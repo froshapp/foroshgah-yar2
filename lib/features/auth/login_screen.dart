@@ -11,7 +11,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _url = TextEditingController(text: 'https://apadanasleep.ir');
+  final _url = TextEditingController();
   final _token = TextEditingController();
   bool _hide = true;
 
