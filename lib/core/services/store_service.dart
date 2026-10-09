@@ -8,19 +8,9 @@ class Store {
   final String url;
   final String? token;
 
-  Store({
-    required this.id,
-    required this.name,
-    required this.url,
-    this.token,
-  });
+  Store({required this.id, required this.name, required this.url, this.token});
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'url': url,
-        'token': token,
-      };
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'url': url, 'token': token};
 
   factory Store.fromJson(Map<String, dynamic> json) => Store(
         id: json['id']?.toString() ?? '',
@@ -43,17 +33,12 @@ class StoreService extends ChangeNotifier {
     if (raw != null) {
       try {
         final list = jsonDecode(raw) as List;
-        _stores = list.map((e) => Store.fromJson(e as Map<String, dynamic>)).toList();
-      } catch (_) {
-        _stores = [];
-      }
+        _stores = list.map((e) => Store.fromJson(Map<String, dynamic>.from(e))).toList();
+      } catch (_) {}
     }
     final currentId = prefs.getString('fy_current_store');
     if (currentId != null && _stores.isNotEmpty) {
-      _currentStore = _stores.firstWhere(
-        (s) => s.id == currentId,
-        orElse: () => _stores.first,
-      );
+      _currentStore = _stores.firstWhere((s) => s.id == currentId, orElse: () => _stores.first);
     }
     notifyListeners();
   }
@@ -62,34 +47,9 @@ class StoreService extends ChangeNotifier {
     _stores.removeWhere((s) => s.url == store.url);
     _stores.add(store);
     _currentStore = store;
-    await _save();
-    notifyListeners();
-  }
-
-  Future<void> setCurrentStore(Store store) async {
-    _currentStore = store;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fy_stores', jsonEncode(_stores.map((s) => s.toJson()).toList()));
     await prefs.setString('fy_current_store', store.id);
     notifyListeners();
-  }
-
-  Future<void> removeStore(String id) async {
-    _stores.removeWhere((s) => s.id == id);
-    if (_currentStore?.id == id) {
-      _currentStore = _stores.isNotEmpty ? _stores.first : null;
-    }
-    await _save();
-    notifyListeners();
-  }
-
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'fy_stores',
-      jsonEncode(_stores.map((s) => s.toJson()).toList()),
-    );
-    if (_currentStore != null) {
-      await prefs.setString('fy_current_store', _currentStore!.id);
-    }
   }
 }

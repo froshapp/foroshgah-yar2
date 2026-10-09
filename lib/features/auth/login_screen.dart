@@ -5,7 +5,6 @@ import '../../core/services/store_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -25,19 +24,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _connect() async {
     final url = _url.text.trim();
     final token = _token.text.trim();
-
     if (url.isEmpty || token.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('آدرس سایت و توکن را وارد کنید')),
       );
       return;
     }
-
     final auth = context.read<AuthService>();
     final stores = context.read<StoreService>();
-
     final ok = await auth.connectWithToken(siteUrl: url, token: token);
-
     if (ok && mounted) {
       await stores.addStore(Store(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -51,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-
     return Scaffold(
       backgroundColor: const Color(0xFF1A1B2E),
       body: SafeArea(
@@ -59,39 +53,23 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // لوگو
                 Container(
-                  width: 72,
-                  height: 72,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
                     color: const Color(0xFF6C63FF).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                   ),
-                  child: const Icon(
-                    Icons.storefront_rounded,
-                    size: 36,
-                    color: Color(0xFF6C63FF),
-                  ),
+                  child: const Icon(Icons.storefront_rounded, size: 40, color: Color(0xFF6C63FF)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'فروشگاه‌یار',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('فروشگاه‌یار',
+                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                const Text(
-                  'مدیریت فروشگاه ووکامرس',
-                  style: TextStyle(color: Colors.white54, fontSize: 14),
-                ),
+                const Text('مدیریت حرفه‌ای فروشگاه ووکامرس',
+                    style: TextStyle(color: Colors.white54, fontSize: 14)),
                 const SizedBox(height: 36),
-
-                // کارت فرم
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -102,46 +80,35 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'آدرس سایت',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
+                      const Text('آدرس سایت', style: TextStyle(color: Colors.white70, fontSize: 13)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _url,
                         keyboardType: TextInputType.url,
                         textDirection: TextDirection.ltr,
                         style: const TextStyle(color: Colors.black, fontSize: 15),
-                        cursorColor: const Color(0xFF6C63FF),
                         enableInteractiveSelection: true,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFECECF3),
-                          hintText: 'https://apadanasleep.ir',
+                          hintText: 'https://yoursite.com',
                           hintStyle: const TextStyle(color: Colors.black38),
                           prefixIcon: const Icon(Icons.language, color: Colors.black54),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'توکن اتصال',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
+                      const Text('توکن اتصال', style: TextStyle(color: Colors.white70, fontSize: 13)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _token,
                         obscureText: _hide,
                         textDirection: TextDirection.ltr,
                         style: const TextStyle(color: Colors.black, fontSize: 15),
-                        cursorColor: const Color(0xFF6C63FF),
                         enableInteractiveSelection: true,
                         decoration: InputDecoration(
                           filled: true,
@@ -150,27 +117,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           hintStyle: const TextStyle(color: Colors.black38),
                           prefixIcon: const Icon(Icons.vpn_key, color: Colors.black54),
                           suffixIcon: IconButton(
-                            icon: Icon(
-                              _hide ? Icons.visibility_off : Icons.visibility,
-                              color: Colors.black54,
-                            ),
+                            icon: Icon(_hide ? Icons.visibility_off : Icons.visibility, color: Colors.black54),
                             onPressed: () => setState(() => _hide = !_hide),
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'توکن را از پیشخوان وردپرس ← فروشگاه‌یار بسازید\n(بدون انقضا تا وقتی خودتان حذف کنید)',
+                        'توکن یک‌بار وارد می‌شود و ذخیره می‌ماند',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+                        style: TextStyle(color: Colors.white38, fontSize: 11),
                       ),
                       if (auth.error != null) ...[
                         const SizedBox(height: 12),
@@ -180,11 +141,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.red.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(
-                            auth.error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                          ),
+                          child: Text(auth.error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                         ),
                       ],
                       const SizedBox(height: 20),
@@ -195,25 +154,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF6C63FF),
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0xFF6C63FF).withOpacity(0.5),
                             elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: auth.isLoading
                               ? const SizedBox(
                                   width: 22,
                                   height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'ورود به فروشگاه',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                ),
+                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                              : const Text('ورود به فروشگاه',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],

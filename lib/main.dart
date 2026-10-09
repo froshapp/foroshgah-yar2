@@ -10,16 +10,18 @@ import 'core/services/dashboard_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  );
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
+
+  final auth = AuthService();
+  await auth.tryAutoLogin();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => StoreService()..loadStores()),
         ChangeNotifierProvider(create: (_) => OrdersService()),
         ChangeNotifierProvider(create: (_) => ProductsService()),

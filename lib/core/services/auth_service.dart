@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 
 class AuthService extends ChangeNotifier {
@@ -18,6 +19,43 @@ class AuthService extends ChangeNotifier {
   Map<String, dynamic>? get site => _site;
   ApiClient get api => _api;
 
+  /// ورود خودکار با توکن ذخیره‌شده
+  Future<void> tryAutoLogin() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('fy_token');
+      final baseUrl = prefs.getString('fy_base_url');
+      final siteUrl = prefs.getString('fy_site_url');
+
+      if (token == null || token.isEmpty || siteUrl == null) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      _api.setBaseUrl(siteUrl);
+      try {
+        await _api.ensureReachable();
+      } catch (_) {}
+
+      await _api.saveToken(token);
+
+      // اعتبارسنجی توکن
+      final res = await _api.dio.get('site-info');
+      if (res.statusCode == 200 && res.data != null) {
+        _site = res.data is Map ? Map<String, dynamic>.from(res.data) : null;
+        _user = {'display_name': prefs.getString('fy_user_name') ?? 'مدیر'};
+        _isAuthenticated = true;
+      }
+    } catch (_) {
+      // توکن نامعتبر — پاک نکن، کاربر دستی وارد شود
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<bool> connectWithToken({
     required String siteUrl,
     required String token,
@@ -28,17 +66,25 @@ class AuthService extends ChangeNotifier {
 
     try {
       _api.setBaseUrl(siteUrl);
+      try {
+        await _api.ensureReachable();
+      } catch (_) {}
 
       final response = await _api.dio.post('connect', data: {'token': token});
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         await _api.saveToken(token);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fy_site_url', siteUrl.trim());
         _user = response.data['user'] is Map
             ? Map<String, dynamic>.from(response.data['user'])
             : null;
         _site = response.data['site'] is Map
             ? Map<String, dynamic>.from(response.data['site'])
             : null;
+        if (_user?['display_name'] != null) {
+          await prefs.setString('fy_user_name', _user!['display_name'].toString());
+        }
         _isAuthenticated = true;
         _isLoading = false;
         notifyListeners();
@@ -53,9 +99,9 @@ class AuthService extends ChangeNotifier {
           e.type == DioExceptionType.receiveTimeout) {
         _error = 'زمان اتصال تمام شد. اینترنت را چک کنید.';
       } else if (e.type == DioExceptionType.connectionError) {
-        _error = 'خطای شبکه: ${e.message ?? e.type}';
+        _error = 'خطای شبکه: ${e.message ?? "اتصال برقرار نشد"}';
       } else {
-        _error = 'خطا: ${e.message ?? e.type}';
+        _error = 'خطا: ${e.message ?? e.type.toString()}';
       }
     } catch (e) {
       _error = 'خطای ناشناخته: $e';
@@ -71,6 +117,9 @@ class AuthService extends ChangeNotifier {
       await _api.dio.post('logout');
     } catch (_) {}
     await _api.clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('fy_site_url');
+    await prefs.remove('fy_user_name');
     _isAuthenticated = false;
     _user = null;
     _site = null;

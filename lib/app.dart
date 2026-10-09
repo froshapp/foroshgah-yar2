@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/services/auth_service.dart';
 import 'features/auth/login_screen.dart';
-import 'features/dashboard/home_screen.dart';
+import 'features/home/main_shell.dart';
 
 class ForoshgahYarApp extends StatelessWidget {
   const ForoshgahYarApp({super.key});
@@ -23,18 +23,25 @@ class ForoshgahYarApp extends StatelessWidget {
           error: Color(0xFFEF4444),
         ),
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1B2E),
+          elevation: 0,
+          centerTitle: true,
+        ),
       ),
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child!,
-        );
-      },
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: child!,
+      ),
       home: Consumer<AuthService>(
         builder: (context, auth, _) {
-          if (auth.isAuthenticated) {
-            return const HomeScreen();
+          if (auth.isLoading && !auth.isAuthenticated) {
+            return const Scaffold(
+              backgroundColor: Color(0xFF1A1B2E),
+              body: Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
+            );
           }
+          if (auth.isAuthenticated) return const MainShell();
           return const LoginScreen();
         },
       ),

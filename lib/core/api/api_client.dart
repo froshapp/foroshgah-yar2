@@ -16,12 +16,14 @@ class ApiClient {
     return _dio!;
   }
 
+  /// Resolve domain via DNS-over-HTTPS (works even when system DNS fails)
   Future<String?> _resolveViaDoh(String host) async {
     final servers = <String>[
       'https://1.1.1.1/dns-query',
       'https://8.8.8.8/resolve',
       'https://1.0.0.1/dns-query',
     ];
+
     for (final server in servers) {
       try {
         final dio = Dio(BaseOptions(
@@ -34,10 +36,12 @@ class ApiClient {
           c.badCertificateCallback = (cert, host, port) => true;
           return c;
         };
+
         final res = await dio.get(server, queryParameters: {
           'name': host,
           'type': 'A',
         });
+
         final data = res.data;
         if (data is Map && data['Answer'] is List) {
           for (final ans in data['Answer']) {
@@ -66,12 +70,14 @@ class ApiClient {
       },
       validateStatus: (code) => code != null && code < 500,
     ));
+
     (_dio!.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
       client.connectionTimeout = const Duration(seconds: 30);
       return client;
     };
+
     _dio!.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (_token != null && _token!.isNotEmpty) {
@@ -89,19 +95,23 @@ class ApiClient {
     var url = siteUrl.trim();
     if (url.endsWith('/')) url = url.substring(0, url.length - 1);
     if (!url.startsWith('http')) url = 'https://$url';
+
     final uri = Uri.parse(url);
     _siteHost = uri.host;
     _baseUrl = '$url/wp-json/foroshgah-yar/v1';
     _buildDio(_baseUrl!);
   }
 
+  /// If system DNS fails, resolve via DoH and reconnect by IP
   Future<void> ensureReachable() async {
     if (_siteHost == null || _baseUrl == null) return;
+
     try {
       final result = await InternetAddress.lookup(_siteHost!)
           .timeout(const Duration(seconds: 5));
       if (result.isNotEmpty) return;
     } catch (_) {}
+
     final ip = await _resolveViaDoh(_siteHost!);
     if (ip == null) {
       throw DioException(
@@ -110,7 +120,9 @@ class ApiClient {
         message: 'DNS: نتوانست دامنه را پیدا کند ($_siteHost)',
       );
     }
-    _buildDio('https://$ip/wp-json/foroshgah-yar/v1', hostHeader: _siteHost);
+
+    final path = '/wp-json/foroshgah-yar/v1';
+    _buildDio('https://$ip$path', hostHeader: _siteHost);
   }
 
   Future<void> saveToken(String token) async {
@@ -127,7 +139,8 @@ class ApiClient {
     _token = prefs.getString('fy_token');
     final savedUrl = prefs.getString('fy_base_url');
     if (savedUrl != null && savedUrl.isNotEmpty) {
-      setBaseUrl(savedUrl.replaceAll('/wp-json/foroshgah-yar/v1', ''));
+      final site = savedUrl.replaceAll('/wp-json/foroshgah-yar/v1', '');
+      setBaseUrl(site);
       _token = prefs.getString('fy_token');
     }
   }
