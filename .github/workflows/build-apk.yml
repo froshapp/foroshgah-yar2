@@ -26,6 +26,34 @@ jobs:
           mkdir -p assets/images assets/icons
           touch assets/images/.gitkeep assets/icons/.gitkeep
 
+      - name: Fix AndroidManifest + Icon
+        run: |
+          python3 << 'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          t = p.read_text()
+          if "android.permission.INTERNET" not in t:
+              idx = t.find(">")
+              t = t[:idx+1] + '\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' + t[idx+1:]
+          if "usesCleartextTraffic" not in t:
+              t = t.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
+          p.write_text(t)
+          print("Manifest OK")
+          PY
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26 || true
+          if [ -f assets/icons/app_icon.png ]; then
+            for folder in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+              dir="android/app/src/main/res/mipmap-$folder"
+              mkdir -p "$dir"
+              cp assets/icons/app_icon.png "$dir/ic_launcher.png"
+              cp assets/icons/app_icon.png "$dir/ic_launcher_round.png"
+            done
+            echo "Custom icon applied"
+          else
+            echo "WARNING: icon not found"
+            ls -la assets/icons/ || true
+          fi
+
       - name: Get dependencies
         run: flutter pub get
 
