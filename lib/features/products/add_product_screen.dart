@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/products_service.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -12,16 +13,28 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
+  int _step = 0;
   final _name = TextEditingController();
   final _price = TextEditingController();
   final _salePrice = TextEditingController();
   final _stock = TextEditingController();
   final _sku = TextEditingController();
   final _desc = TextEditingController();
+  final _brand = TextEditingController();
+  final _weight = TextEditingController();
   String _status = 'publish';
+  int? _categoryId;
   bool _saving = false;
   XFile? _image;
   final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductsService>().fetchCategories(context.read<AuthService>());
+    });
+  }
 
   @override
   void dispose() {
@@ -31,6 +44,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _stock.dispose();
     _sku.dispose();
     _desc.dispose();
+    _brand.dispose();
+    _weight.dispose();
     super.dispose();
   }
 
@@ -42,6 +57,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام محصول الزامی است')));
+      setState(() => _step = 0);
       return;
     }
     setState(() => _saving = true);
@@ -51,62 +67,54 @@ class _AddProductScreenState extends State<AddProductScreen> {
         await auth.api.ensureReachable();
       } catch (_) {}
 
+      int? imageId;
+      if (_image != null) {
+        try {
+          final form = FormData.fromMap({
+            'file': await MultipartFile.fromFile(_image!.path, filename: _image!.name),
+          });
+          final media = await auth.api.dio.post(
+            'products/upload',
+            data: form,
+            options: Options(contentType: 'multipart/form-data'),
+          );
+          if (media.data is Map && media.data['id'] != null) {
+            imageId = int.tryParse(media.data['id'].toString());
+          }
+        } catch (e) {
+          debugPrint('upload image failed: $e');
+        }
+      }
+
       final body = <String, dynamic>{
         'name': _name.text.trim(),
         'type': 'simple',
         'status': _status,
         'regular_price': _price.text.trim().isEmpty ? '0' : _price.text.trim(),
-        'price': _price.text.trim().isEmpty ? '0' : _price.text.trim(),
         'description': _desc.text.trim(),
-        'short_description': _desc.text.trim().length > 120
-            ? _desc.text.trim().substring(0, 120)
+        'short_description': _desc.text.trim().length > 150
+            ? _desc.text.trim().substring(0, 150)
             : _desc.text.trim(),
+        'manage_stock': _stock.text.trim().isNotEmpty,
       };
-      if (_salePrice.text.trim().isNotEmpty) {
-        body['sale_price'] = _salePrice.text.trim();
-      }
+      if (_salePrice.text.trim().isNotEmpty) body['sale_price'] = _salePrice.text.trim();
       if (_sku.text.trim().isNotEmpty) body['sku'] = _sku.text.trim();
-      if (_stock.text.trim().isNotEmpty) {
-        body['manage_stock'] = true;
-        body['stock_quantity'] = int.tryParse(_stock.text.trim()) ?? 0;
-      }
+      if (_stock.text.trim().isNotEmpty) body['stock_quantity'] = int.tryParse(_stock.text.trim()) ?? 0;
+      if (_categoryId != null) body['categories'] = [_categoryId];
+      if (imageId != null) body['image_id'] = imageId;
+      if (_brand.text.trim().isNotEmpty) body['brand'] = _brand.text.trim();
+      if (_weight.text.trim().isNotEmpty) body['weight'] = _weight.text.trim();
 
-      // create product first
       final res = await auth.api.dio.post('products', data: body);
-      if (res.statusCode != 200 && res.statusCode != 201) {
-        throw Exception(res.data?['message']?.toString() ?? 'خطا در ذخیره');
-      }
-
-      final productId = res.data is Map ? res.data['id'] : null;
-
-      // upload image if selected (best-effort)
-      if (_image != null && productId != null) {
-        try {
-          final form = FormData.fromMap({
-            'file': await MultipartFile.fromFile(_image!.path, filename: _image!.name),
-          });
-          // try media then attach
-          final media = await auth.api.dio.post(
-            '../wp/v2/media',
-            data: form,
-            options: Options(contentType: 'multipart/form-data', headers: {
-              'Content-Disposition': 'attachment; filename="${_image!.name}"',
-            }),
-          );
-          final mediaId = media.data is Map ? media.data['id'] : null;
-          if (mediaId != null) {
-            await auth.api.dio.put('products/$productId', data: {
-              'images': [{'id': mediaId}],
-            });
-          }
-        } catch (_) {
-          // image optional
-        }
-      }
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('محصول اضافه شد')));
-      Navigator.pop(context, true);
+      if (res.statusCode == 200 || res.statusCode == 201 || res.data?['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('محصول اضافه شد')));
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.data?['message']?.toString() ?? 'خطا در ذخیره')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
@@ -117,121 +125,197 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cats = context.watch<ProductsService>().categories;
     return Scaffold(
       backgroundColor: const Color(0xFF1A1B2E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1B2E),
-        title: const Text('افزودن محصول', style: TextStyle(fontSize: 16)),
+        title: Text('افزودن محصول (${_step + 1}/3)', style: const TextStyle(fontSize: 16)),
         leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          _label('وضعیت محصول'),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, children: [
-            _chip('publish', 'منتشر شده', const Color(0xFF10B981)),
-            _chip('draft', 'پیش‌نویس', Colors.orange),
-            _chip('pending', 'در انتظار', Colors.white54),
-          ]),
-          const SizedBox(height: 16),
-          _label('تصویر شاخص'),
-          const SizedBox(height: 8),
-          Row(children: [
-            if (_image != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(_image!.path), width: 72, height: 72, fit: BoxFit.cover),
-              )
-            else
-              Container(
-                width: 72, height: 72,
-                decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.image, color: Colors.white24),
-              ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pick(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library, size: 18),
-                    label: const Text('گالری', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+          // steps indicator
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Row(
+              children: List.generate(3, (i) {
+                final active = i <= _step;
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: active ? const Color(0xFF6C63FF) : Colors.white12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pick(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt, size: 18),
-                    label: const Text('دوربین', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
-                  ),
-                ),
-              ]),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          _label('نام محصول'),
-          const SizedBox(height: 8),
-          _field(_name, 'مثلاً روتختی طرح ملودی'),
-          const SizedBox(height: 16),
-          _label('توضیحات'),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _desc,
-            maxLines: 4,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'توضیحات محصول...',
-              hintStyle: const TextStyle(color: Colors.white24),
-              filled: true,
-              fillColor: const Color(0xFF252640),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                );
+              }),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _label('قیمت اصلی'),
-              const SizedBox(height: 8),
-              _field(_price, '0', number: true),
-            ])),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _label('قیمت ویژه'),
-              const SizedBox(height: 8),
-              _field(_salePrice, 'اختیاری', number: true),
-            ])),
-          ]),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _label('موجودی'),
-              const SizedBox(height: 8),
-              _field(_stock, 'اختیاری', number: true),
-            ])),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _label('SKU'),
-              const SizedBox(height: 8),
-              _field(_sku, 'اختیاری'),
-            ])),
-          ]),
-          const SizedBox(height: 28),
-          SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (_step == 0) ...[
+                  _label('وضعیت'),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    _chip('publish', 'منتشر شده', const Color(0xFF10B981)),
+                    _chip('draft', 'پیش‌نویس', Colors.orange),
+                    _chip('pending', 'در انتظار', Colors.white54),
+                  ]),
+                  const SizedBox(height: 16),
+                  _label('نام محصول'),
+                  const SizedBox(height: 8),
+                  _field(_name, 'نام محصول'),
+                  const SizedBox(height: 16),
+                  _label('توضیحات'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _desc,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _dec('توضیحات محصول'),
+                  ),
+                  const SizedBox(height: 16),
+                  _label('تصویر'),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    if (_image != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(File(_image!.path), width: 72, height: 72, fit: BoxFit.cover),
+                      )
+                    else
+                      Container(
+                        width: 72, height: 72,
+                        decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.image, color: Colors.white24),
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Row(children: [
+                        Expanded(child: OutlinedButton.icon(
+                          onPressed: () => _pick(ImageSource.gallery),
+                          icon: const Icon(Icons.photo_library, size: 16),
+                          label: const Text('گالری', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+                        )),
+                        const SizedBox(width: 8),
+                        Expanded(child: OutlinedButton.icon(
+                          onPressed: () => _pick(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt, size: 16),
+                          label: const Text('دوربین', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.white70),
+                        )),
+                      ]),
+                    ),
+                  ]),
+                ] else if (_step == 1) ...[
+                  Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _label('قیمت اصلی'),
+                      const SizedBox(height: 8),
+                      _field(_price, '0', number: true),
+                    ])),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _label('قیمت ویژه'),
+                      const SizedBox(height: 8),
+                      _field(_salePrice, 'اختیاری', number: true),
+                    ])),
+                  ]),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _label('موجودی'),
+                      const SizedBox(height: 8),
+                      _field(_stock, 'اختیاری', number: true),
+                    ])),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _label('SKU'),
+                      const SizedBox(height: 8),
+                      _field(_sku, 'اختیاری'),
+                    ])),
+                  ]),
+                  const SizedBox(height: 16),
+                  _label('برند'),
+                  const SizedBox(height: 8),
+                  _field(_brand, 'اختیاری'),
+                ] else ...[
+                  _label('دسته‌بندی'),
+                  const SizedBox(height: 8),
+                  if (cats.isEmpty)
+                    const Text('دسته‌ای یافت نشد', style: TextStyle(color: Colors.white38))
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: cats.map((c) {
+                        final id = int.tryParse(c['id']?.toString() ?? '') ?? 0;
+                        final selected = _categoryId == id;
+                        return ChoiceChip(
+                          label: Text(c['name']?.toString() ?? '', style: TextStyle(color: selected ? Colors.white : Colors.white70, fontSize: 12)),
+                          selected: selected,
+                          selectedColor: const Color(0xFF6C63FF).withOpacity(0.4),
+                          backgroundColor: const Color(0xFF252640),
+                          onSelected: (_) => setState(() => _categoryId = selected ? null : id),
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 16),
+                  _label('وزن (کیلوگرم)'),
+                  const SizedBox(height: 8),
+                  _field(_weight, 'اختیاری', number: true),
+                ],
+              ],
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Row(
+                children: [
+                  if (_step > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _step--),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: const Text('قبلی'),
+                      ),
+                    ),
+                  if (_step > 0) const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _saving
+                          ? null
+                          : () {
+                              if (_step < 2) {
+                                setState(() => _step++);
+                              } else {
+                                _save();
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: _saving
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                          : Text(_step < 2 ? 'مرحله بعد' : 'ذخیره محصول'),
+                    ),
+                  ),
+                ],
               ),
-              child: _saving
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                  : const Text('ذخیره محصول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -241,19 +325,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Widget _label(String t) => Text(t, style: const TextStyle(color: Colors.white54, fontSize: 12));
 
-  Widget _field(TextEditingController c, String hint, {bool number = false}) {
-    return TextField(
-      controller: c,
-      keyboardType: number ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
+  InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.white24),
         filled: true,
         fillColor: const Color(0xFF252640),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      ),
+      );
+
+  Widget _field(TextEditingController c, String hint, {bool number = false}) {
+    return TextField(
+      controller: c,
+      keyboardType: number ? TextInputType.number : TextInputType.text,
+      style: const TextStyle(color: Colors.white),
+      decoration: _dec(hint),
     );
   }
 

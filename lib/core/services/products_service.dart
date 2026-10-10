@@ -24,27 +24,16 @@ class ProductsService extends ChangeNotifier {
       try {
         await auth.api.ensureReachable();
       } catch (_) {}
-      final res = await auth.api.dio.get('products/categories', queryParameters: {'per_page': 100});
+      final res = await auth.api.dio.get('products/categories');
       List list = [];
-      if (res.data is List) {
-        list = res.data as List;
-      } else if (res.data is Map && res.data['categories'] is List) {
+      if (res.data is Map && res.data['categories'] is List) {
         list = res.data['categories'] as List;
-      } else if (res.data is Map && res.data['data'] is List) {
-        list = res.data['data'] as List;
+      } else if (res.data is List) {
+        list = res.data as List;
       }
       _categories = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       notifyListeners();
-    } catch (_) {
-      // try WC path via plugin alias
-      try {
-        final res = await auth.api.dio.get('categories', queryParameters: {'per_page': 100});
-        if (res.data is List) {
-          _categories = (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-          notifyListeners();
-        }
-      } catch (_) {}
-    }
+    } catch (_) {}
   }
 
   Future<void> fetchProducts(AuthService auth, {bool refresh = false, String? search, int? categoryId}) async {
@@ -68,19 +57,19 @@ class ProductsService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final params = <String, dynamic>{'page': _page, 'per_page': 20};
+      final params = <String, dynamic>{'page': _page, 'per_page': 20, 'status': 'any'};
       if (_search.isNotEmpty) params['search'] = _search;
       if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
 
       final res = await auth.api.dio.get('products', queryParameters: params);
 
       List list = [];
-      if (res.data is List) {
+      if (res.data is Map) {
+        final m = res.data as Map;
+        if (m['products'] is List) list = m['products'] as List;
+        else if (m['data'] is List) list = m['data'] as List;
+      } else if (res.data is List) {
         list = res.data as List;
-      } else if (res.data is Map && res.data['products'] is List) {
-        list = res.data['products'] as List;
-      } else if (res.data is Map && res.data['data'] is List) {
-        list = res.data['data'] as List;
       }
 
       final items = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -134,7 +123,6 @@ class ProductsService extends ChangeNotifier {
           if (price != null) _products[idx]['price'] = price;
           if (regularPrice != null) _products[idx]['regular_price'] = regularPrice;
           if (stock != null) _products[idx]['stock_quantity'] = stock;
-          if (status != null) _products[idx]['status'] = status;
           notifyListeners();
         }
         return true;
