@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -15,7 +16,8 @@ class _LowStockScreenState extends State<LowStockScreen> {
   List low = [];
   List out = [];
   int total = 0;
-  String filter = 'all'; // all low out
+  int threshold = 5;
+  String filter = 'all';
 
   @override
   void initState() {
@@ -25,9 +27,11 @@ class _LowStockScreenState extends State<LowStockScreen> {
 
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
+    final prefs = await SharedPreferences.getInstance();
+    threshold = prefs.getInt('stock_threshold') ?? 5;
     try {
       final auth = context.read<AuthService>();
-      final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': 5});
+      final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
       if (res.data is Map) {
         final m = res.data as Map;
         low = m['low_stock'] is List ? m['low_stock'] as List : [];
@@ -58,13 +62,15 @@ class _LowStockScreenState extends State<LowStockScreen> {
       body: loading
           ? const Center(child: MiniLoader())
           : error != null
-              ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+              ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(error!, style: const TextStyle(color: AppColors.red), textAlign: TextAlign.center)))
               : RefreshIndicator(
                   color: AppColors.purple,
                   onRefresh: _load,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      Text('آستانه: $threshold عدد (از تنظیمات قابل تغییر)', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                      const SizedBox(height: 10),
                       Row(children: [
                         Expanded(child: _stat('کل', '$total', AppColors.blue)),
                         const SizedBox(width: 8),
@@ -79,10 +85,16 @@ class _LowStockScreenState extends State<LowStockScreen> {
                         _chip('تمام‌شده', 'out'),
                       ]),
                       const SizedBox(height: 12),
+                      if (_items.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('محصولی با موجودی کم یافت نشد.\nاگر مدیریت موجودی روی محصولات فعال نباشد، لیست خالی است.',
+                              textAlign: TextAlign.center, style: TextStyle(color: AppColors.textDim)),
+                        ),
                       ..._items.map((e) {
                         final m = Map<String, dynamic>.from(e as Map);
                         final stock = m['stock'];
-                        final isOut = (stock is num && stock <= 0) || stock == 0;
+                        final isOut = (stock is num && stock <= 0);
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: NeonCard(

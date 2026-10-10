@@ -174,7 +174,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('سفارشی یافت نشد', style: TextStyle(color: AppColors.textDim)),
+            Text(svc.error ?? 'سفارشی یافت نشد', style: const TextStyle(color: AppColors.textDim), textAlign: TextAlign.center),
+            if (svc.debug != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(svc.debug!, style: const TextStyle(color: AppColors.textMute, fontSize: 11), textAlign: TextAlign.center)),
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () => svc.fetchOrders(auth, refresh: true),

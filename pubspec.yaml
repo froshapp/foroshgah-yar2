@@ -1,7 +1,7 @@
 name: foroshgah_yar
 description: اپلیکیشن مدیریت فروشگاه ووکامرس - فروشگاه‌یار
 publish_to: 'none'
-version: 1.5.0+9
+version: 1.5.1+10
 
 environment:
   sdk: '>=3.2.0 <4.0.0'

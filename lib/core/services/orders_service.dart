@@ -9,12 +9,14 @@ class OrdersService extends ChangeNotifier {
   int _page = 1;
   bool _hasMore = true;
   int _total = 0;
+  String? _debug;
 
   List<Map<String, dynamic>> get orders => _orders;
   bool get loading => _loading;
   String? get error => _error;
   bool get hasMore => _hasMore;
   int get total => _total;
+  String? get debug => _debug;
 
   Future<void> fetchOrders(AuthService auth, {bool refresh = false}) async {
     if (refresh) {
@@ -26,6 +28,7 @@ class OrdersService extends ChangeNotifier {
 
     _loading = true;
     _error = null;
+    _debug = null;
     notifyListeners();
 
     try {
@@ -41,6 +44,10 @@ class OrdersService extends ChangeNotifier {
       List list = [];
       if (res.data is Map) {
         final m = Map<String, dynamic>.from(res.data as Map);
+        if (m['success'] == false) {
+          _error = (m['message'] ?? 'خطای سرور').toString();
+          if (m['file'] != null) _error = '$_error (${m['file']}:${m['line']})';
+        }
         if (m['orders'] is List) {
           list = m['orders'] as List;
         } else if (m['data'] is List) {
@@ -49,6 +56,12 @@ class OrdersService extends ChangeNotifier {
         final pag = m['pagination'];
         if (pag is Map) {
           _total = int.tryParse(pag['total']?.toString() ?? '') ?? _total;
+        }
+        if (m['debug'] is Map) {
+          _debug = m['debug'].toString();
+        }
+        if (m['count'] != null) {
+          _debug = '${_debug ?? ''} count=${m['count']}';
         }
       } else if (res.data is List) {
         list = res.data as List;

@@ -11,131 +11,41 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notifOrder = true;
-  bool _notifStatus = true;
-  bool _showPhone = true;
-  bool _showAddress = true;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final p = await SharedPreferences.getInstance();
-    setState(() {
-      _notifOrder = p.getBool('fy_notif_order') ?? true;
-      _notifStatus = p.getBool('fy_notif_status') ?? true;
-      _showPhone = p.getBool('fy_show_phone') ?? true;
-      _showAddress = p.getBool('fy_show_address') ?? true;
-      _loading = false;
-    });
-  }
-
-  Future<void> _save(String key, bool v) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(key, v);
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final siteName = auth.site?['name']?.toString() ?? 'فروشگاه';
-    final user = auth.user?['display_name']?.toString() ?? '';
-
-    if (_loading) return const Center(child: MiniLoader());
-
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           GlassHeader(
             title: 'تنظیمات',
-            subtitle: '$siteName\n$user',
-            actions: [
-              IconButton(icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70), onPressed: () {}),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: NeonCard(
-              borderColor: AppColors.purple.withOpacity(0.3),
-              child: Column(children: [
-                const Row(children: [
-                  Icon(Icons.visibility_outlined, color: AppColors.purpleGlow, size: 18),
-                  SizedBox(width: 8),
-                  Text('نمایش سفارش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                ]),
-                const SizedBox(height: 8),
-                _sw('نمایش موبایل مشتری', Icons.phone_android, _showPhone, (v) { setState(() => _showPhone = v); _save('fy_show_phone', v); }),
-                _sw('نمایش آدرس', Icons.location_on_outlined, _showAddress, (v) { setState(() => _showAddress = v); _save('fy_show_address', v); }),
-              ]),
-            ),
+            subtitle: auth.siteName.isNotEmpty ? auth.siteName : 'فروشگاه‌یار',
           ),
           const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: NeonCard(
-              borderColor: AppColors.blue.withOpacity(0.3),
-              child: Column(children: [
-                const Row(children: [
-                  Icon(Icons.notifications_outlined, color: AppColors.blue, size: 18),
-                  SizedBox(width: 8),
-                  Text('اعلان‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                ]),
-                const SizedBox(height: 8),
-                _sw('سفارش جدید', Icons.inventory_2_outlined, _notifOrder, (v) { setState(() => _notifOrder = v); _save('fy_notif_order', v); }),
-                _sw('تغییر وضعیت سفارش', Icons.sync, _notifStatus, (v) { setState(() => _notifStatus = v); _save('fy_notif_status', v); }),
-              ]),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: NeonCard(
-              borderColor: AppColors.orange.withOpacity(0.3),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [
-                  Icon(Icons.palette_outlined, color: AppColors.orange, size: 18),
-                  SizedBox(width: 8),
-                  Text('رنگ وضعیت سفارشات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                ]),
-                const SizedBox(height: 10),
-                _colorRow('در انتظار پرداخت', const Color(0xFFF59E0B)),
-                _colorRow('در حال انجام', const Color(0xFF3B82F6)),
-                _colorRow('تکمیل شده', const Color(0xFF10B981)),
-                _colorRow('لغو / مرجوع', const Color(0xFFEF4444)),
-              ]),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: NeonCard(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: AppColors.card,
-                    title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-                    content: const Text('نسخه ۱.۵\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
-                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
-                  ),
-                );
-              },
-              child: const Row(children: [
-                Icon(Icons.info_outline, color: AppColors.textDim, size: 18),
-                SizedBox(width: 8),
-                Expanded(child: Text('درباره فروشگاه‌یار', style: TextStyle(color: Colors.white))),
-                Text('۱.۵', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
-                Icon(Icons.chevron_left, color: AppColors.textMute),
-              ]),
-            ),
-          ),
+          _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
+          }),
+          _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const StockThresholdPage()));
+          }),
+          _item(Icons.campaign_outlined, 'اطلاعیه‌ها', 'ارسال و مدیریت اعلان عمومی', AppColors.purple, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
+          }),
+          _item(Icons.notifications_active_outlined, 'اعلان‌های اپ', 'زنگ و هشدار داخل اپ', AppColors.blue, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
+          }),
+          _item(Icons.info_outline, 'درباره فروشگاه‌یار', 'نسخه ۱.۵', AppColors.textDim, () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: AppColors.card,
+                title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
+                content: const Text('نسخه ۱.۵\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
+              ),
+            );
+          }),
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -162,13 +72,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
               ),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('خروج از حساب', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                SizedBox(width: 8),
-                Icon(Icons.logout, size: 20),
-              ]),
+              child: const Text('خروج از حساب', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -176,26 +81,367 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-
-  Widget _colorRow(String label, Color c) {
+  Widget _item(IconData icon, String title, String sub, Color c, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
-        Container(width: 14, height: 14, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-        const SizedBox(width: 10),
-        Text(label, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-      ]),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: NeonCard(
+        onTap: onTap,
+        borderColor: c.withOpacity(0.25),
+        child: Row(children: [
+          Container(
+            width: 42, height: 42,
+            decoration: BoxDecoration(color: c.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: c, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 2),
+            Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+          ])),
+          const Icon(Icons.chevron_left, color: AppColors.textMute),
+        ]),
+      ),
     );
   }
+}
 
-  Widget _sw(String title, IconData icon, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      secondary: Icon(icon, color: AppColors.textDim, size: 20),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 13)),
-      value: value,
-      activeColor: AppColors.purple,
-      onChanged: onChanged,
+class StatusColorsPage extends StatefulWidget {
+  const StatusColorsPage({super.key});
+  @override
+  State<StatusColorsPage> createState() => _StatusColorsPageState();
+}
+
+class _StatusColorsPageState extends State<StatusColorsPage> {
+  final keys = ['pending', 'processing', 'completed', 'cancelled'];
+  final labels = {
+    'pending': 'در انتظار پرداخت',
+    'processing': 'در حال انجام',
+    'completed': 'تکمیل شده',
+    'cancelled': 'لغو / مرجوع',
+  };
+  final defaults = {
+    'pending': 0xFFF59E0B,
+    'processing': 0xFF3B82F6,
+    'completed': 0xFF10B981,
+    'cancelled': 0xFFEF4444,
+  };
+  Map<String, int> colors = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await SharedPreferences.getInstance();
+    final m = <String, int>{};
+    for (final k in keys) {
+      m[k] = p.getInt('status_color_$k') ?? defaults[k]!;
+    }
+    setState(() => colors = m);
+  }
+
+  Future<void> _save(String k, int val) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('status_color_$k', val);
+    setState(() => colors[k] = val);
+  }
+
+  static const palette = [
+    0xFFF59E0B, 0xFF3B82F6, 0xFF10B981, 0xFFEF4444,
+    0xFF8B5CF6, 0xFF06B6D4, 0xFFEC4899, 0xFF84CC16,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('رنگ وضعیت سفارشات', style: TextStyle(fontSize: 16)),
+        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: keys.map((k) {
+          final c = Color(colors[k] ?? defaults[k]!);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: NeonCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(width: 16, height: 16, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+                  const SizedBox(width: 10),
+                  Text(labels[k]!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, children: palette.map((hex) {
+                  final selected = colors[k] == hex;
+                  return GestureDetector(
+                    onTap: () => _save(k, hex),
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: Color(hex),
+                        shape: BoxShape.circle,
+                        border: selected ? Border.all(color: Colors.white, width: 2) : null,
+                      ),
+                    ),
+                  );
+                }).toList()),
+              ]),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class StockThresholdPage extends StatefulWidget {
+  const StockThresholdPage({super.key});
+  @override
+  State<StockThresholdPage> createState() => _StockThresholdPageState();
+}
+
+class _StockThresholdPageState extends State<StockThresholdPage> {
+  final c = TextEditingController(text: '5');
+  bool notify = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await SharedPreferences.getInstance();
+    c.text = (p.getInt('stock_threshold') ?? 5).toString();
+    notify = p.getBool('stock_notify') ?? true;
+    setState(() {});
+  }
+
+  Future<void> _save() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('stock_threshold', int.tryParse(c.text) ?? 5);
+    await p.setBool('stock_notify', notify);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد')));
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16)),
+        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          NeonCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('اگر موجودی محصول به این عدد یا کمتر برسد، در بخش یادآوری نمایش داده می‌شود.', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: c,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'تعداد آستانه',
+                  labelStyle: const TextStyle(color: AppColors.textDim),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('نمایش هشدار در اپ', style: TextStyle(color: Colors.white, fontSize: 13)),
+                value: notify,
+                activeColor: AppColors.purple,
+                onChanged: (v) => setState(() => notify = v),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.purple,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Text('ذخیره'),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class AppNotifyPage extends StatefulWidget {
+  const AppNotifyPage({super.key});
+  @override
+  State<AppNotifyPage> createState() => _AppNotifyPageState();
+}
+
+class _AppNotifyPageState extends State<AppNotifyPage> {
+  bool orderN = true;
+  bool stockN = true;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      setState(() {
+        orderN = p.getBool('notify_orders') ?? true;
+        stockN = p.getBool('notify_stock') ?? true;
+      });
+    });
+  }
+
+  Future<void> _set(String k, bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(k, v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('اعلان‌های اپ', style: TextStyle(fontSize: 16)),
+        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: NeonCard(
+          child: Column(children: [
+            SwitchListTile(
+              title: const Text('اعلان سفارش جدید', style: TextStyle(color: Colors.white, fontSize: 13)),
+              value: orderN,
+              activeColor: AppColors.purple,
+              onChanged: (v) { setState(() => orderN = v); _set('notify_orders', v); },
+            ),
+            SwitchListTile(
+              title: const Text('اعلان موجودی کم', style: TextStyle(color: Colors.white, fontSize: 13)),
+              value: stockN,
+              activeColor: AppColors.purple,
+              onChanged: (v) { setState(() => stockN = v); _set('notify_stock', v); },
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class AnnouncementsPage extends StatefulWidget {
+  const AnnouncementsPage({super.key});
+  @override
+  State<AnnouncementsPage> createState() => _AnnouncementsPageState();
+}
+
+class _AnnouncementsPageState extends State<AnnouncementsPage> {
+  bool loading = true;
+  List items = [];
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final res = await context.read<AuthService>().api.dio.get('announcements');
+      if (res.data is Map && res.data['items'] is List) {
+        items = res.data['items'] as List;
+      }
+    } catch (e) {
+      error = e.toString();
+    }
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _create() async {
+    final title = TextEditingController();
+    final body = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
+          TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      try {
+        await context.read<AuthService>().api.dio.post('announcements', data: {
+          'title': title.text,
+          'body': body.text,
+          'places': ['app', 'site'],
+          'active': true,
+        });
+        await _load();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        title: const Text('اطلاعیه‌ها', style: TextStyle(fontSize: 16)),
+        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
+        actions: [IconButton(icon: const Icon(Icons.add), onPressed: _create)],
+      ),
+      body: loading
+          ? const Center(child: MiniLoader())
+          : error != null
+              ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+              : items.isEmpty
+                  ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) {
+                        final it = Map<String, dynamic>.from(items[i] as Map);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: NeonCard(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(children: [
+                                Expanded(child: Text(it['title']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: (it['active'] == true ? AppColors.green : AppColors.textMute).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(it['active'] == true ? 'فعال' : 'غیرفعال', style: TextStyle(color: it['active'] == true ? AppColors.green : AppColors.textMute, fontSize: 11)),
+                                ),
+                              ]),
+                              const SizedBox(height: 6),
+                              Text(it['body']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
     );
   }
 }

@@ -11,6 +11,7 @@ class AppColors {
   static const orange = Color(0xFFFF9F43);
   static const blue = Color(0xFF4C8DFF);
   static const red = Color(0xFFFF4D6D);
+  static const green = Color(0xFF10B981);
   static const text = Colors.white;
   static const textDim = Color(0xFF9A9AB5);
   static const textMute = Color(0xFF6B6B8A);

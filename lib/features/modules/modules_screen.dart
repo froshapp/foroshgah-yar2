@@ -15,8 +15,8 @@ class ModulesScreen extends StatelessWidget {
       _Item(Icons.people_alt_rounded, 'مدیریت مشتریان', 'اطلاعات و ارتباط با مشتریان', AppColors.orange, const CustomersScreen()),
       _Item(Icons.history_rounded, 'سوابق مشتریان', 'تاریخچه خرید و تعاملات', AppColors.blue, const CustomerHistoryScreen()),
       _Item(Icons.account_balance_wallet_rounded, 'حسابداری فروشگاه', 'گزارشات مالی و تراکنش‌ها', AppColors.cyan, const AccountingScreen()),
-      _Item(Icons.chat_bubble_outline_rounded, 'پرسش و پاسخ', 'مدیریت سوالات و نظرات', const Color(0xFF2EE6A6), null),
-      _Item(Icons.support_agent_rounded, 'تیکت و پشتیبانی', 'پاسخگویی به درخواست‌ها', const Color(0xFFE879F9), null),
+      _Item(Icons.chat_bubble_outline_rounded, 'پرسش و پاسخ', 'به‌زودی — نیاز به افزونه نظرات', const Color(0xFF2EE6A6), null),
+      _Item(Icons.support_agent_rounded, 'تیکت و پشتیبانی', 'به‌زودی — نیاز به سیستم تیکت', const Color(0xFFE879F9), null),
     ];
 
     return SafeArea(
