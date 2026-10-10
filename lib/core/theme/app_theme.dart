@@ -21,18 +21,29 @@ class NeonCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? borderColor;
   final VoidCallback? onTap;
-  const NeonCard({super.key, required this.child, this.padding, this.borderColor, this.onTap});
+  const NeonCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.borderColor,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final color = borderColor ?? AppColors.cardBorder;
     final content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.card.withOpacity(0.85),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: (borderColor ?? AppColors.cardBorder).withOpacity(0.7), width: 1),
+        border: Border.all(color: color.withOpacity(0.7), width: 1),
         boxShadow: [
-          BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.08), blurRadius: 16, spread: const Offset(0, 4)),
+          BoxShadow(
+            color: (borderColor ?? AppColors.purple).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: child,
@@ -40,7 +51,11 @@ class NeonCard extends StatelessWidget {
     if (onTap == null) return content;
     return Material(
       color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: content),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: content,
+      ),
     );
   }
 }
@@ -48,12 +63,16 @@ class NeonCard extends StatelessWidget {
 class MiniLoader extends StatelessWidget {
   final double size;
   const MiniLoader({super.key, this.size = 28});
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: const CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.purple),
+      child: const CircularProgressIndicator(
+        strokeWidth: 2.5,
+        color: AppColors.purple,
+      ),
     );
   }
 }
@@ -63,7 +82,13 @@ class GlassHeader extends StatelessWidget {
   final String? subtitle;
   final List<Widget>? actions;
   final bool showStoreIcon;
-  const GlassHeader({super.key, required this.title, this.subtitle, this.actions, this.showStoreIcon = true});
+  const GlassHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actions,
+    this.showStoreIcon = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +103,13 @@ class GlassHeader extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.purple.withOpacity(0.35)),
-        boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 6))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.purple.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -87,20 +118,44 @@ class GlassHeader extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppColors.purple, Color(0xFF5A3FE0)]),
+                gradient: const LinearGradient(
+                  colors: [AppColors.purple, Color(0xFF5A3FE0)],
+                ),
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 10)],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.purple.withOpacity(0.4),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.storefront_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
           if (showStoreIcon) const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (subtitle != null && subtitle!.isNotEmpty)
-                  Text(subtitle!, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      color: AppColors.textDim,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
