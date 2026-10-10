@@ -6,7 +6,8 @@ import '../../core/services/dashboard_service.dart';
 class DashboardScreen extends StatefulWidget {
   final void Function(int index)? onNavigate;
   final VoidCallback? onAddProduct;
-  const DashboardScreen({super.key, this.onNavigate, this.onAddProduct});
+  final VoidCallback? onContacts;
+  const DashboardScreen({super.key, this.onNavigate, this.onAddProduct, this.onContacts});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -60,36 +61,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: dash.loading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)))
-                      : const Icon(Icons.refresh, color: Colors.white54),
-                  onPressed: dash.loading ? null : () => dash.fetchStats(auth),
-                ),
+                if (dash.loading)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF))),
+                  )
+                else
+                  IconButton(icon: const Icon(Icons.refresh, color: Colors.white54), onPressed: () => dash.fetchStats(auth)),
               ],
             ),
             const SizedBox(height: 20),
-            if (dash.loading && (stats['total_orders'] == 0 && stats['total_products'] == 0))
+            if (dash.loading && stats['total_orders'] == 0)
               const Padding(
-                padding: EdgeInsets.all(40),
+                padding: EdgeInsets.all(48),
                 child: Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF)))),
               )
             else ...[
-              Row(
-                children: [
-                  Expanded(child: _stat('فروش امروز', _fmt(stats['today_sales']), Icons.payments_outlined, const Color(0xFF10B981))),
-                  const SizedBox(width: 12),
-                  Expanded(child: _stat('سفارش امروز', _fmt(stats['today_orders']), Icons.receipt_outlined, const Color(0xFF6C63FF))),
-                ],
-              ),
+              Row(children: [
+                Expanded(child: _stat('فروش امروز', _fmt(stats['today_sales']), Icons.payments_outlined, const Color(0xFF10B981))),
+                const SizedBox(width: 12),
+                Expanded(child: _stat('سفارش امروز', _fmt(stats['today_orders']), Icons.receipt_outlined, const Color(0xFF6C63FF))),
+              ]),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: _stat('کل سفارشات', _fmt(stats['total_orders']), Icons.shopping_bag_outlined, const Color(0xFFF59E0B))),
-                  const SizedBox(width: 12),
-                  Expanded(child: _stat('محصولات', _fmt(stats['total_products']), Icons.inventory_2_outlined, const Color(0xFF3B82F6))),
-                ],
-              ),
+              Row(children: [
+                Expanded(child: _stat('کل سفارشات', _fmt(stats['total_orders']), Icons.shopping_bag_outlined, const Color(0xFFF59E0B))),
+                const SizedBox(width: 12),
+                Expanded(child: _stat('محصولات', _fmt(stats['total_products']), Icons.inventory_2_outlined, const Color(0xFF3B82F6))),
+              ]),
               if (dash.error != null) ...[
                 const SizedBox(height: 12),
                 Text(dash.error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12), textAlign: TextAlign.center),
@@ -97,14 +95,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 24),
               const Text('دسترسی سریع', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
-              _quick(Icons.receipt_long, 'مدیریت سفارشات', 'مشاهده آدرس و تغییر وضعیت', const Color(0xFF6C63FF),
-                  () => widget.onNavigate?.call(1)),
+              _quick(Icons.receipt_long, 'مدیریت سفارشات', 'آدرس، اقلام و تغییر وضعیت', const Color(0xFF6C63FF), () => widget.onNavigate?.call(1)),
               const SizedBox(height: 10),
-              _quick(Icons.add_box_outlined, 'افزودن محصول', 'محصول جدید با فرم ساده', const Color(0xFF10B981),
-                  () => widget.onAddProduct?.call()),
+              _quick(Icons.add_box_outlined, 'افزودن محصول', 'نام، قیمت، عکس و توضیحات', const Color(0xFF10B981), () => widget.onAddProduct?.call()),
               const SizedBox(height: 10),
-              _quick(Icons.inventory_2, 'لیست محصولات', 'ویرایش قیمت و موجودی', const Color(0xFF3B82F6),
-                  () => widget.onNavigate?.call(2)),
+              _quick(Icons.phone_in_talk_outlined, 'تماس‌ها', 'تماس و واتساپ مشتریان', const Color(0xFF3B82F6), () => widget.onContacts?.call()),
             ],
           ],
         ),
@@ -116,16 +111,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 12),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(title, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, color: color, size: 22),
+        const SizedBox(height: 12),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      ]),
     );
   }
 
@@ -138,27 +130,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    Text(sub, style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_left, color: Colors.white24),
-            ],
-          ),
+          child: Row(children: [
+            Container(
+              width: 42, height: 42,
+              decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(sub, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            ])),
+            const Icon(Icons.chevron_left, color: Colors.white24),
+          ]),
         ),
       ),
     );

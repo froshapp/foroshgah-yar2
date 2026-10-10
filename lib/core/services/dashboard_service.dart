@@ -30,6 +30,30 @@ class DashboardService extends ChangeNotifier {
     return double.tryParse(v.toString().replaceAll(',', '').replaceAll('٬', '')) ?? 0;
   }
 
+  List _extractList(dynamic data) {
+    if (data is List) return data;
+    if (data is Map) {
+      if (data['orders'] is List) return data['orders'] as List;
+      if (data['products'] is List) return data['products'] as List;
+      if (data['data'] is List) return data['data'] as List;
+      if (data['items'] is List) return data['items'] as List;
+    }
+    return [];
+  }
+
+  int _totalFrom(Response res, List list) {
+    final h = res.headers.value('x-wp-total') ??
+        res.headers.value('X-WP-Total');
+    if (h != null) return _toInt(h);
+    if (res.data is Map) {
+      final m = res.data as Map;
+      for (final k in ['total', 'total_orders', 'total_products', 'found', 'count']) {
+        if (m[k] != null) return _toInt(m[k]);
+      }
+    }
+    return list.length;
+  }
+
   Future<void> fetchStats(AuthService auth) async {
     _loading = true;
     _error = null;
@@ -40,12 +64,11 @@ class DashboardService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      // 1) try dedicated dashboard endpoint
+      // dashboard endpoint
       try {
         final res = await auth.api.dio.get('dashboard');
-        final data = res.data;
-        if (data is Map) {
-          final raw = Map<String, dynamic>.from(data);
+        if (res.data is Map) {
+          final raw = Map<String, dynamic>.from(res.data as Map);
           if (raw['stats'] is Map) raw.addAll(Map<String, dynamic>.from(raw['stats'] as Map));
           if (raw['data'] is Map) raw.addAll(Map<String, dynamic>.from(raw['data'] as Map));
           if (raw['today'] is Map) {
@@ -53,10 +76,10 @@ class DashboardService extends ChangeNotifier {
             raw['today_sales'] = t['sales'] ?? t['total'] ?? t['revenue'];
             raw['today_orders'] = t['orders'] ?? t['count'];
           }
-          final ts = _toInt(raw['today_sales'] ?? raw['sales_today'] ?? raw['today_revenue']);
+          final ts = _toInt(raw['today_sales'] ?? raw['sales_today']);
           final to = _toInt(raw['today_orders'] ?? raw['orders_today']);
-          final totO = _toInt(raw['total_orders'] ?? raw['orders_count'] ?? raw['order_count']);
-          final totP = _toInt(raw['total_products'] ?? raw['products_count'] ?? raw['product_count']);
+          final totO = _toInt(raw['total_orders'] ?? raw['orders_count']);
+          final totP = _toInt(raw['total_products'] ?? raw['products_count']);
           if (ts + to + totO + totP > 0) {
             _stats = {
               'today_sales': ts,
@@ -68,59 +91,65 @@ class DashboardService extends ChangeNotifier {
         }
       } catch (_) {}
 
-      // 2) fallback: compute from orders + products
-      if (_stats['total_orders'] == 0 || _stats['today_orders'] == 0 || _stats['today_sales'] == 0) {
-        try {
-          final oRes = await auth.api.dio.get('orders', queryParameters: {'page': 1, 'per_page': 50});
-          List list = [];
-          if (oRes.data is List) {
-            list = oRes.data as List;
-          } else if (oRes.data is Map) {
-            list = (oRes.data['orders'] ?? oRes.data['data'] ?? []) as List? ?? [];
-          }
-          final headerTotal = oRes.headers.value('x-wp-total');
-          if (headerTotal != null) {
-            _stats['total_orders'] = _toInt(headerTotal);
-          } else if (list.isNotEmpty && _stats['total_orders'] == 0) {
-            _stats['total_orders'] = list.length;
-          }
+      // orders: get total + today from several pages
+      try {
+        final oRes = await auth.api.dio.get('orders', queryParameters: {'page': 1, 'per_page': 100});
+        final list = _extractList(oRes.data);
+        final total = _totalFrom(oRes, list);
+        if (total > (_stats['total_orders'] as int)) {
+          _stats['total_orders'] = total;
+        }
 
-          final now = DateTime.now();
-          int todayCount = 0;
-          double todaySales = 0;
-          for (final item in list) {
-            if (item is! Map) continue;
-            final m = Map<String, dynamic>.from(item);
-            final dateStr = m['date_created']?.toString() ?? m['date']?.toString() ?? '';
-            DateTime? d;
-            try {
-              d = DateTime.tryParse(dateStr);
-            } catch (_) {}
-            if (d != null && d.year == now.year && d.month == now.month && d.day == now.day) {
-              todayCount++;
+        // if plugin doesn't send total header, try page 2 count estimate
+        if (total <= list.length && list.length >= 100) {
+          try {
+            final o2 = await auth.api.dio.get('orders', queryParameters: {'page': 2, 'per_page': 100});
+            final list2 = _extractList(o2.data);
+            final t2 = _totalFrom(o2, list2);
+            if (t2 > (_stats['total_orders'] as int)) {
+              _stats['total_orders'] = t2;
+            } else {
+              _stats['total_orders'] = list.length + list2.length;
+            }
+            list.addAll(list2);
+          } catch (_) {}
+        }
+
+        final now = DateTime.now();
+        int todayCount = 0;
+        double todaySales = 0;
+        for (final item in list) {
+          if (item is! Map) continue;
+          final m = Map<String, dynamic>.from(item);
+          final dateStr = m['date_created']?.toString() ?? m['date']?.toString() ?? '';
+          final d = DateTime.tryParse(dateStr);
+          if (d != null && d.year == now.year && d.month == now.month && d.day == now.day) {
+            todayCount++;
+            final st = m['status']?.toString() ?? '';
+            if (st != 'cancelled' && st != 'refunded' && st != 'failed') {
               todaySales += _toDouble(m['total']);
             }
           }
-          if (todayCount > 0 || _stats['today_orders'] == 0) {
-            _stats['today_orders'] = todayCount;
-            _stats['today_sales'] = todaySales.round();
-          }
-        } catch (_) {}
-      }
+        }
+        _stats['today_orders'] = todayCount;
+        _stats['today_sales'] = todaySales.round();
+      } catch (_) {}
 
-      if (_stats['total_products'] == 0) {
-        try {
-          final pRes = await auth.api.dio.get('products', queryParameters: {'page': 1, 'per_page': 1});
-          final headerTotal = pRes.headers.value('x-wp-total');
-          if (headerTotal != null) {
-            _stats['total_products'] = _toInt(headerTotal);
-          } else if (pRes.data is Map && pRes.data['total'] != null) {
-            _stats['total_products'] = _toInt(pRes.data['total']);
-          } else if (pRes.data is List) {
-            _stats['total_products'] = (pRes.data as List).length;
-          }
-        } catch (_) {}
-      }
+      // products total
+      try {
+        final pRes = await auth.api.dio.get('products', queryParameters: {'page': 1, 'per_page': 1});
+        final list = _extractList(pRes.data);
+        final total = _totalFrom(pRes, list);
+        if (total > 0) {
+          _stats['total_products'] = total;
+        } else {
+          // try larger page
+          final p2 = await auth.api.dio.get('products', queryParameters: {'page': 1, 'per_page': 100});
+          final list2 = _extractList(p2.data);
+          final t2 = _totalFrom(p2, list2);
+          _stats['total_products'] = t2 > 0 ? t2 : list2.length;
+        }
+      } catch (_) {}
     } on DioException catch (e) {
       _error = e.response?.data?['message']?.toString() ?? e.message;
     } catch (e) {

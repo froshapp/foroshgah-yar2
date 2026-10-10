@@ -4,19 +4,54 @@ import 'auth_service.dart';
 
 class ProductsService extends ChangeNotifier {
   List<Map<String, dynamic>> _products = [];
+  List<Map<String, dynamic>> _categories = [];
   bool _loading = false;
   String? _error;
   int _page = 1;
   bool _hasMore = true;
   String _search = '';
+  int? _categoryId;
 
   List<Map<String, dynamic>> get products => _products;
+  List<Map<String, dynamic>> get categories => _categories;
   bool get loading => _loading;
   String? get error => _error;
   bool get hasMore => _hasMore;
+  int? get categoryId => _categoryId;
 
-  Future<void> fetchProducts(AuthService auth, {bool refresh = false, String? search}) async {
+  Future<void> fetchCategories(AuthService auth) async {
+    try {
+      try {
+        await auth.api.ensureReachable();
+      } catch (_) {}
+      final res = await auth.api.dio.get('products/categories', queryParameters: {'per_page': 100});
+      List list = [];
+      if (res.data is List) {
+        list = res.data as List;
+      } else if (res.data is Map && res.data['categories'] is List) {
+        list = res.data['categories'] as List;
+      } else if (res.data is Map && res.data['data'] is List) {
+        list = res.data['data'] as List;
+      }
+      _categories = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      notifyListeners();
+    } catch (_) {
+      // try WC path via plugin alias
+      try {
+        final res = await auth.api.dio.get('categories', queryParameters: {'per_page': 100});
+        if (res.data is List) {
+          _categories = (res.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          notifyListeners();
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> fetchProducts(AuthService auth, {bool refresh = false, String? search, int? categoryId}) async {
     if (search != null) _search = search;
+    if (categoryId != null) {
+      _categoryId = categoryId == 0 ? null : categoryId;
+    }
     if (refresh) {
       _page = 1;
       _hasMore = true;
@@ -35,6 +70,7 @@ class ProductsService extends ChangeNotifier {
 
       final params = <String, dynamic>{'page': _page, 'per_page': 20};
       if (_search.isNotEmpty) params['search'] = _search;
+      if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
 
       final res = await auth.api.dio.get('products', queryParameters: params);
 
@@ -65,6 +101,10 @@ class ProductsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearCategory() {
+    _categoryId = null;
+  }
+
   Future<bool> updateProduct(
     AuthService auth,
     int id, {
@@ -89,7 +129,6 @@ class ProductsService extends ChangeNotifier {
 
       final res = await auth.api.dio.put('products/$id', data: body);
       if (res.statusCode == 200 || res.statusCode == 201) {
-        // update local list
         final idx = _products.indexWhere((p) => p['id'].toString() == id.toString());
         if (idx >= 0) {
           if (price != null) _products[idx]['price'] = price;
@@ -106,17 +145,10 @@ class ProductsService extends ChangeNotifier {
     }
   }
 
-  Future<int> bulkUpdatePrice(AuthService auth, List<int> ids, {required String price, bool percent = false}) async {
+  Future<int> bulkUpdatePrice(AuthService auth, List<int> ids, {required String price}) async {
     int ok = 0;
     for (final id in ids) {
-      String newPrice = price;
-      if (percent) {
-        final p = _products.firstWhere((e) => e['id'].toString() == id.toString(), orElse: () => {});
-        final old = double.tryParse(p['price']?.toString() ?? '0') ?? 0;
-        final pct = double.tryParse(price) ?? 0;
-        newPrice = (old * (1 + pct / 100)).round().toString();
-      }
-      if (await updateProduct(auth, id, price: newPrice, regularPrice: newPrice)) ok++;
+      if (await updateProduct(auth, id, price: price, regularPrice: price)) ok++;
     }
     return ok;
   }

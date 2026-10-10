@@ -17,9 +17,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthService>();
-      context.read<ProductsService>().fetchProducts(auth, refresh: true);
+      final svc = context.read<ProductsService>();
+      await svc.fetchCategories(auth);
+      await svc.fetchProducts(auth, refresh: true);
     });
   }
 
@@ -238,6 +240,51 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          if (svc.categories.isNotEmpty)
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: FilterChip(
+                      label: const Text('همه', style: TextStyle(fontSize: 12)),
+                      selected: svc.categoryId == null,
+                      selectedColor: const Color(0xFF6C63FF).withOpacity(0.3),
+                      backgroundColor: const Color(0xFF252640),
+                      labelStyle: TextStyle(color: svc.categoryId == null ? Colors.white : Colors.white54),
+                      onSelected: (_) {
+                        svc.clearCategory();
+                        svc.fetchProducts(auth, refresh: true, categoryId: 0);
+                        // force null category
+                        svc.fetchProducts(auth, refresh: true);
+                      },
+                    ),
+                  ),
+                  ...svc.categories.map((c) {
+                    final id = int.tryParse(c['id']?.toString() ?? '') ?? 0;
+                    final name = c['name']?.toString() ?? '';
+                    final selected = svc.categoryId == id;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: FilterChip(
+                        label: Text(name, style: const TextStyle(fontSize: 12)),
+                        selected: selected,
+                        selectedColor: const Color(0xFF6C63FF).withOpacity(0.3),
+                        backgroundColor: const Color(0xFF252640),
+                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.white54),
+                        onSelected: (_) {
+                          svc.fetchProducts(auth, refresh: true, categoryId: id);
+                        },
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          if (svc.categories.isNotEmpty) const SizedBox(height: 8),
           Expanded(
             child: svc.loading && svc.products.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
