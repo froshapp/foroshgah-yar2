@@ -122,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   builder: (ctx) => AlertDialog(
                     backgroundColor: AppColors.card,
                     title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-                    content: const Text('نسخه ۱.۴\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
+                    content: const Text('نسخه ۱.۵\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
                     actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
                   ),
                 );
@@ -131,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Icon(Icons.info_outline, color: AppColors.textDim, size: 18),
                 SizedBox(width: 8),
                 Expanded(child: Text('درباره فروشگاه‌یار', style: TextStyle(color: Colors.white))),
-                Text('۱.۴', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
+                Text('۱.۵', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
                 Icon(Icons.chevron_left, color: AppColors.textMute),
               ]),
             ),
@@ -173,6 +173,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+
+  Widget _colorRow(String label, Color c) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Container(width: 14, height: 14, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        const SizedBox(width: 10),
+        Text(label, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+      ]),
     );
   }
 
