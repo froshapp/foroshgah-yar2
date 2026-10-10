@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/orders_service.dart';
+import 'order_detail_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -92,97 +93,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Future<void> _openOrder(Map<String, dynamic> order) async {
-    final auth = context.read<AuthService>();
-    final svc = context.read<OrdersService>();
-    final id = order['id'];
-    String status = order['status']?.toString() ?? 'pending';
-
-    final statuses = ['pending', 'processing', 'on-hold', 'completed', 'cancelled'];
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF252640),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModal) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('سفارش #${order['id'] ?? order['number']}',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(_customerName(order), style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  if (_customerPhone(order).isNotEmpty)
-                    Text(_customerPhone(order),
-                        style: const TextStyle(color: Colors.white38, fontSize: 13), textDirection: TextDirection.ltr),
-                  const SizedBox(height: 8),
-                  Text('${_fmtMoney(order['total'])} تومان',
-                      style: const TextStyle(color: Color(0xFF10B981), fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 16),
-                  const Text('تغییر وضعیت', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: statuses.map((s) {
-                      final selected = status == s;
-                      return ChoiceChip(
-                        label: Text(_statusLabel(s),
-                            style: TextStyle(
-                              color: selected ? Colors.white : Colors.white70,
-                              fontSize: 12,
-                            )),
-                        selected: selected,
-                        selectedColor: _statusColor(s),
-                        backgroundColor: const Color(0xFF1A1B2E),
-                        onSelected: (_) => setModal(() => status = s),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final ok = await svc.updateStatus(auth, int.tryParse(id.toString()) ?? 0, status);
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(ok ? 'وضعیت به‌روز شد' : 'خطا در به‌روزرسانی')),
-                          );
-                          if (ok) svc.fetchOrders(auth, refresh: true);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('ذخیره وضعیت'),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order)),
     );
+    if (mounted) {
+      final auth = context.read<AuthService>();
+      context.read<OrdersService>().fetchOrders(auth, refresh: true);
+    }
   }
 
   @override

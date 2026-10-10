@@ -5,7 +5,8 @@ import '../../core/services/dashboard_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final void Function(int index)? onNavigate;
-  const DashboardScreen({super.key, this.onNavigate});
+  final VoidCallback? onAddProduct;
+  const DashboardScreen({super.key, this.onNavigate, this.onAddProduct});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -16,8 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthService>();
-      context.read<DashboardService>().fetchStats(auth);
+      context.read<DashboardService>().fetchStats(context.read<AuthService>());
     });
   }
 
@@ -61,67 +61,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white54),
-                  onPressed: () => dash.fetchStats(auth),
+                  icon: dash.loading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)))
+                      : const Icon(Icons.refresh, color: Colors.white54),
+                  onPressed: dash.loading ? null : () => dash.fetchStats(auth),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            if (dash.loading && stats.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(40),
-                  child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
-                ),
+            if (dash.loading && (stats['total_orders'] == 0 && stats['total_products'] == 0))
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF)))),
               )
             else ...[
               Row(
                 children: [
-                  Expanded(
-                      child: _statCard('فروش امروز', _fmt(stats['today_sales']), Icons.payments_outlined,
-                          const Color(0xFF10B981))),
+                  Expanded(child: _stat('فروش امروز', _fmt(stats['today_sales']), Icons.payments_outlined, const Color(0xFF10B981))),
                   const SizedBox(width: 12),
-                  Expanded(
-                      child: _statCard('سفارش امروز', _fmt(stats['today_orders']), Icons.receipt_outlined,
-                          const Color(0xFF6C63FF))),
+                  Expanded(child: _stat('سفارش امروز', _fmt(stats['today_orders']), Icons.receipt_outlined, const Color(0xFF6C63FF))),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(
-                      child: _statCard('کل سفارشات', _fmt(stats['total_orders']), Icons.shopping_bag_outlined,
-                          const Color(0xFFF59E0B))),
+                  Expanded(child: _stat('کل سفارشات', _fmt(stats['total_orders']), Icons.shopping_bag_outlined, const Color(0xFFF59E0B))),
                   const SizedBox(width: 12),
-                  Expanded(
-                      child: _statCard('محصولات', _fmt(stats['total_products']), Icons.inventory_2_outlined,
-                          const Color(0xFF3B82F6))),
+                  Expanded(child: _stat('محصولات', _fmt(stats['total_products']), Icons.inventory_2_outlined, const Color(0xFF3B82F6))),
                 ],
               ),
               if (dash.error != null) ...[
                 const SizedBox(height: 12),
-                Text(dash.error!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12), textAlign: TextAlign.center),
+                Text(dash.error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12), textAlign: TextAlign.center),
               ],
               const SizedBox(height: 24),
-              const Text('دسترسی سریع',
-                  style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+              const Text('دسترسی سریع', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
-              _quick(
-                Icons.receipt_long,
-                'مدیریت سفارشات',
-                'مشاهده و تغییر وضعیت',
-                const Color(0xFF6C63FF),
-                () => widget.onNavigate?.call(1),
-              ),
+              _quick(Icons.receipt_long, 'مدیریت سفارشات', 'مشاهده آدرس و تغییر وضعیت', const Color(0xFF6C63FF),
+                  () => widget.onNavigate?.call(1)),
               const SizedBox(height: 10),
-              _quick(
-                Icons.inventory_2,
-                'مدیریت محصولات',
-                'افزودن و ویرایش کالا',
-                const Color(0xFF10B981),
-                () => widget.onNavigate?.call(2),
-              ),
+              _quick(Icons.add_box_outlined, 'افزودن محصول', 'محصول جدید با فرم ساده', const Color(0xFF10B981),
+                  () => widget.onAddProduct?.call()),
+              const SizedBox(height: 10),
+              _quick(Icons.inventory_2, 'لیست محصولات', 'ویرایش قیمت و موجودی', const Color(0xFF3B82F6),
+                  () => widget.onNavigate?.call(2)),
             ],
           ],
         ),
@@ -129,7 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statCard(String title, String value, IconData icon, Color color) {
+  Widget _stat(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(16)),

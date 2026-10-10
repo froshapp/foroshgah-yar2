@@ -38,11 +38,11 @@ class OrdersService extends ChangeNotifier {
 
       List list = [];
       if (res.data is List) {
-        list = res.data;
+        list = res.data as List;
       } else if (res.data is Map && res.data['orders'] is List) {
-        list = res.data['orders'];
+        list = res.data['orders'] as List;
       } else if (res.data is Map && res.data['data'] is List) {
-        list = res.data['data'];
+        list = res.data['data'] as List;
       }
 
       final items = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -63,10 +63,37 @@ class OrdersService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>?> fetchOrder(AuthService auth, int id) async {
+    try {
+      try {
+        await auth.api.ensureReachable();
+      } catch (_) {}
+      final res = await auth.api.dio.get('orders/$id');
+      if (res.data is Map) return Map<String, dynamic>.from(res.data as Map);
+    } catch (_) {}
+    // fallback from list
+    try {
+      return _orders.firstWhere((o) => o['id'].toString() == id.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> updateStatus(AuthService auth, int orderId, String status) async {
     try {
+      try {
+        await auth.api.ensureReachable();
+      } catch (_) {}
       final res = await auth.api.dio.put('orders/$orderId', data: {'status': status});
-      return res.statusCode == 200;
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final idx = _orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+        if (idx >= 0) {
+          _orders[idx]['status'] = status;
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
     } catch (_) {
       return false;
     }
