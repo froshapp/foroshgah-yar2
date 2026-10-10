@@ -17,6 +17,11 @@ class AuthService extends ChangeNotifier {
   String? get error => _error;
   Map<String, dynamic>? get user => _user;
   Map<String, dynamic>? get site => _site;
+  String get siteName {
+    final n = _site?['name']?.toString();
+    if (n != null && n.isNotEmpty) return n;
+    return _user?['display_name']?.toString() ?? '';
+  }
   ApiClient get api => _api;
 
   Future<String?> getSavedSiteUrl() async {

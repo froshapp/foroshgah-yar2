@@ -20,7 +20,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           GlassHeader(
             title: 'تنظیمات',
-            subtitle: auth.siteName.isNotEmpty ? auth.siteName : 'فروشگاه‌یار',
+            subtitle: (auth.site?['name']?.toString().isNotEmpty == true)
+                ? auth.site!['name'].toString()
+                : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
           ),
           const SizedBox(height: 12),
           _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
