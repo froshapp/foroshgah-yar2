@@ -346,13 +346,39 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
           ),
         ),
-        if (_selectMode && _selected.isNotEmpty)
+        if (_selectMode)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(children: [
-              Text('${_selected.length} انتخاب', style: const TextStyle(color: AppColors.textDim)),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    if (_selected.length == svc.products.length) {
+                      _selected.clear();
+                    } else {
+                      for (final p in svc.products) {
+                        final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
+                        if (id > 0) _selected.add(id);
+                      }
+                    }
+                  });
+                },
+                child: Text(_selected.length == svc.products.length && svc.products.isNotEmpty ? 'لغو همه' : 'انتخاب همه'),
+              ),
+              Text('${_selected.length} انتخاب', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
               const Spacer(),
-              TextButton(onPressed: _bulkPrice, child: const Text('تغییر قیمت گروهی')),
+              if (_selected.isNotEmpty)
+                ElevatedButton.icon(
+                  onPressed: _bulkPrice,
+                  icon: const Icon(Icons.price_change_outlined, size: 18),
+                  label: const Text('قیمت گروهی', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
             ]),
           ),
         const SizedBox(height: 8),

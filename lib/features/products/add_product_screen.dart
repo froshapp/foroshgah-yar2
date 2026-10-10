@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shamsi_date/shamsi_date.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
@@ -27,6 +28,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _height = TextEditingController();
   final _saleFrom = TextEditingController();
   final _saleTo = TextEditingController();
+  final _attrs = TextEditingController(); // ویژگی‌ها اختیاری
   String _status = 'publish';
   List<Map<String, dynamic>> _brands = [];
   List<Map<String, dynamic>> _shipping = [];
@@ -71,6 +73,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _height.dispose();
     _saleFrom.dispose();
     _saleTo.dispose();
+    _attrs.dispose();
     super.dispose();
   }
 
@@ -136,6 +139,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_saleTo.text.trim().isNotEmpty) body['date_on_sale_to'] = _saleTo.text.trim();
       if (_brandName != null) body['brand'] = _brandName;
       if (_shippingMethod != null) body['shipping_class'] = _shippingMethod;
+      if (_attrs.text.trim().isNotEmpty) body['attributes_text'] = _attrs.text.trim();
 
       final res = await auth.api.dio.post('products', data: body);
       if (!mounted) return;
@@ -274,13 +278,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ])),
                   ]),
                   const SizedBox(height: 16),
-                  _label('شروع فروش ویژه (YYYY-MM-DD)'),
+                  _label('شروع فروش ویژه (شمسی)'),
                   const SizedBox(height: 8),
-                  _field(_saleFrom, 'مثلاً 2026-10-10'),
+                  _dateField(_saleFrom, 'انتخاب تاریخ شروع'),
                   const SizedBox(height: 12),
-                  _label('پایان فروش ویژه (YYYY-MM-DD)'),
+                  _label('پایان فروش ویژه (شمسی)'),
                   const SizedBox(height: 8),
-                  _field(_saleTo, 'مثلاً 2026-10-20'),
+                  _dateField(_saleTo, 'انتخاب تاریخ پایان'),
                   const SizedBox(height: 16),
                   _label('برند'),
                   const SizedBox(height: 8),
@@ -320,6 +324,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         child: DropdownButton<int?>(
                           isExpanded: true,
                           dropdownColor: const Color(0xFF252640),
+                          menuMaxHeight: 220,
                           value: _categoryId,
                           hint: const Text('انتخاب دسته', style: TextStyle(color: Colors.white54)),
                           items: [
@@ -364,6 +369,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           isExpanded: true,
                           dropdownColor: const Color(0xFF252640),
                           value: _shippingMethod,
+                          menuMaxHeight: 220,
                           hint: const Text('انتخاب روش ارسال', style: TextStyle(color: Colors.white54)),
                           items: [
                             const DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض', style: TextStyle(color: Colors.white70))),
@@ -376,6 +382,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ),
                       ),
                     ),
+                  const SizedBox(height: 16),
+                  _label('ویژگی محصول (اختیاری)'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _attrs,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'مثال: رنگ: آبی، جنس: نخ پنبه',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      filled: true,
+                      fillColor: const Color(0xFF252640),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
                 ],
               ],
             ),

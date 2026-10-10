@@ -47,7 +47,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final auth = context.watch<AuthService>();
     final dash = context.watch<DashboardService>();
     final siteName = auth.site?['name']?.toString() ?? 'فروشگاه من';
-    final manager = auth.user?['display_name']?.toString() ?? 'مدیریت فروشگاه';
+    final manager = auth.user?['display_name']?.toString() ?? '';
     final stats = dash.stats;
 
     return SafeArea(
@@ -60,18 +60,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             GlassHeader(
               title: siteName,
-              subtitle: manager,
+              subtitle: manager.isEmpty ? null : manager,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
+                  tooltip: 'سفارشات',
+                  onPressed: () => widget.onNavigate?.call(1),
+                ),
                 if (dash.loading)
-                  const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 20))
-                else
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
-                    onPressed: () {},
-                  ),
+                  const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18)),
               ],
             ),
-            // date chip
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: NeonCard(
@@ -80,7 +79,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Icon(Icons.calendar_today_rounded, color: AppColors.purpleGlow, size: 18),
                   const SizedBox(width: 10),
                   Expanded(child: Text(_jalali(), style: const TextStyle(color: AppColors.textDim, fontSize: 13))),
-                  const Icon(Icons.chevron_left, color: AppColors.textMute, size: 18),
                 ]),
               ),
             ),
@@ -91,25 +89,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(children: [
-                  Expanded(child: _statCard('فروش امروز', _fmt(stats['today_sales']), Icons.trending_up_rounded, AppColors.cyan)),
+                  Expanded(child: _stat('فروش امروز', _fmt(stats['today_sales']), Icons.trending_up_rounded, AppColors.cyan)),
                   const SizedBox(width: 10),
-                  Expanded(child: _statCard('سفارش امروز', _fmt(stats['today_orders']), Icons.shopping_cart_outlined, AppColors.purple)),
+                  Expanded(child: _stat('سفارش امروز', _fmt(stats['today_orders']), Icons.shopping_cart_outlined, AppColors.purple)),
                 ]),
               ),
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(children: [
-                  Expanded(child: _statCard('کل سفارشات', _fmt(stats['total_orders']), Icons.groups_outlined, AppColors.orange)),
+                  Expanded(child: _stat('کل سفارشات', _fmt(stats['total_orders']), Icons.groups_outlined, AppColors.orange)),
                   const SizedBox(width: 10),
-                  Expanded(child: _statCard('موجودی کالا', _fmt(stats['total_products']), Icons.inventory_2_outlined, AppColors.blue)),
+                  Expanded(child: _stat('موجودی کالا', _fmt(stats['total_products']), Icons.inventory_2_outlined, AppColors.blue)),
                 ]),
               ),
-              if (dash.error != null)
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(dash.error!, style: const TextStyle(color: AppColors.red, fontSize: 11), textAlign: TextAlign.center),
-                ),
               const SizedBox(height: 20),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -123,11 +116,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(children: [
-                  Expanded(child: _quickTile(Icons.receipt_long_rounded, 'سفارشات', AppColors.purple, () => widget.onNavigate?.call(1))),
+                  Expanded(child: _quick(Icons.receipt_long_rounded, 'سفارشات', AppColors.purple, () => widget.onNavigate?.call(1))),
                   const SizedBox(width: 10),
-                  Expanded(child: _quickTile(Icons.add_circle_outline, 'افزودن محصول', AppColors.cyan, () => widget.onAddProduct?.call())),
+                  Expanded(child: _quick(Icons.add_circle_rounded, 'افزودن محصول', AppColors.cyan, () => widget.onAddProduct?.call())),
                   const SizedBox(width: 10),
-                  Expanded(child: _quickTile(Icons.phone_in_talk_rounded, 'تماس‌ها', AppColors.blue, () => widget.onContacts?.call())),
+                  Expanded(child: _quick(Icons.phone_in_talk_rounded, 'تماس‌ها', AppColors.blue, () => widget.onContacts?.call())),
                 ]),
               ),
             ],
@@ -137,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statCard(String title, String value, IconData icon, Color color) {
+  Widget _stat(String title, String value, IconData icon, Color color) {
     return NeonCard(
       borderColor: color.withOpacity(0.4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -155,20 +148,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _quickTile(IconData icon, String title, Color color, VoidCallback onTap) {
+  Widget _quick(IconData icon, String title, Color color, VoidCallback onTap) {
     return NeonCard(
       onTap: onTap,
       borderColor: color.withOpacity(0.3),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Column(children: [
-        Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
-          child: Icon(icon, color: color, size: 22),
-        ),
-        const SizedBox(height: 8),
-        Text(title, style: const TextStyle(color: Colors.white, fontSize: 11), textAlign: TextAlign.center),
-      ]),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      child: SizedBox(
+        height: 84,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 11), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ]),
+      ),
     );
   }
 }

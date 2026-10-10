@@ -33,40 +33,70 @@ class OrdersService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final res = await auth.api.dio.get('orders', queryParameters: {
-        'page': _page,
-        'per_page': 20,
-        'status': 'any',
-      });
+      // try with all statuses first, then without status
+      Response? res;
+      DioException? lastErr;
+      for (final params in [
+        {'page': _page, 'per_page': 20, 'status': 'any'},
+        {'page': _page, 'per_page': 20},
+      ]) {
+        try {
+          res = await auth.api.dio.get('orders', queryParameters: params);
+          break;
+        } on DioException catch (e) {
+          lastErr = e;
+        }
+      }
+      if (res == null) throw lastErr ?? Exception('no response');
 
       List list = [];
       if (res.data is Map) {
-        final m = res.data as Map;
-        if (m['orders'] is List) list = m['orders'] as List;
-        else if (m['data'] is List) list = m['data'] as List;
-        if (m['pagination'] is Map) {
-          _total = int.tryParse(m['pagination']['total']?.toString() ?? '') ?? _total;
+        final m = Map<String, dynamic>.from(res.data as Map);
+        if (m['orders'] is List) {
+          list = m['orders'] as List;
+        } else if (m['data'] is List) {
+          list = m['data'] as List;
+        } else if (m['results'] is List) {
+          list = m['results'] as List;
+        }
+        // pagination
+        final pag = m['pagination'];
+        if (pag is Map) {
+          _total = int.tryParse(pag['total']?.toString() ?? '') ?? _total;
+        } else if (m['total'] != null) {
+          _total = int.tryParse(m['total'].toString()) ?? _total;
+        }
+        // if success false
+        if (m['success'] == false && list.isEmpty) {
+          _error = m['message']?.toString() ?? 'خطا در دریافت سفارشات';
         }
       } else if (res.data is List) {
         list = res.data as List;
       }
 
-      final items = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final items = <Map<String, dynamic>>[];
+      for (final e in list) {
+        if (e is Map) items.add(Map<String, dynamic>.from(e));
+      }
+
       if (refresh) {
         _orders = items;
       } else {
         _orders.addAll(items);
       }
       _hasMore = items.length >= 20;
-      _page++;
+      if (items.isNotEmpty) _page++;
+      if (items.isEmpty && _orders.isEmpty && _error == null) {
+        _error = null; // empty is valid
+      }
     } on DioException catch (e) {
       final body = e.response?.data;
       if (body is Map && body['message'] != null) {
         _error = body['message'].toString();
       } else if (body is Map && body['code'] != null) {
-        _error = body['code'].toString();
+        _error = '${body['code']}: ${body['message'] ?? ''}';
       } else {
-        _error = 'خطا: ${e.response?.statusCode ?? e.message}';
+        _error = 'خطای ارتباط: ${e.response?.statusCode ?? e.message}';
       }
     } catch (e) {
       _error = e.toString();
@@ -88,29 +118,18 @@ class OrdersService extends ChangeNotifier {
         if (m['id'] != null) return Map<String, dynamic>.from(m);
       }
     } catch (_) {}
-    try {
-      return _orders.firstWhere((o) => o['id'].toString() == id.toString());
-    } catch (_) {
-      return null;
-    }
+    return null;
   }
 
-  Future<bool> updateStatus(AuthService auth, int orderId, String status) async {
+  Future<bool> updateStatus(AuthService auth, int id, String status) async {
     try {
-      try {
-        await auth.api.ensureReachable();
-      } catch (_) {}
-      // plugin expects status without wc- prefix sometimes
-      final res = await auth.api.dio.put('orders/$orderId', data: {'status': status});
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        final idx = _orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-        if (idx >= 0) {
-          _orders[idx]['status'] = status;
-          notifyListeners();
-        }
-        return true;
+      await auth.api.dio.post('orders/$id', data: {'status': status});
+      final idx = _orders.indexWhere((o) => o['id'].toString() == id.toString());
+      if (idx >= 0) {
+        _orders[idx] = {..._orders[idx], 'status': status};
+        notifyListeners();
       }
-      return false;
+      return true;
     } catch (_) {
       return false;
     }
