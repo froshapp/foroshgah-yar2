@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/dashboard_service.dart';
+import '../../core/theme/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   final void Function(int index)? onNavigate;
@@ -35,80 +36,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return buf.toString();
   }
 
-  String _jalaliToday() {
+  String _jalali() {
     final j = Jalali.now();
     const months = ['', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-    const days = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
-    // shamsi_date weekDay: 1=Sat ... 7=Fri in some versions; use DateTime for weekday
-    final wd = DateTime.now().weekday; // 1=Mon..7=Sun
-    final map = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 0}; // to index of days starting Sat
-    // simpler: just date
-    return '${j.day} ${months[j.month]} ${j.year}';
+    return 'امروز - ${j.day} ${months[j.month]} ${j.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final dash = context.watch<DashboardService>();
-    final siteName = auth.site?['name']?.toString() ?? 'فروشگاه';
-    final manager = auth.user?['display_name']?.toString() ?? '';
+    final siteName = auth.site?['name']?.toString() ?? 'فروشگاه من';
+    final manager = auth.user?['display_name']?.toString() ?? 'مدیریت فروشگاه';
     final stats = dash.stats;
 
     return SafeArea(
       child: RefreshIndicator(
-        color: const Color(0xFF6C63FF),
+        color: AppColors.purple,
+        backgroundColor: AppColors.card,
         onRefresh: () => dash.fetchStats(auth),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
-            // header
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(siteName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(manager.isNotEmpty ? 'مدیر: $manager' : '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                    const SizedBox(height: 2),
-                    Text(_jalaliToday(), style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
-                  ]),
-                ),
+            GlassHeader(
+              title: siteName,
+              subtitle: manager,
+              actions: [
                 if (dash.loading)
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF))),
-                  )
+                  const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 20))
                 else
-                  IconButton(icon: const Icon(Icons.refresh, color: Colors.white38, size: 22), onPressed: () => dash.fetchStats(auth)),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
+                    onPressed: () {},
+                  ),
               ],
             ),
-            const SizedBox(height: 18),
-            if (dash.loading && stats['total_orders'] == 0)
-              const Padding(
-                padding: EdgeInsets.all(40),
-                child: Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF)))),
-              )
+            // date chip
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: NeonCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  const Icon(Icons.calendar_today_rounded, color: AppColors.purpleGlow, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(_jalali(), style: const TextStyle(color: AppColors.textDim, fontSize: 13))),
+                  const Icon(Icons.chevron_left, color: AppColors.textMute, size: 18),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (dash.loading && (stats['total_orders'] == 0 && stats['total_products'] == 0))
+              const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))
             else ...[
-              Row(children: [
-                Expanded(child: _stat('فروش امروز', _fmt(stats['today_sales']), const Color(0xFF10B981))),
-                const SizedBox(width: 10),
-                Expanded(child: _stat('سفارش امروز', _fmt(stats['today_orders']), const Color(0xFF6C63FF))),
-              ]),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Expanded(child: _statCard('فروش امروز', _fmt(stats['today_sales']), Icons.trending_up_rounded, AppColors.cyan)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _statCard('سفارش امروز', _fmt(stats['today_orders']), Icons.shopping_cart_outlined, AppColors.purple)),
+                ]),
+              ),
               const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: _stat('کل سفارشات', _fmt(stats['total_orders']), const Color(0xFFF59E0B))),
-                const SizedBox(width: 10),
-                Expanded(child: _stat('محصولات', _fmt(stats['total_products']), const Color(0xFF3B82F6))),
-              ]),
-              const SizedBox(height: 22),
-              const Text('دسترسی سریع', style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w600)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Expanded(child: _statCard('کل سفارشات', _fmt(stats['total_orders']), Icons.groups_outlined, AppColors.orange)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _statCard('موجودی کالا', _fmt(stats['total_products']), Icons.inventory_2_outlined, AppColors.blue)),
+                ]),
+              ),
+              if (dash.error != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(dash.error!, style: const TextStyle(color: AppColors.red, fontSize: 11), textAlign: TextAlign.center),
+                ),
+              const SizedBox(height: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Icon(Icons.bolt_rounded, color: AppColors.purpleGlow, size: 18),
+                  SizedBox(width: 6),
+                  Text('دسترسی سریع', style: TextStyle(color: AppColors.textDim, fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
+              ),
               const SizedBox(height: 10),
-              _quick(Icons.receipt_long_rounded, 'سفارشات', const Color(0xFF6C63FF), () => widget.onNavigate?.call(1)),
-              const SizedBox(height: 8),
-              _quick(Icons.add_box_outlined, 'افزودن محصول', const Color(0xFF10B981), () => widget.onAddProduct?.call()),
-              const SizedBox(height: 8),
-              _quick(Icons.phone_in_talk_outlined, 'تماس‌ها', const Color(0xFF3B82F6), () => widget.onContacts?.call()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Expanded(child: _quickTile(Icons.receipt_long_rounded, 'سفارشات', AppColors.purple, () => widget.onNavigate?.call(1))),
+                  const SizedBox(width: 10),
+                  Expanded(child: _quickTile(Icons.add_circle_outline, 'افزودن محصول', AppColors.cyan, () => widget.onAddProduct?.call())),
+                  const SizedBox(width: 10),
+                  Expanded(child: _quickTile(Icons.phone_in_talk_rounded, 'تماس‌ها', AppColors.blue, () => widget.onContacts?.call())),
+                ]),
+              ),
             ],
           ],
         ),
@@ -116,39 +137,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _stat(String title, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF252640),
-        borderRadius: BorderRadius.circular(14),
-        border: Border(right: BorderSide(color: color, width: 3)),
-      ),
+  Widget _statCard(String title, String value, IconData icon, Color color) {
+    return NeonCard(
+      borderColor: color.withOpacity(0.4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Row(children: [
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold))),
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Text(title, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
       ]),
     );
   }
 
-  Widget _quick(IconData icon, String title, Color color, VoidCallback onTap) {
-    return Material(
-      color: const Color(0xFF252640),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 12),
-            Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14))),
-            const Icon(Icons.chevron_left, color: Colors.white24, size: 20),
-          ]),
+  Widget _quickTile(IconData icon, String title, Color color, VoidCallback onTap) {
+    return NeonCard(
+      onTap: onTap,
+      borderColor: color.withOpacity(0.3),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Column(children: [
+        Container(
+          width: 42, height: 42,
+          decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 22),
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(title, style: const TextStyle(color: Colors.white, fontSize: 11), textAlign: TextAlign.center),
+      ]),
     );
   }
 }

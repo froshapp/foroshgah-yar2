@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -44,100 +45,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final siteName = auth.site?['name']?.toString() ?? 'فروشگاه';
     final user = auth.user?['display_name']?.toString() ?? '';
 
-    if (_loading) {
-      return const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF))));
-    }
+    if (_loading) return const Center(child: MiniLoader());
 
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            color: const Color(0xFF252640),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('تنظیمات', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text(siteName, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-              if (user.isNotEmpty) Text('کاربر: $user', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-            ]),
+          GlassHeader(
+            title: 'تنظیمات',
+            subtitle: '$siteName\n$user',
+            actions: [
+              IconButton(icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70), onPressed: () {}),
+            ],
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text('نمایش سفارش', style: TextStyle(color: Colors.white54, fontSize: 12)),
-          ),
-          SwitchListTile(
-            title: const Text('نمایش موبایل مشتری', style: TextStyle(color: Colors.white)),
-            value: _showPhone,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) {
-              setState(() => _showPhone = v);
-              _save('fy_show_phone', v);
-            },
-          ),
-          SwitchListTile(
-            title: const Text('نمایش آدرس', style: TextStyle(color: Colors.white)),
-            value: _showAddress,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) {
-              setState(() => _showAddress = v);
-              _save('fy_show_address', v);
-            },
-          ),
-          const Divider(color: Colors.white12),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text('اعلان‌ها', style: TextStyle(color: Colors.white54, fontSize: 12)),
-          ),
-          SwitchListTile(
-            title: const Text('سفارش جدید', style: TextStyle(color: Colors.white)),
-            value: _notifOrder,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) {
-              setState(() => _notifOrder = v);
-              _save('fy_notif_order', v);
-            },
-          ),
-          SwitchListTile(
-            title: const Text('تغییر وضعیت سفارش', style: TextStyle(color: Colors.white)),
-            value: _notifStatus,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) {
-              setState(() => _notifStatus = v);
-              _save('fy_notif_status', v);
-            },
-          ),
-          const Divider(color: Colors.white12),
-          ListTile(
-            leading: const Icon(Icons.info_outline, color: Colors.white70),
-            title: const Text('درباره فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-            subtitle: const Text('نسخه ۱.۳', style: TextStyle(color: Colors.white38)),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  backgroundColor: const Color(0xFF252640),
-                  title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-                  content: const Text('نسخه ۱.۳\nمدیریت فروشگاه ووکامرس', style: TextStyle(color: Colors.white70)),
-                  actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
-                ),
-              );
-            },
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NeonCard(
+              borderColor: AppColors.purple.withOpacity(0.3),
+              child: Column(children: [
+                const Row(children: [
+                  Icon(Icons.visibility_outlined, color: AppColors.purpleGlow, size: 18),
+                  SizedBox(width: 8),
+                  Text('نمایش سفارش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 8),
+                _sw('نمایش موبایل مشتری', Icons.phone_android, _showPhone, (v) { setState(() => _showPhone = v); _save('fy_show_phone', v); }),
+                _sw('نمایش آدرس', Icons.location_on_outlined, _showAddress, (v) { setState(() => _showAddress = v); _save('fy_show_address', v); }),
+              ]),
+            ),
           ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ElevatedButton.icon(
+            child: NeonCard(
+              borderColor: AppColors.blue.withOpacity(0.3),
+              child: Column(children: [
+                const Row(children: [
+                  Icon(Icons.notifications_outlined, color: AppColors.blue, size: 18),
+                  SizedBox(width: 8),
+                  Text('اعلان‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 8),
+                _sw('سفارش جدید', Icons.inventory_2_outlined, _notifOrder, (v) { setState(() => _notifOrder = v); _save('fy_notif_order', v); }),
+                _sw('تغییر وضعیت سفارش', Icons.sync, _notifStatus, (v) { setState(() => _notifStatus = v); _save('fy_notif_status', v); }),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NeonCard(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: AppColors.card,
+                    title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
+                    content: const Text('نسخه ۱.۴\nمدیریت فروشگاه ووکامرس', style: TextStyle(color: AppColors.textDim)),
+                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
+                  ),
+                );
+              },
+              child: const Row(children: [
+                Icon(Icons.info_outline, color: AppColors.textDim, size: 18),
+                SizedBox(width: 8),
+                Expanded(child: Text('درباره فروشگاه‌یار', style: TextStyle(color: Colors.white))),
+                Text('نسخه ۱.۴', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
+                Icon(Icons.chevron_left, color: AppColors.textMute),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ElevatedButton(
               onPressed: () async {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    backgroundColor: const Color(0xFF252640),
+                    backgroundColor: AppColors.card,
                     title: const Text('خروج', style: TextStyle(color: Colors.white)),
-                    content: const Text('از حساب خارج می‌شوید؟\nتوکن ذخیره می‌ماند.', style: TextStyle(color: Colors.white70)),
+                    content: const Text('از حساب خارج می‌شوید؟ توکن ذخیره می‌ماند.', style: TextStyle(color: AppColors.textDim)),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: Colors.redAccent))),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: AppColors.red))),
                     ],
                   ),
                 );
@@ -145,18 +137,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await context.read<AuthService>().logout(clearToken: false);
                 }
               },
-              icon: const Icon(Icons.logout),
-              label: const Text('خروج از حساب'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
+                backgroundColor: AppColors.red,
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
               ),
+              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('خروج از حساب', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                SizedBox(width: 8),
+                Icon(Icons.logout, size: 20),
+              ]),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _sw(String title, IconData icon, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: Icon(icon, color: AppColors.textDim, size: 20),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 13)),
+      value: value,
+      activeColor: AppColors.purple,
+      onChanged: onChanged,
     );
   }
 }

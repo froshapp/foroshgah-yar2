@@ -36,6 +36,7 @@ class OrdersService extends ChangeNotifier {
       final res = await auth.api.dio.get('orders', queryParameters: {
         'page': _page,
         'per_page': 20,
+        'status': 'any',
       });
 
       List list = [];
@@ -59,7 +60,14 @@ class OrdersService extends ChangeNotifier {
       _hasMore = items.length >= 20;
       _page++;
     } on DioException catch (e) {
-      _error = e.response?.data?['message']?.toString() ?? e.message ?? 'خطا در دریافت سفارشات';
+      final body = e.response?.data;
+      if (body is Map && body['message'] != null) {
+        _error = body['message'].toString();
+      } else if (body is Map && body['code'] != null) {
+        _error = body['code'].toString();
+      } else {
+        _error = 'خطا: ${e.response?.statusCode ?? e.message}';
+      }
     } catch (e) {
       _error = e.toString();
     }

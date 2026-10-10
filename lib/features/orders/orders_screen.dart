@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/orders_service.dart';
 import 'order_detail_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -136,9 +137,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       )
                     : svc.orders.isEmpty
-                        ? const Center(child: Text('سفارشی یافت نشد', style: TextStyle(color: Colors.white54)))
+                        ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            const Text('سفارشی یافت نشد', style: TextStyle(color: AppColors.textDim)),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () => svc.fetchOrders(auth, refresh: true),
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text('تلاش مجدد'),
+                            ),
+                            if (svc.error != null) Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(svc.error!, style: const TextStyle(color: AppColors.red, fontSize: 11), textAlign: TextAlign.center),
+                            ),
+                          ]))
                         : RefreshIndicator(
-                            color: const Color(0xFF6C63FF),
+                            color: AppColors.purple,
                             onRefresh: () => svc.fetchOrders(auth, refresh: true),
                             child: ListView.builder(
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -152,7 +165,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 final dateShort = date.length >= 10 ? date.substring(0, 10) : date;
 
                                 return Material(
-                                  color: const Color(0xFF252640),
+                                  color: AppColors.card,
                                   borderRadius: BorderRadius.circular(14),
                                   child: InkWell(
                                     onTap: () => _openOrder(o),
