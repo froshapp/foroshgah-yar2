@@ -284,7 +284,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           title: 'محصولات',
           actions: [
             IconButton(
-              icon: Icon(_selectMode ? Icons.close : Icons.checklist_rtl, color: Colors.white70),
+              icon: Icon(_selectMode ? Icons.close : Icons.attach_money_rounded, color: _selectMode ? Colors.white70 : AppColors.cyan),
+              tooltip: 'قیمت گروهی',
               onPressed: () => setState(() { _selectMode = !_selectMode; _selected.clear(); }),
             ),
             if (svc.loading)

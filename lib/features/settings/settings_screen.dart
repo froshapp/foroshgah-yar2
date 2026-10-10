@@ -92,6 +92,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
             ),
           ),
+
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NeonCard(
+              borderColor: AppColors.orange.withOpacity(0.3),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Row(children: [
+                  Icon(Icons.palette_outlined, color: AppColors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Text('رنگ وضعیت سفارشات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 10),
+                _colorRow('در انتظار پرداخت', const Color(0xFFF59E0B)),
+                _colorRow('در حال انجام', const Color(0xFF3B82F6)),
+                _colorRow('تکمیل شده', const Color(0xFF10B981)),
+                _colorRow('لغو / مرجوع', const Color(0xFFEF4444)),
+              ]),
+            ),
+          ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
