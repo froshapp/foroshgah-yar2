@@ -40,11 +40,11 @@ class ProductsService extends ChangeNotifier {
 
       List list = [];
       if (res.data is List) {
-        list = res.data;
+        list = res.data as List;
       } else if (res.data is Map && res.data['products'] is List) {
-        list = res.data['products'];
+        list = res.data['products'] as List;
       } else if (res.data is Map && res.data['data'] is List) {
-        list = res.data['data'];
+        list = res.data['data'] as List;
       }
 
       final items = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -63,5 +63,61 @@ class ProductsService extends ChangeNotifier {
 
     _loading = false;
     notifyListeners();
+  }
+
+  Future<bool> updateProduct(
+    AuthService auth,
+    int id, {
+    String? price,
+    String? regularPrice,
+    int? stock,
+    String? status,
+  }) async {
+    try {
+      try {
+        await auth.api.ensureReachable();
+      } catch (_) {}
+
+      final body = <String, dynamic>{};
+      if (price != null) body['price'] = price;
+      if (regularPrice != null) body['regular_price'] = regularPrice;
+      if (stock != null) {
+        body['stock_quantity'] = stock;
+        body['manage_stock'] = true;
+      }
+      if (status != null) body['status'] = status;
+
+      final res = await auth.api.dio.put('products/$id', data: body);
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        // update local list
+        final idx = _products.indexWhere((p) => p['id'].toString() == id.toString());
+        if (idx >= 0) {
+          if (price != null) _products[idx]['price'] = price;
+          if (regularPrice != null) _products[idx]['regular_price'] = regularPrice;
+          if (stock != null) _products[idx]['stock_quantity'] = stock;
+          if (status != null) _products[idx]['status'] = status;
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<int> bulkUpdatePrice(AuthService auth, List<int> ids, {required String price, bool percent = false}) async {
+    int ok = 0;
+    for (final id in ids) {
+      String newPrice = price;
+      if (percent) {
+        final p = _products.firstWhere((e) => e['id'].toString() == id.toString(), orElse: () => {});
+        final old = double.tryParse(p['price']?.toString() ?? '0') ?? 0;
+        final pct = double.tryParse(price) ?? 0;
+        newPrice = (old * (1 + pct / 100)).round().toString();
+      }
+      if (await updateProduct(auth, id, price: newPrice, regularPrice: newPrice)) ok++;
+    }
+    return ok;
   }
 }

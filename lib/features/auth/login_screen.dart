@@ -13,6 +13,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _url = TextEditingController();
   final _token = TextEditingController();
   bool _hide = true;
+  bool _prefilled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_prefilled) {
+      _prefilled = true;
+      _loadSaved();
+    }
+  }
+
+  Future<void> _loadSaved() async {
+    final auth = context.read<AuthService>();
+    final url = await auth.getSavedSiteUrl();
+    final token = await auth.getSavedToken();
+    if (url != null) _url.text = url;
+    if (token != null) _token.text = token;
+  }
 
   @override
   void dispose() {
@@ -94,10 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           hintText: 'https://yoursite.com',
                           hintStyle: const TextStyle(color: Colors.black38),
                           prefixIcon: const Icon(Icons.language, color: Colors.black54),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                       ),
@@ -113,23 +128,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: const Color(0xFFECECF3),
-                          hintText: 'توکن را اینجا بچسبانید',
+                          hintText: 'توکن ذخیره می‌شود',
                           hintStyle: const TextStyle(color: Colors.black38),
                           prefixIcon: const Icon(Icons.vpn_key, color: Colors.black54),
                           suffixIcon: IconButton(
                             icon: Icon(_hide ? Icons.visibility_off : Icons.visibility, color: Colors.black54),
                             onPressed: () => setState(() => _hide = !_hide),
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'توکن یک‌بار وارد می‌شود و ذخیره می‌ماند',
+                        'توکن ذخیره می‌ماند — بعد از خروج دوباره وارد کردن لازم نیست',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white38, fontSize: 11),
                       ),

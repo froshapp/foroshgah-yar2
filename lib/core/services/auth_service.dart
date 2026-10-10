@@ -19,14 +19,22 @@ class AuthService extends ChangeNotifier {
   Map<String, dynamic>? get site => _site;
   ApiClient get api => _api;
 
-  /// ورود خودکار با توکن ذخیره‌شده
+  Future<String?> getSavedSiteUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('fy_site_url');
+  }
+
+  Future<String?> getSavedToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('fy_token');
+  }
+
   Future<void> tryAutoLogin() async {
     _isLoading = true;
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('fy_token');
-      final baseUrl = prefs.getString('fy_base_url');
       final siteUrl = prefs.getString('fy_site_url');
 
       if (token == null || token.isEmpty || siteUrl == null) {
@@ -39,19 +47,15 @@ class AuthService extends ChangeNotifier {
       try {
         await _api.ensureReachable();
       } catch (_) {}
-
       await _api.saveToken(token);
 
-      // اعتبارسنجی توکن
       final res = await _api.dio.get('site-info');
       if (res.statusCode == 200 && res.data != null) {
-        _site = res.data is Map ? Map<String, dynamic>.from(res.data) : null;
+        _site = res.data is Map ? Map<String, dynamic>.from(res.data as Map) : null;
         _user = {'display_name': prefs.getString('fy_user_name') ?? 'مدیر'};
         _isAuthenticated = true;
       }
-    } catch (_) {
-      // توکن نامعتبر — پاک نکن، کاربر دستی وارد شود
-    }
+    } catch (_) {}
     _isLoading = false;
     notifyListeners();
   }
@@ -77,10 +81,10 @@ class AuthService extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('fy_site_url', siteUrl.trim());
         _user = response.data['user'] is Map
-            ? Map<String, dynamic>.from(response.data['user'])
+            ? Map<String, dynamic>.from(response.data['user'] as Map)
             : null;
         _site = response.data['site'] is Map
-            ? Map<String, dynamic>.from(response.data['site'])
+            ? Map<String, dynamic>.from(response.data['site'] as Map)
             : null;
         if (_user?['display_name'] != null) {
           await prefs.setString('fy_user_name', _user!['display_name'].toString());
@@ -112,17 +116,23 @@ class AuthService extends ChangeNotifier {
     return false;
   }
 
-  Future<void> logout() async {
+  /// خروج از صفحه اصلی — توکن پاک نمی‌شود تا دوباره وارد کردن لازم نباشد
+  Future<void> logout({bool clearToken = false}) async {
     try {
       await _api.dio.post('logout');
     } catch (_) {}
-    await _api.clearToken();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('fy_site_url');
-    await prefs.remove('fy_user_name');
+
+    if (clearToken) {
+      await _api.clearToken();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('fy_site_url');
+      await prefs.remove('fy_user_name');
+    }
+
     _isAuthenticated = false;
     _user = null;
     _site = null;
+    _error = null;
     notifyListeners();
   }
 }
