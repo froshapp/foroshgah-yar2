@@ -135,8 +135,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_length.text.trim().isNotEmpty) body['length'] = _length.text.trim();
       if (_width.text.trim().isNotEmpty) body['width'] = _width.text.trim();
       if (_height.text.trim().isNotEmpty) body['height'] = _height.text.trim();
-      if (_saleFrom.text.trim().isNotEmpty) body['date_on_sale_from'] = _saleFrom.text.trim();
-      if (_saleTo.text.trim().isNotEmpty) body['date_on_sale_to'] = _saleTo.text.trim();
+      if (_saleFrom.text.trim().isNotEmpty) body['date_on_sale_from'] = _jalaliToGregorian(_saleFrom.text.trim());
+      if (_saleTo.text.trim().isNotEmpty) body['date_on_sale_to'] = _jalaliToGregorian(_saleTo.text.trim());
       if (_brandName != null) body['brand'] = _brandName;
       if (_shippingMethod != null) body['shipping_class'] = _shippingMethod;
       if (_attrs.text.trim().isNotEmpty) body['attributes_text'] = _attrs.text.trim();
@@ -480,4 +480,124 @@ class _AddProductScreenState extends State<AddProductScreen> {
       onSelected: (_) => setState(() => _status = value),
     );
   }
+  Widget _dateField(TextEditingController c, String hint) {
+    return InkWell(
+      onTap: () async {
+        final picked = await _pickJalali();
+        if (picked != null) {
+          setState(() => c.text = picked);
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: const Color(0xFF252640),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          suffixIcon: const Icon(Icons.calendar_month, color: Colors.white38),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+        child: Text(
+          c.text.isEmpty ? hint : c.text,
+          style: TextStyle(color: c.text.isEmpty ? Colors.white38 : Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _pickJalali() async {
+    final now = Jalali.now();
+    int year = now.year;
+    int month = now.month;
+    int day = now.day;
+    const months = [
+      '', 'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+      'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+    ];
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setD) {
+          final maxDay = Jalali(year, month, 1).monthLength;
+          if (day > maxDay) day = maxDay;
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A32),
+            title: const Text('انتخاب تاریخ شمسی', style: TextStyle(color: Colors.white, fontSize: 16)),
+            content: Row(
+              children: [
+                Expanded(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF1A1A32),
+                    value: year,
+                    menuMaxHeight: 200,
+                    items: [
+                      for (var y = now.year - 1; y <= now.year + 2; y++)
+                        DropdownMenuItem(value: y, child: Text('$y', style: const TextStyle(color: Colors.white))),
+                    ],
+                    onChanged: (v) => setD(() => year = v!),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF1A1A32),
+                    value: month,
+                    menuMaxHeight: 200,
+                    items: [
+                      for (var m = 1; m <= 12; m++)
+                        DropdownMenuItem(
+                          value: m,
+                          child: Text(months[m], style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                    ],
+                    onChanged: (v) => setD(() => month = v!),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF1A1A32),
+                    value: day,
+                    menuMaxHeight: 200,
+                    items: [
+                      for (var d = 1; d <= maxDay; d++)
+                        DropdownMenuItem(value: d, child: Text('$d', style: const TextStyle(color: Colors.white))),
+                    ],
+                    onChanged: (v) => setD(() => day = v!),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('تأیید')),
+            ],
+          );
+        });
+      },
+    );
+
+    if (ok == true) {
+      final j = Jalali(year, month, day);
+      return '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}';
+    }
+    return null;
+  }
+
+  String _jalaliToGregorian(String jalali) {
+    try {
+      final parts = jalali.split(RegExp(r'[/\-]'));
+      if (parts.length >= 3) {
+        final j = Jalali(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+        final g = j.toGregorian();
+        return '${g.year.toString().padLeft(4, '0')}-${g.month.toString().padLeft(2, '0')}-${g.day.toString().padLeft(2, '0')}';
+      }
+    } catch (_) {}
+    return jalali;
+  }
 }
+
