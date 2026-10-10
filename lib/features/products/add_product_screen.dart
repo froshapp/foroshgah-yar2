@@ -32,6 +32,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _status = 'publish';
   List<Map<String, dynamic>> _brands = [];
   List<Map<String, dynamic>> _shipping = [];
+  List<Map<String, dynamic>> _attrList = [];
+  final Map<String, String> _selectedAttrs = {};
   String? _brandName;
   String? _shippingMethod;
   int? _categoryId;
@@ -53,6 +55,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         final s = await auth.api.dio.get('shipping-methods');
         if (s.data is Map && s.data['methods'] is List) {
           setState(() => _shipping = (s.data['methods'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
+        }
+        final a = await auth.api.dio.get('products/attributes');
+        if (a.data is Map && a.data['attributes'] is List) {
+          setState(() => _attrList = (a.data['attributes'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
         }
       } catch (_) {}
     });
@@ -140,6 +146,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_brandName != null) body['brand'] = _brandName;
       if (_shippingMethod != null) body['shipping_class'] = _shippingMethod;
       if (_attrs.text.trim().isNotEmpty) body['attributes_text'] = _attrs.text.trim();
+      if (_selectedAttrs.isNotEmpty) {
+        body['attributes'] = _selectedAttrs.entries.map((e) => {'name': e.key, 'option': e.value}).toList();
+      }
 
       final res = await auth.api.dio.post('products', data: body);
       if (!mounted) return;
@@ -385,18 +394,59 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   const SizedBox(height: 16),
                   _label('ویژگی محصول (اختیاری)'),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: _attrs,
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'مثال: رنگ: آبی، جنس: نخ پنبه',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                      filled: true,
-                      fillColor: const Color(0xFF252640),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    ),
-                  ),
+                  if (_attrList.isEmpty)
+                    TextField(
+                      controller: _attrs,
+                      maxLines: 2,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'ویژگی سفارشی (اختیاری)',
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                        filled: true,
+                        fillColor: const Color(0xFF252640),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    )
+                  else
+                    ..._attrList.map((attr) {
+                      final name = attr['name']?.toString() ?? '';
+                      final terms = (attr['terms'] is List)
+                          ? (attr['terms'] as List).whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+                          : <Map<String, dynamic>>[];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF252640),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              dropdownColor: const Color(0xFF1A1A32),
+                              menuMaxHeight: 200,
+                              value: _selectedAttrs[name],
+                              hint: Text(name, style: const TextStyle(color: Colors.white54)),
+                              items: [
+                                DropdownMenuItem<String?>(value: null, child: Text('بدون $name', style: const TextStyle(color: Colors.white54))),
+                                ...terms.map((term) => DropdownMenuItem<String?>(
+                                      value: term['name']?.toString(),
+                                      child: Text(term['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                                    )),
+                              ],
+                              onChanged: (v) => setState(() {
+                                if (v == null) {
+                                  _selectedAttrs.remove(name);
+                                } else {
+                                  _selectedAttrs[name] = v;
+                                }
+                              }),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ],
             ),
@@ -411,8 +461,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       child: OutlinedButton(
                         onPressed: () => setState(() => _step--),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white70,
+                          foregroundColor: const Color(0xFF9B7BFF),
+                          side: const BorderSide(color: Color(0xFF7B5CFF), width: 1.5),
                           minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: const Text('قبلی'),
                       ),
@@ -431,14 +483,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
+                        backgroundColor: const Color(0xFF7B5CFF),
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                        shadowColor: const Color(0xFF7B5CFF),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: _saving
                           ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                          : Text(_step < 2 ? 'مرحله بعد' : 'ذخیره محصول'),
+                          : Text(_step < 2 ? 'مرحله بعد' : 'ذخیره محصول', style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],

@@ -324,6 +324,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               child: DropdownButton<int?>(
                 isExpanded: true,
                 dropdownColor: AppColors.card,
+                menuMaxHeight: 240,
                 value: svc.categoryId,
                 hint: const Text('همه دسته‌ها', style: TextStyle(color: AppColors.textDim)),
                 icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute),
@@ -370,7 +371,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (_selected.isNotEmpty)
                 ElevatedButton.icon(
                   onPressed: _bulkPrice,
-                  icon: const Icon(Icons.price_change_outlined, size: 18),
+                  icon: const Icon(Icons.attach_money_rounded, size: 18),
                   label: const Text('قیمت گروهی', style: TextStyle(fontSize: 12)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.purple,

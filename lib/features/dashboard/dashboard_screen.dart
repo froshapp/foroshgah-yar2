@@ -118,7 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(children: [
                   Expanded(child: _quick(Icons.receipt_long_rounded, 'سفارشات', AppColors.purple, () => widget.onNavigate?.call(1))),
                   const SizedBox(width: 10),
-                  Expanded(child: _quick(Icons.add_circle_rounded, 'افزودن محصول', AppColors.cyan, () => widget.onAddProduct?.call())),
+                  Expanded(child: _quick(Icons.add_circle_rounded, 'افزودن', AppColors.cyan, () => widget.onAddProduct?.call())),
                   const SizedBox(width: 10),
                   Expanded(child: _quick(Icons.phone_in_talk_rounded, 'تماس‌ها', AppColors.blue, () => widget.onContacts?.call())),
                 ]),
@@ -162,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 11), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 11), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
         ]),
       ),
     );

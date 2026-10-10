@@ -33,21 +33,10 @@ class OrdersService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      // try with all statuses first, then without status
-      Response? res;
-      DioException? lastErr;
-      for (final params in [
-        {'page': _page, 'per_page': 20, 'status': 'any'},
-        {'page': _page, 'per_page': 20},
-      ]) {
-        try {
-          res = await auth.api.dio.get('orders', queryParameters: params);
-          break;
-        } on DioException catch (e) {
-          lastErr = e;
-        }
-      }
-      if (res == null) throw lastErr ?? Exception('no response');
+      final res = await auth.api.dio.get('orders', queryParameters: {
+        'page': _page,
+        'per_page': 20,
+      });
 
       List list = [];
       if (res.data is Map) {
@@ -56,19 +45,10 @@ class OrdersService extends ChangeNotifier {
           list = m['orders'] as List;
         } else if (m['data'] is List) {
           list = m['data'] as List;
-        } else if (m['results'] is List) {
-          list = m['results'] as List;
         }
-        // pagination
         final pag = m['pagination'];
         if (pag is Map) {
           _total = int.tryParse(pag['total']?.toString() ?? '') ?? _total;
-        } else if (m['total'] != null) {
-          _total = int.tryParse(m['total'].toString()) ?? _total;
-        }
-        // if success false
-        if (m['success'] == false && list.isEmpty) {
-          _error = m['message']?.toString() ?? 'خطا در دریافت سفارشات';
         }
       } else if (res.data is List) {
         list = res.data as List;
@@ -85,16 +65,18 @@ class OrdersService extends ChangeNotifier {
         _orders.addAll(items);
       }
       _hasMore = items.length >= 20;
-      if (items.isNotEmpty) _page++;
-      if (items.isEmpty && _orders.isEmpty && _error == null) {
-        _error = null; // empty is valid
+      if (items.isNotEmpty) {
+        _page++;
+      } else {
+        _hasMore = false;
       }
     } on DioException catch (e) {
       final body = e.response?.data;
-      if (body is Map && body['message'] != null) {
-        _error = body['message'].toString();
-      } else if (body is Map && body['code'] != null) {
-        _error = '${body['code']}: ${body['message'] ?? ''}';
+      if (body is Map) {
+        _error = (body['message'] ?? body['code'] ?? 'خطای سرور').toString();
+        if (e.response?.statusCode != null) {
+          _error = '${e.response!.statusCode}: $_error';
+        }
       } else {
         _error = 'خطای ارتباط: ${e.response?.statusCode ?? e.message}';
       }
