@@ -22,7 +22,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _desc = TextEditingController();
   final _brand = TextEditingController();
   final _weight = TextEditingController();
+  final _length = TextEditingController();
+  final _width = TextEditingController();
+  final _height = TextEditingController();
+  final _saleFrom = TextEditingController();
+  final _saleTo = TextEditingController();
   String _status = 'publish';
+  List<Map<String, dynamic>> _brands = [];
+  List<Map<String, dynamic>> _shipping = [];
+  String? _brandName;
+  String? _shippingMethod;
   int? _categoryId;
   bool _saving = false;
   XFile? _image;
@@ -31,8 +40,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductsService>().fetchCategories(context.read<AuthService>());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final auth = context.read<AuthService>();
+      await context.read<ProductsService>().fetchCategories(auth);
+      try {
+        final b = await auth.api.dio.get('products/brands');
+        if (b.data is Map && b.data['brands'] is List) {
+          setState(() => _brands = (b.data['brands'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
+        }
+        final s = await auth.api.dio.get('shipping-methods');
+        if (s.data is Map && s.data['methods'] is List) {
+          setState(() => _shipping = (s.data['methods'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
+        }
+      } catch (_) {}
     });
   }
 
@@ -46,6 +66,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _desc.dispose();
     _brand.dispose();
     _weight.dispose();
+    _length.dispose();
+    _width.dispose();
+    _height.dispose();
+    _saleFrom.dispose();
+    _saleTo.dispose();
     super.dispose();
   }
 
@@ -104,6 +129,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (imageId != null) body['image_id'] = imageId;
       if (_brand.text.trim().isNotEmpty) body['brand'] = _brand.text.trim();
       if (_weight.text.trim().isNotEmpty) body['weight'] = _weight.text.trim();
+      if (_length.text.trim().isNotEmpty) body['length'] = _length.text.trim();
+      if (_width.text.trim().isNotEmpty) body['width'] = _width.text.trim();
+      if (_height.text.trim().isNotEmpty) body['height'] = _height.text.trim();
+      if (_saleFrom.text.trim().isNotEmpty) body['date_on_sale_from'] = _saleFrom.text.trim();
+      if (_saleTo.text.trim().isNotEmpty) body['date_on_sale_to'] = _saleTo.text.trim();
+      if (_brandName != null) body['brand'] = _brandName;
+      if (_shippingMethod != null) body['shipping_class'] = _shippingMethod;
 
       final res = await auth.api.dio.post('products', data: body);
       if (!mounted) return;
@@ -242,34 +274,108 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ])),
                   ]),
                   const SizedBox(height: 16),
+                  _label('شروع فروش ویژه (YYYY-MM-DD)'),
+                  const SizedBox(height: 8),
+                  _field(_saleFrom, 'مثلاً 2026-10-10'),
+                  const SizedBox(height: 12),
+                  _label('پایان فروش ویژه (YYYY-MM-DD)'),
+                  const SizedBox(height: 8),
+                  _field(_saleTo, 'مثلاً 2026-10-20'),
+                  const SizedBox(height: 16),
                   _label('برند'),
                   const SizedBox(height: 8),
-                  _field(_brand, 'اختیاری'),
+                  if (_brands.isEmpty)
+                    _field(_brand, 'اختیاری')
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          dropdownColor: const Color(0xFF252640),
+                          value: _brandName,
+                          hint: const Text('انتخاب برند', style: TextStyle(color: Colors.white54)),
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: Text('بدون برند', style: TextStyle(color: Colors.white70))),
+                            ..._brands.map((b) => DropdownMenuItem<String?>(
+                              value: b['name']?.toString(),
+                              child: Text(b['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => _brandName = v),
+                        ),
+                      ),
+                    ),
                 ] else ...[
                   _label('دسته‌بندی'),
                   const SizedBox(height: 8),
                   if (cats.isEmpty)
                     const Text('دسته‌ای یافت نشد', style: TextStyle(color: Colors.white38))
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: cats.map((c) {
-                        final id = int.tryParse(c['id']?.toString() ?? '') ?? 0;
-                        final selected = _categoryId == id;
-                        return ChoiceChip(
-                          label: Text(c['name']?.toString() ?? '', style: TextStyle(color: selected ? Colors.white : Colors.white70, fontSize: 12)),
-                          selected: selected,
-                          selectedColor: const Color(0xFF6C63FF).withOpacity(0.4),
-                          backgroundColor: const Color(0xFF252640),
-                          onSelected: (_) => setState(() => _categoryId = selected ? null : id),
-                        );
-                      }).toList(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int?>(
+                          isExpanded: true,
+                          dropdownColor: const Color(0xFF252640),
+                          value: _categoryId,
+                          hint: const Text('انتخاب دسته', style: TextStyle(color: Colors.white54)),
+                          items: [
+                            const DropdownMenuItem<int?>(value: null, child: Text('بدون دسته', style: TextStyle(color: Colors.white70))),
+                            ...cats.map((c) {
+                              final id = int.tryParse(c['id']?.toString() ?? '');
+                              return DropdownMenuItem<int?>(
+                                value: id,
+                                child: Text(c['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                              );
+                            }),
+                          ],
+                          onChanged: (v) => setState(() => _categoryId = v),
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 16),
                   _label('وزن (کیلوگرم)'),
                   const SizedBox(height: 8),
                   _field(_weight, 'اختیاری', number: true),
+                  const SizedBox(height: 16),
+                  _label('ابعاد (سانتی‌متر)'),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: _field(_length, 'طول', number: true)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _field(_width, 'عرض', number: true)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _field(_height, 'ارتفاع', number: true)),
+                  ]),
+                  const SizedBox(height: 16),
+                  _label('روش ارسال'),
+                  const SizedBox(height: 8),
+                  if (_shipping.isEmpty)
+                    const Text('روش ارسالی تعریف نشده', style: TextStyle(color: Colors.white38, fontSize: 12))
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          dropdownColor: const Color(0xFF252640),
+                          value: _shippingMethod,
+                          hint: const Text('انتخاب روش ارسال', style: TextStyle(color: Colors.white54)),
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض', style: TextStyle(color: Colors.white70))),
+                            ..._shipping.map((s) => DropdownMenuItem<String?>(
+                              value: s['title']?.toString(),
+                              child: Text(s['title']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => _shippingMethod = v),
+                        ),
+                      ),
+                    ),
                 ],
               ],
             ),

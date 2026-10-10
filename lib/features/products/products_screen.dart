@@ -31,24 +31,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  String _fmtMoney(dynamic v) {
-    if (v == null) return '—';
+  String _fmt(dynamic v) {
+    if (v == null) return '0';
     final n = double.tryParse(v.toString().replaceAll(',', '')) ?? 0;
     final s = n.round().toString();
-    final buf = StringBuffer();
+    final b = StringBuffer();
     for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
+      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
+      b.write(s[i]);
     }
-    return buf.toString();
+    return b.toString();
   }
 
   Future<void> _editProduct(Map<String, dynamic> p) async {
-    final auth = context.read<AuthService>();
-    final svc = context.read<ProductsService>();
-    final id = int.tryParse(p['id'].toString()) ?? 0;
-    final priceCtrl = TextEditingController(text: p['price']?.toString() ?? p['regular_price']?.toString() ?? '');
-    final stockCtrl = TextEditingController(text: p['stock_quantity']?.toString() ?? p['stock']?.toString() ?? '');
+    final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
+    if (id == 0) return;
+    final priceCtrl = TextEditingController(text: p['regular_price']?.toString() ?? p['price']?.toString() ?? '');
+    final saleCtrl = TextEditingController(text: p['sale_price']?.toString() ?? '');
+    final stockCtrl = TextEditingController(text: p['stock_quantity']?.toString() ?? '');
+    String status = p['status']?.toString() ?? 'publish';
+    bool manageStock = p['manage_stock'] == true || p['stock_quantity'] != null;
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -56,112 +58,142 @@ class _ProductsScreenState extends State<ProductsScreen> {
       backgroundColor: const Color(0xFF252640),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-              ),
-              const SizedBox(height: 16),
-              Text(p['name']?.toString() ?? 'محصول',
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 16),
-              const Text('قیمت (تومان)', style: TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: priceCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF1A1B2E),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text('موجودی', style: TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: stockCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF1A1B2E),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        return StatefulBuilder(builder: (ctx, setModal) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16, right: 16, top: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(p['name']?.toString() ?? 'ویرایش',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                      IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(ctx, false)),
+                    ],
                   ),
-                  child: const Text('ذخیره تغییرات'),
-                ),
+                  Text('شناسه: ${p['id']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  const SizedBox(height: 16),
+                  const Text('وضعیت محصول', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    for (final s in [
+                      ('publish', 'منتشر شده', const Color(0xFF10B981)),
+                      ('draft', 'پیش‌نویس', Colors.orange),
+                      ('pending', 'در انتظار', Colors.white54),
+                    ])
+                      ChoiceChip(
+                        label: Text(s.$2, style: TextStyle(color: status == s.$1 ? Colors.white : Colors.white70, fontSize: 12)),
+                        selected: status == s.$1,
+                        selectedColor: s.$3.withOpacity(0.35),
+                        backgroundColor: const Color(0xFF1A1B2E),
+                        onSelected: (_) => setModal(() => status = s.$1),
+                      ),
+                  ]),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: _modalField(priceCtrl, 'قیمت اصلی')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _modalField(saleCtrl, 'قیمت ویژه')),
+                  ]),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('فعال‌سازی انبار', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    value: manageStock,
+                    activeColor: const Color(0xFF6C63FF),
+                    onChanged: (v) => setModal(() => manageStock = v),
+                  ),
+                  if (manageStock) _modalField(stockCtrl, 'موجودی انبار', number: true),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    icon: const Icon(Icons.check),
+                    label: const Text('ذخیره تغییرات'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
+            ),
+          );
+        });
       },
     );
 
     if (ok == true && mounted) {
-      final price = priceCtrl.text.trim();
-      final stock = int.tryParse(stockCtrl.text.trim());
-      final success = await svc.updateProduct(
+      final auth = context.read<AuthService>();
+      final svc = context.read<ProductsService>();
+      final bodyOk = await svc.updateProduct(
         auth,
         id,
-        price: price.isEmpty ? null : price,
-        regularPrice: price.isEmpty ? null : price,
-        stock: stock,
+        price: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
+        regularPrice: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
+        stock: manageStock ? int.tryParse(stockCtrl.text.trim()) : null,
+        status: status,
       );
+      // sale price via extra put
+      if (saleCtrl.text.trim().isNotEmpty) {
+        try {
+          await auth.api.dio.put('products/$id', data: {
+            'sale_price': saleCtrl.text.trim(),
+            'regular_price': priceCtrl.text.trim(),
+          });
+        } catch (_) {}
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(success ? 'محصول به‌روز شد' : 'خطا در ذخیره — API را بررسی کنید')),
+          SnackBar(content: Text(bodyOk ? 'ذخیره شد' : 'خطا در ذخیره')),
         );
+        svc.fetchProducts(auth, refresh: true);
       }
     }
+    priceCtrl.dispose();
+    saleCtrl.dispose();
+    stockCtrl.dispose();
+  }
+
+  Widget _modalField(TextEditingController c, String label, {bool number = false}) {
+    return TextField(
+      controller: c,
+      keyboardType: number ? TextInputType.number : TextInputType.text,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white54),
+        filled: true,
+        fillColor: const Color(0xFF1A1B2E),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      ),
+    );
   }
 
   Future<void> _bulkPrice() async {
     if (_selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ابتدا محصولات را انتخاب کنید')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ابتدا محصول انتخاب کنید')));
       return;
     }
-    final priceCtrl = TextEditingController();
+    final ctrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF252640),
-        title: const Text('تغییر گروهی قیمت', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${_selected.length} محصول انتخاب شده', style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: priceCtrl,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'قیمت جدید (تومان)',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: const Color(0xFF1A1B2E),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-          ],
+        title: const Text('قیمت گروهی', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(hintText: 'قیمت جدید', hintStyle: TextStyle(color: Colors.white38)),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
@@ -169,19 +201,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
     );
-
-    if (ok == true && priceCtrl.text.trim().isNotEmpty && mounted) {
+    if (ok == true && ctrl.text.trim().isNotEmpty && mounted) {
       final auth = context.read<AuthService>();
-      final svc = context.read<ProductsService>();
-      final n = await svc.bulkUpdatePrice(auth, _selected.toList(), price: priceCtrl.text.trim());
+      final n = await context.read<ProductsService>().bulkUpdatePrice(auth, _selected.toList(), price: ctrl.text.trim());
       setState(() {
         _selected.clear();
         _selectMode = false;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n محصول به‌روز شد')));
+        context.read<ProductsService>().fetchProducts(auth, refresh: true);
       }
     }
+    ctrl.dispose();
   }
 
   @override
@@ -193,43 +225,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text('محصولات', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                const Expanded(child: Text('محصولات', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+                if (svc.loading)
+                  const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)))
+                else
+                  IconButton(icon: const Icon(Icons.refresh, color: Colors.white54), onPressed: () => svc.fetchProducts(auth, refresh: true)),
+                IconButton(
+                  icon: Icon(_selectMode ? Icons.close : Icons.checklist, color: Colors.white54),
+                  onPressed: () => setState(() {
+                    _selectMode = !_selectMode;
+                    _selected.clear();
+                  }),
                 ),
-                if (_selectMode) ...[
-                  TextButton(onPressed: _bulkPrice, child: const Text('قیمت گروهی', style: TextStyle(color: Color(0xFF6C63FF)))),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
-                    onPressed: () => setState(() {
-                      _selectMode = false;
-                      _selected.clear();
-                    }),
-                  ),
-                ] else ...[
-                  IconButton(
-                    icon: const Icon(Icons.checklist, color: Colors.white54),
-                    tooltip: 'انتخاب گروهی',
-                    onPressed: () => setState(() => _selectMode = true),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, color: Colors.white54),
-                    onPressed: () => svc.fetchProducts(auth, refresh: true),
-                  ),
-                ],
               ],
             ),
           ),
+          // search
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: TextField(
               controller: _search,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'جستجو در محصولات...',
-                hintStyle: const TextStyle(color: Colors.white38),
+                hintText: 'جستجوی محصول...',
+                hintStyle: const TextStyle(color: Colors.white24),
                 prefixIcon: const Icon(Icons.search, color: Colors.white38),
                 filled: true,
                 fillColor: const Color(0xFF252640),
@@ -239,181 +261,122 @@ class _ProductsScreenState extends State<ProductsScreen> {
               onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v),
             ),
           ),
-          const SizedBox(height: 8),
-          if (svc.categories.isNotEmpty)
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+          // category dropdown
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(12)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int?>(
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF252640),
+                  value: svc.categoryId,
+                  hint: const Text('همه دسته‌ها', style: TextStyle(color: Colors.white70)),
+                  icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white))),
+                    ...svc.categories.map((c) {
+                      final id = int.tryParse(c['id']?.toString() ?? '');
+                      return DropdownMenuItem<int?>(
+                        value: id,
+                        child: Text(c['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) {
+                      svc.clearCategory();
+                      svc.fetchProducts(auth, refresh: true, categoryId: 0);
+                    } else {
+                      svc.fetchProducts(auth, refresh: true, categoryId: v);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+          if (_selectMode && _selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: FilterChip(
-                      label: const Text('همه', style: TextStyle(fontSize: 12)),
-                      selected: svc.categoryId == null,
-                      selectedColor: const Color(0xFF6C63FF).withOpacity(0.3),
-                      backgroundColor: const Color(0xFF252640),
-                      labelStyle: TextStyle(color: svc.categoryId == null ? Colors.white : Colors.white54),
-                      onSelected: (_) {
-                        svc.clearCategory();
-                        svc.fetchProducts(auth, refresh: true, categoryId: 0);
-                        // force null category
-                        svc.fetchProducts(auth, refresh: true);
-                      },
-                    ),
-                  ),
-                  ...svc.categories.map((c) {
-                    final id = int.tryParse(c['id']?.toString() ?? '') ?? 0;
-                    final name = c['name']?.toString() ?? '';
-                    final selected = svc.categoryId == id;
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: FilterChip(
-                        label: Text(name, style: const TextStyle(fontSize: 12)),
-                        selected: selected,
-                        selectedColor: const Color(0xFF6C63FF).withOpacity(0.3),
-                        backgroundColor: const Color(0xFF252640),
-                        labelStyle: TextStyle(color: selected ? Colors.white : Colors.white54),
-                        onSelected: (_) {
-                          svc.fetchProducts(auth, refresh: true, categoryId: id);
-                        },
-                      ),
-                    );
-                  }),
+                  Text('${_selected.length} انتخاب', style: const TextStyle(color: Colors.white70)),
+                  const Spacer(),
+                  TextButton(onPressed: _bulkPrice, child: const Text('تغییر قیمت گروهی')),
                 ],
               ),
             ),
-          if (svc.categories.isNotEmpty) const SizedBox(height: 8),
+          const SizedBox(height: 8),
           Expanded(
             child: svc.loading && svc.products.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
+                ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF))))
                 : svc.error != null && svc.products.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(svc.error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent)),
-                        ),
-                      )
+                    ? Center(child: Text(svc.error!, style: const TextStyle(color: Colors.redAccent)))
                     : svc.products.isEmpty
                         ? const Center(child: Text('محصولی یافت نشد', style: TextStyle(color: Colors.white54)))
                         : RefreshIndicator(
                             color: const Color(0xFF6C63FF),
                             onRefresh: () => svc.fetchProducts(auth, refresh: true),
                             child: ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                              itemCount: svc.products.length,
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              itemCount: svc.products.length + (svc.hasMore ? 1 : 0),
                               itemBuilder: (ctx, i) {
+                                if (i >= svc.products.length) {
+                                  svc.fetchProducts(auth);
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)))),
+                                  );
+                                }
                                 final p = svc.products[i];
                                 final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
-                                final name = p['name']?.toString() ?? 'بدون نام';
-                                final price = p['price'] ?? p['regular_price'];
-                                final stock = p['stock_quantity'] ?? p['stock'];
-                                final img = p['image']?.toString() ??
-                                    (p['images'] is List && (p['images'] as List).isNotEmpty
-                                        ? ((p['images'][0] is Map)
-                                            ? p['images'][0]['src']
-                                            : p['images'][0])
-                                            ?.toString()
-                                        : null);
                                 final selected = _selected.contains(id);
-
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF252640),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: selected ? Border.all(color: const Color(0xFF6C63FF), width: 1.5) : null,
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(14),
-                                      onTap: () {
-                                        if (_selectMode) {
-                                          setState(() {
-                                            if (selected) {
-                                              _selected.remove(id);
-                                            } else {
-                                              _selected.add(id);
-                                            }
-                                          });
-                                        } else {
-                                          _editProduct(p);
-                                        }
-                                      },
-                                      onLongPress: () {
+                                  decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(14)),
+                                  child: ListTile(
+                                    onTap: () {
+                                      if (_selectMode) {
                                         setState(() {
-                                          _selectMode = true;
-                                          _selected.add(id);
+                                          if (selected) {
+                                            _selected.remove(id);
+                                          } else {
+                                            _selected.add(id);
+                                          }
                                         });
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Row(
-                                          children: [
-                                            if (_selectMode)
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 8),
-                                                child: Icon(
-                                                  selected ? Icons.check_circle : Icons.circle_outlined,
-                                                  color: selected ? const Color(0xFF6C63FF) : Colors.white38,
-                                                ),
-                                              ),
-                                            Container(
-                                              width: 56,
-                                              height: 56,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF1A1B2E),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              clipBehavior: Clip.antiAlias,
-                                              child: img != null && img.toString().startsWith('http')
-                                                  ? Image.network(img.toString(), fit: BoxFit.cover,
-                                                      errorBuilder: (_, __, ___) =>
-                                                          const Icon(Icons.image, color: Colors.white24))
-                                                  : const Icon(Icons.image, color: Colors.white24),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(name,
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                          color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                                                  const SizedBox(height: 4),
-                                                  Text('شناسه: $id', style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                                                  const SizedBox(height: 4),
-                                                  Row(
-                                                    children: [
-                                                      Text(_fmtMoney(price),
-                                                          style: const TextStyle(
-                                                              color: Color(0xFF10B981),
-                                                              fontSize: 13,
-                                                              fontWeight: FontWeight.w600)),
-                                                      const SizedBox(width: 12),
-                                                      Text(
-                                                        stock != null ? 'موجودی: $stock' : '—',
-                                                        style: TextStyle(
-                                                          color: (stock == 0 || stock == '0')
-                                                              ? Colors.redAccent
-                                                              : Colors.white54,
-                                                          fontSize: 11,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const Icon(Icons.edit_outlined, color: Colors.white24, size: 18),
-                                          ],
-                                        ),
-                                      ),
+                                      } else {
+                                        _editProduct(p);
+                                      }
+                                    },
+                                    leading: _selectMode
+                                        ? Checkbox(
+                                            value: selected,
+                                            activeColor: const Color(0xFF6C63FF),
+                                            onChanged: (_) {
+                                              setState(() {
+                                                if (selected) {
+                                                  _selected.remove(id);
+                                                } else {
+                                                  _selected.add(id);
+                                                }
+                                              });
+                                            },
+                                          )
+                                        : ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: (p['image'] != null && p['image'].toString().isNotEmpty)
+                                                ? Image.network(p['image'].toString(), width: 48, height: 48, fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) => _imgPlaceholder())
+                                                : _imgPlaceholder(),
+                                          ),
+                                    title: Text(p['name']?.toString() ?? '—',
+                                        style: const TextStyle(color: Colors.white, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    subtitle: Text(
+                                      '${_fmt(p['price'] ?? p['regular_price'])} تومان  •  موجودی: ${p['stock_quantity'] ?? '—'}',
+                                      style: const TextStyle(color: Colors.white38, fontSize: 12),
                                     ),
+                                    trailing: const Icon(Icons.edit_outlined, color: Colors.white24, size: 20),
                                   ),
                                 );
                               },
@@ -424,4 +387,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
     );
   }
+
+  Widget _imgPlaceholder() => Container(
+        width: 48,
+        height: 48,
+        color: const Color(0xFF1A1B2E),
+        child: const Icon(Icons.image, color: Colors.white24, size: 22),
+      );
 }
