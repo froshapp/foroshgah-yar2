@@ -301,8 +301,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.6), AppColors.blue.withOpacity(0.5)]),
                 ),
-                child: (m['avatar']?.toString().isNotEmpty == true)
-                ? ClipOval(child: Image.network(m['avatar'].toString(), width: 64, height: 64, fit: BoxFit.cover,
+                child: (c['avatar']?.toString().isNotEmpty == true)
+                ? ClipOval(child: Image.network(c['avatar'].toString(), width: 64, height: 64, fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 36)))
                 : const Icon(Icons.person, color: Colors.white, size: 36),
               ),

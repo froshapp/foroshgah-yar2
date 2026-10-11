@@ -1,5 +1,6 @@
 import '../nav.dart';
 import 'package:flutter/material.dart';
+import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
 class AppColors {
   static const bg = Color(0xFF0B0B1A);
@@ -200,9 +201,7 @@ class GlassHeader extends StatelessWidget {
                 constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                 icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70, size: 22),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                  );
+                  openNotificationsPanel(context);
                 },
               ),
             ...?actions,
