@@ -108,6 +108,38 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return '$buf تومان';
   }
 
+  String _toJalali(String date) {
+    if (date.length < 10) return date;
+    final parts = date.substring(0, 10).split('-');
+    if (parts.length != 3) return date;
+    final gy = int.tryParse(parts[0]) ?? 0;
+    final gm = int.tryParse(parts[1]) ?? 0;
+    final gd = int.tryParse(parts[2]) ?? 0;
+    if (gy == 0) return date;
+    const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    final gy2 = gm > 2 ? gy + 1 : gy;
+    var days = 355666 + (365 * gy) + ((gy2 + 3) ~/ 4) - ((gy2 + 99) ~/ 100) + ((gy2 + 399) ~/ 400) + gd + gdm[gm - 1];
+    var jy = -1595 + (33 * (days ~/ 12053));
+    days %= 12053;
+    jy += 4 * (days ~/ 1461);
+    days %= 1461;
+    if (days > 365) {
+      jy += (days - 1) ~/ 365;
+      days = (days - 1) % 365;
+    }
+    int jm, jd;
+    if (days < 186) {
+      jm = 1 + days ~/ 31;
+      jd = 1 + days % 31;
+    } else {
+      jm = 7 + (days - 186) ~/ 30;
+      jd = 1 + (days - 186) % 30;
+    }
+    return '${jy.toString().padLeft(4, '0')}/${jm.toString().padLeft(2, '0')}/${jd.toString().padLeft(2, '0')}';
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -207,7 +239,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final status = o['status']?.toString();
           final total = o['total'] ?? o['total_formatted'];
           final date = o['date_created']?.toString() ?? o['date']?.toString() ?? '';
-          final dateShort = date.length >= 10 ? date.substring(0, 10) : date;
+          final dateShort = date.length >= 10 ? _toJalali(date) : date;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),

@@ -15,22 +15,44 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late Map<String, dynamic> order;
   bool loading = false;
   bool saving = false;
+  List<Map<String, dynamic>> statusList = [];
 
-  static const statuses = [
-    ('pending', 'در انتظار پرداخت', Color(0xFFF59E0B)),
-    ('processing', 'در حال انجام', Color(0xFF3B82F6)),
-    ('on-hold', 'در انتظار بررسی', Color(0xFF8B5CF6)),
-    ('completed', 'تکمیل شده', Color(0xFF10B981)),
-    ('cancelled', 'لغو شده', Color(0xFFEF4444)),
-    ('refunded', 'مسترد شده', Color(0xFFEF4444)),
-    ('failed', 'ناموفق', Color(0xFFEF4444)),
-  ];
+  static const _colorMap = {
+    'pending': Color(0xFFF59E0B),
+    'processing': Color(0xFF3B82F6),
+    'on-hold': Color(0xFF8B5CF6),
+    'completed': Color(0xFF10B981),
+    'cancelled': Color(0xFFEF4444),
+    'refunded': Color(0xFFEF4444),
+    'failed': Color(0xFFEF4444),
+  };
+
+  Color _statusColor(String key, String group) {
+    if (_colorMap.containsKey(key)) return _colorMap[key]!;
+    if (group == 'cod24') return const Color(0xFF06B6D4);
+    if (group == 'basalam') return const Color(0xFFF472B6);
+    if (group == 'torob') return const Color(0xFFA78BFA);
+    return const Color(0xFF94A3B8);
+  }
 
   @override
   void initState() {
     super.initState();
     order = Map<String, dynamic>.from(widget.order);
     _loadFull();
+    _loadStatuses();
+  }
+
+  Future<void> _loadStatuses() async {
+    try {
+      final res = await context.read<AuthService>().api.dio.get('orders/statuses');
+      if (res.data is Map && res.data['statuses'] is List) {
+        statusList = (res.data['statuses'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        if (mounted) setState(() {});
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadFull() async {
@@ -135,7 +157,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final status = order['status']?.toString().replaceFirst('wc-', '') ?? '';
-    final statusInfo = statuses.firstWhere((s) => s.$1 == status, orElse: () => (status, status, Colors.white54));
+    Map<String, dynamic>? stMatch;
+    for (final s in statusList) {
+      if (s['key']?.toString() == status) { stMatch = s; break; }
+    }
+    final statusLabel = stMatch?['label']?.toString() ?? order['status_label']?.toString() ?? status;
+    final statusColor = _statusColor(status, stMatch?['group']?.toString() ?? '');
     final shipTitle = order['shipping_method_title']?.toString() ?? '';
     final payTitle = order['payment_method_title']?.toString() ?? order['payment_method']?.toString() ?? '';
 
@@ -162,34 +189,74 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         : () async {
                             final selected = await showModalBottomSheet<String>(
                               context: context,
-                              backgroundColor: const Color(0xFF252640),
+                              backgroundColor: const Color(0xFF0F172A),
+                              isScrollControlled: true,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Padding(
-                                      padding: EdgeInsets.all(16),
-                                      child: Text('تغییر وضعیت', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              builder: (ctx) {
+                                final groups = <String, List<Map<String, dynamic>>>{};
+                                for (final s in statusList) {
+                                  final g = s['group']?.toString() ?? 'custom';
+                                  groups.putIfAbsent(g, () => []).add(s);
+                                }
+                                final shipG = order['shipping_group']?.toString() ?? '';
+                                final orderG = shipG == 'cod24'
+                                    ? ['cod24', 'woocommerce', 'basalam', 'torob', 'custom']
+                                    : shipG == 'basalam'
+                                        ? ['basalam', 'woocommerce', 'cod24', 'torob', 'custom']
+                                        : ['woocommerce', 'cod24', 'basalam', 'torob', 'custom'];
+                                final titles = {
+                                  'woocommerce': 'وضعیت ووکامرس',
+                                  'cod24': 'COD24 / ارسال',
+                                  'basalam': 'باسلام',
+                                  'torob': 'ترب',
+                                  'custom': 'سایر',
+                                };
+                                return SafeArea(
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      children: [
+                                        const Padding(
+                                          padding: EdgeInsets.all(16),
+                                          child: Text('تغییر وضعیت سفارش', textAlign: TextAlign.center,
+                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                        ),
+                                        ...orderG.where((g) => groups.containsKey(g)).expand((g) {
+                                          final items = groups[g]!;
+                                          return [
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                                              child: Text(titles[g] ?? g, style: TextStyle(color: _statusColor('', g), fontSize: 12, fontWeight: FontWeight.w600)),
+                                            ),
+                                            ...items.map((s) {
+                                              final key = s['key']?.toString() ?? '';
+                                              final label = s['label']?.toString() ?? key;
+                                              final c = _statusColor(key, s['group']?.toString() ?? '');
+                                              return ListTile(
+                                                title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                                trailing: status == key ? Icon(Icons.check_circle, color: c, size: 20) : null,
+                                                onTap: () => Navigator.pop(ctx, key),
+                                              );
+                                            }),
+                                          ];
+                                        }),
+                                        const SizedBox(height: 12),
+                                      ],
                                     ),
-                                    ...statuses.map((s) => ListTile(
-                                          title: Text(s.$2, style: TextStyle(color: s.$3, fontWeight: FontWeight.w600)),
-                                          trailing: status == s.$1 ? Icon(Icons.check, color: s.$3) : null,
-                                          onTap: () => Navigator.pop(ctx, s.$1),
-                                        )),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             );
                             if (selected != null) await _changeStatus(selected);
                           },
                     child: Padding(
                       padding: const EdgeInsets.all(14),
                       child: Row(children: [
-                        Icon(Icons.sync_alt, color: statusInfo.$3, size: 20),
+                        Icon(Icons.sync_alt, color: statusColor, size: 20),
                         const SizedBox(width: 10),
                         const Text('وضعیت: ', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                        Text(statusInfo.$2, style: TextStyle(color: statusInfo.$3, fontWeight: FontWeight.bold)),
+                        Text(statusLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
                         const Spacer(),
                         if (saving)
                           const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)))
@@ -235,11 +302,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 const SizedBox(height: 12),
                 _card(
                   child: Column(children: [
-                    _row('محصولات', _fmt(order['total'])),
-                    _row('حمل و نقل', _fmt(order['shipping_total'])),
-                    _row('تخفیف', _fmt(order['discount_total'])),
+                    _row('مبلغ محصولات', '${_fmt(order['subtotal'] ?? order['total'])} تومان'),
+                    _row('هزینه ارسال', '${_fmt(order['shipping_total'])} تومان'),
+                    _row('تخفیف', '${_fmt(order['discount_total'])} تومان'),
                     const Divider(color: Colors.white12),
-                    _row('جمع کل', _fmt(order['total']), bold: true, valueColor: const Color(0xFF10B981)),
+                    _row('جمع کل', '${_fmt(order['total'])} تومان', bold: true, valueColor: const Color(0xFF10B981)),
                   ]),
                 ),
                 if (_items().isNotEmpty) ...[
@@ -249,13 +316,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       const Text('اقلام سفارش', style: TextStyle(color: Colors.white54, fontSize: 12)),
                       const SizedBox(height: 8),
                       ..._items().map((item) {
+                        final qty = item['quantity'] ?? 1;
+                        final lineTotal = item['total'] ?? item['subtotal'] ?? item['price'];
+                        final unit = item['price'] ?? item['subtotal'];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(children: [
-                            Expanded(child: Text(item['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontSize: 13))),
-                            Text('×${item['quantity'] ?? 1}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                            const SizedBox(width: 12),
-                            Text(_fmt(item['total'] ?? item['price']), style: const TextStyle(color: Color(0xFF10B981), fontSize: 13)),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(item['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              Text('تعداد: $qty', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                              const SizedBox(width: 12),
+                              if (unit != null)
+                                Text('فی: ${_fmt(unit)}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                              const Spacer(),
+                              Text('${_fmt(lineTotal)} تومان', style: const TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.w600)),
+                            ]),
                           ]),
                         );
                       }),

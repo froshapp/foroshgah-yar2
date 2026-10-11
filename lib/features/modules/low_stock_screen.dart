@@ -88,13 +88,13 @@ class _LowStockScreenState extends State<LowStockScreen> {
                       if (_items.isEmpty)
                         const Padding(
                           padding: EdgeInsets.all(24),
-                          child: Text('محصولی با موجودی کم یافت نشد.\nاگر مدیریت موجودی روی محصولات فعال نباشد، لیست خالی است.',
+                          child: Text('محصولی با این فیلتر یافت نشد.\nمحصولات ناموجود و کم‌موجود از وضعیت انبار ووکامرس خوانده می‌شوند.',
                               textAlign: TextAlign.center, style: TextStyle(color: AppColors.textDim)),
                         ),
                       ..._items.map((e) {
                         final m = Map<String, dynamic>.from(e as Map);
                         final stock = m['stock'];
-                        final isOut = (stock is num && stock <= 0);
+                        final isOut = (m['stock_status']?.toString() == 'outofstock') || (stock is num && stock <= 0);
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: NeonCard(
