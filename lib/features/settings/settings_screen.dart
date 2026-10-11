@@ -388,15 +388,20 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     );
     if (ok == true) {
       try {
-        await context.read<AuthService>().api.dio.post('announcements', data: {
-          'title': title.text,
-          'body': body.text,
+        final res = await context.read<AuthService>().api.dio.post('announcements', data: {
+          'title': title.text.trim(),
+          'body': body.text.trim(),
           'places': ['app', 'site'],
           'active': true,
         });
-        await _load();
+        if (res.data is Map && res.data['success'] == true) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اطلاعیه ثبت شد')));
+          await _load();
+        } else {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ثبت نشد: ${res.data}')));
+        }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     }
   }

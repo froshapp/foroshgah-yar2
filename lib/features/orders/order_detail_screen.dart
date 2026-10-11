@@ -154,6 +154,96 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+
+  Future<void> _openCod24() async {
+    final id = int.tryParse(order['id']?.toString() ?? '') ?? 0;
+    if (id == 0) return;
+    try {
+      final res = await context.read<AuthService>().api.dio.get('cod24/meta', queryParameters: {'order_id': id});
+      if (res.data is! Map || res.data['available'] != true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('افزونه COD24 روی سایت فعال نیست')));
+        }
+        return;
+      }
+      final cartons = Map<String, dynamic>.from(res.data['cartons'] as Map? ?? {});
+      final weightCtrl = TextEditingController(text: '${res.data['default_weight'] ?? 0}');
+      String carton = cartons.keys.isNotEmpty ? cartons.keys.first : '1';
+      final content = res.data['content']?.toString() ?? '';
+      final actions = (res.data['actions_initial'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      String action = actions.isNotEmpty ? actions.first['key'].toString() : 'add';
+
+      if (!mounted) return;
+      final ok = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFF0F172A),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (ctx) {
+          return StatefulBuilder(builder: (ctx, setS) {
+            return Padding(
+              padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
+              child: SingleChildScrollView(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const Text('ارسال به پنل COD24', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: weightCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'وزن کل سفارش (گرم)', labelStyle: TextStyle(color: Colors.white54), enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: carton,
+                    dropdownColor: const Color(0xFF1E293B),
+                    decoration: const InputDecoration(labelText: 'سایز بسته‌بندی', labelStyle: TextStyle(color: Colors.white54)),
+                    items: cartons.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value.toString(), style: const TextStyle(color: Colors.white, fontSize: 12)))).toList(),
+                    onChanged: (v) => setS(() => carton = v ?? carton),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('محتوای بسته', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(content.isEmpty ? '—' : content, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: action,
+                    dropdownColor: const Color(0xFF1E293B),
+                    decoration: const InputDecoration(labelText: 'عملیات', labelStyle: TextStyle(color: Colors.white54)),
+                    items: actions.map((a) => DropdownMenuItem(value: a['key'].toString(), child: Text(a['label'].toString(), style: const TextStyle(color: Colors.white)))).toList(),
+                    onChanged: (v) => setS(() => action = v ?? action),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF06B6D4), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(48)),
+                    child: const Text('ارسال به پنل COD24'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                ]),
+              ),
+            );
+          });
+        },
+      );
+      if (ok == true && mounted) {
+        final sub = await context.read<AuthService>().api.dio.post('cod24/submit', data: {
+          'order_id': id,
+          'action': action,
+          'weight': int.tryParse(weightCtrl.text) ?? 0,
+          'carton_size': carton,
+        });
+        final msg = sub.data is Map ? (sub.data['message']?.toString() ?? 'انجام شد') : 'انجام شد';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+          await _loadFull();
+        }
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = order['status']?.toString().replaceFirst('wc-', '') ?? '';
@@ -294,6 +384,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 _card(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('حمل و پرداخت', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    if ((order['shipping_group']?.toString() == 'cod24') || (order['shipping_method']?.toString() ?? '').toLowerCase().contains('cod24') || (order['shipping_method_title']?.toString() ?? '').contains('COD24') || (order['shipping_method_title']?.toString() ?? '').contains('پیشتاز'))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: OutlinedButton.icon(
+                          onPressed: _openCod24,
+                          icon: const Icon(Icons.local_shipping, size: 18),
+                          label: const Text('پنل COD24 / بسته‌بندی'),
+                          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF06B6D4), side: const BorderSide(color: Color(0xFF06B6D4))),
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     _row('روش ارسال', shipTitle.isEmpty ? '—' : shipTitle),
                     _row('روش پرداخت', payTitle.isEmpty ? '—' : payTitle),

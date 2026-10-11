@@ -240,6 +240,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final total = o['total'] ?? o['total_formatted'];
           final date = o['date_created']?.toString() ?? o['date']?.toString() ?? '';
           final dateShort = date.length >= 10 ? _toJalali(date) : date;
+          final products = o['product_names']?.toString() ?? '';
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -287,6 +288,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       _customerPhone(o),
                       style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                       textDirection: TextDirection.ltr,
+                    ),
+                  if (products.isNotEmpty)
+                    Text(
+                      products,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppColors.textMute, fontSize: 11),
                     ),
                   const SizedBox(height: 6),
                   Row(

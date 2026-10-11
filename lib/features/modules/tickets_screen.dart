@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import 'customers_screen.dart';
 
 class TicketsScreen extends StatefulWidget {
   const TicketsScreen({super.key});
@@ -87,7 +88,15 @@ class _TicketsScreenState extends State<TicketsScreen> {
                                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Text('#${t['number'] ?? t['id']} — ${t['title'] ?? ''}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
-                                  Text(t['customer'] is Map ? (t['customer']['name']?.toString() ?? '') : '', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                  Text(t['customer'] is Map ? (t['customer']['name']?.toString() ?? 'کاربر #${t['customer']['id'] ?? ''}') : 'کاربر نامشخص', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                  if (t['customer'] is Map && t['customer']['id'] != null)
+                                    TextButton(
+                                      onPressed: () {
+                                        final c = Map<String, dynamic>.from(t['customer'] as Map);
+                                        Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: c)));
+                                      },
+                                      child: const Text('مدیریت مشتری', style: TextStyle(fontSize: 11, color: AppColors.purpleGlow)),
+                                    ),
                                   Text(t['updated_at']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                                 ])),
                                 Container(
