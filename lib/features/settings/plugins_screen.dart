@@ -81,10 +81,8 @@ class _PluginsScreenState extends State<PluginsScreen> {
       
       body: Column(children: [
           GlassHeader(title: 'افزونه‌های سایت',
-            showBack: true,
-            onRefresh: _load, actions: [
-            IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-          ]),
+                        onRefresh: _load, actions: [
+            ]),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: NeonCard(

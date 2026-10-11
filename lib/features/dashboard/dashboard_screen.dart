@@ -75,11 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: siteName,
               subtitle: manager.isEmpty ? null : manager,
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
-                  tooltip: 'اعلان‌ها',
-                  onPressed: () => openNotificationsPanel(context),
-                ),
                 if (dash.loading)
                   const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18)),
               ],

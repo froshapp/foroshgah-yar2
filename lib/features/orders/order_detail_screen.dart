@@ -269,8 +269,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
         backgroundColor: const Color(0xFF1A1B2E),
         title: Text('سفارش #${order['number'] ?? order['id'] ?? ''}', style: const TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-      ),
+        leading: ),
       body: loading
           ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF))))
           : ListView(

@@ -57,10 +57,13 @@ class _LowStockScreenState extends State<LowStockScreen> {
       body: SafeArea(
         child: Column(children: [
           GlassHeader(
-            title: 'یادآوری موجودی',
-            actions: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-            ],
+            title: 'یادآوری موجودی محصول',
+            subtitle: 'مدیریت هوشمند موجودی کالاها',
+            leadingIcon: Icons.inventory_2_rounded,
+            leadingColor: const Color(0xFF60A5FA),
+            storeOpensSettings: false,
+            onRefresh: _load,
+            
           ),
           Expanded(
             child: loading

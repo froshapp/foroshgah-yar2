@@ -54,9 +54,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       backgroundColor: AppColors.bg,
       
       body: Column(children: [
-          GlassHeader(title: 'نظرات محصولات', actions: [
-            IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-          ]),
+          GlassHeader(title: 'پرسش و پاسخ مشتریان',
+            subtitle: 'مدیریت سوالات و نظرات',
+            leadingIcon: Icons.chat_bubble_rounded,
+            leadingColor: const Color(0xFF2DD4BF),
+            storeOpensSettings: false,
+            onRefresh: _load, ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(children: [

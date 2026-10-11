@@ -12,13 +12,13 @@ class AppNav {
   static void openSettingsDrawer() {
     final s = scaffoldKey?.currentState;
     if (s != null) {
-      s.openEndDrawer();
+      s.openDrawer();
       return;
     }
     goToTab?.call(4);
   }
 
   static void closeDrawer() {
-    scaffoldKey?.currentState?.closeEndDrawer();
+    scaffoldKey?.currentState?.closeDrawer();
   }
 }

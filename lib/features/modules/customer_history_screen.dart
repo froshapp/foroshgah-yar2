@@ -62,7 +62,6 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white), onPressed: () => Navigator.pop(context)),
               const Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Text('سوابق مشتریان', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),

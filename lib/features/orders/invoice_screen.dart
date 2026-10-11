@@ -18,8 +18,22 @@ class InvoiceScreen extends StatefulWidget {
 
 class _InvoiceScreenState extends State<InvoiceScreen> {
   bool printing = false;
+  Map<String, dynamic> inv = {};
 
   Map<String, dynamic> get order => widget.order;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInv();
+  }
+
+  Future<void> _loadInv() async {
+    try {
+      final res = await context.read<AuthService>().api.dio.get('settings/invoice');
+      if (res.data is Map && mounted) setState(() => inv = Map<String, dynamic>.from(res.data as Map));
+    } catch (_) {}
+  }
 
   String _fmt(dynamic v) {
     if (v == null) return '0';
@@ -61,7 +75,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     setState(() => printing = true);
     try {
       final auth = context.read<AuthService>();
-      final site = auth.site?['name']?.toString() ?? 'فروشگاه';
+      final site = inv['store_name']?.toString().isNotEmpty == true ? inv['store_name'].toString() : (auth.site?['name']?.toString() ?? 'فروشگاه');
       final num = order['number'] ?? order['id'] ?? '';
       final b = _billing();
       final name = '${b['first_name'] ?? ''} ${b['last_name'] ?? ''}'.trim();
@@ -147,7 +161,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final site = auth.site?['name']?.toString() ?? 'فروشگاه';
+    final site = inv['store_name']?.toString().isNotEmpty == true ? inv['store_name'].toString() : (auth.site?['name']?.toString() ?? 'فروشگاه');
     final num = order['number'] ?? order['id'] ?? '';
     final b = _billing();
     final name = '${b['first_name'] ?? ''} ${b['last_name'] ?? ''}'.trim();

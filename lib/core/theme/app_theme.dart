@@ -90,7 +90,9 @@ class GlassHeader extends StatelessWidget {
   final VoidCallback? onStoreTap;
   final VoidCallback? onRefresh;
   final bool showBell;
-  final bool showBack;
+  /// آیکون اختصاصی سمت راست (به‌جای فروشگاه)
+  final IconData? leadingIcon;
+  final Color? leadingColor;
   const GlassHeader({
     super.key,
     required this.title,
@@ -101,7 +103,8 @@ class GlassHeader extends StatelessWidget {
     this.onStoreTap,
     this.onRefresh,
     this.showBell = true,
-    this.showBack = false,
+    this.leadingIcon,
+    this.leadingColor,
   });
 
   @override
@@ -110,28 +113,73 @@ class GlassHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 4 : 8, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF2A1A5E), Color(0xFF1A1040), Color(0xFF0F0A28)],
+            colors: [Color(0xFF3B1F8E), Color(0xFF1E1248), Color(0xFF120A2E)],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: AppColors.purple.withOpacity(0.35)),
           boxShadow: [
-            BoxShadow(color: AppColors.purple.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
+            BoxShadow(color: AppColors.purple.withOpacity(0.22), blurRadius: 18, offset: const Offset(0, 5)),
           ],
         ),
         child: Row(
           children: [
-            if (showBack)
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
-                onPressed: () => Navigator.maybePop(context),
+            // زنگوله — همیشه سمت چپ ثابت (مثل پیشخوان)
+            if (showBell)
+              GestureDetector(
+                onTap: () => openNotificationsPanel(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 20),
+                ),
               ),
+            if (showBell) const SizedBox(width: 8),
+            if (onRefresh != null)
+              GestureDetector(
+                onTap: onRefresh,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  margin: const EdgeInsets.only(left: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 18),
+                ),
+              ),
+            const Spacer(),
+            // عنوان وسط/راست
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(title,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  if (subtitle != null && subtitle!.isNotEmpty)
+                    Text(subtitle!,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(color: AppColors.textDim, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            // آیکون فروشگاه / ماژول
             if (showStoreIcon)
               GestureDetector(
                 onTap: () {
@@ -142,21 +190,26 @@ class GlassHeader extends StatelessWidget {
                   if (storeOpensSettings) AppNav.openSettingsDrawer();
                 },
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppColors.purple, Color(0xFF5A3FE0)]),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 8)],
+                    gradient: LinearGradient(colors: [
+                      leadingColor ?? AppColors.purple,
+                      (leadingColor ?? AppColors.purple).withOpacity(0.75),
+                    ]),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: (leadingColor ?? AppColors.purple).withOpacity(0.4), blurRadius: 10),
+                    ],
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.storefront_rounded, color: Colors.white, size: 18),
-                      if (storeOpensSettings)
+                      Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 20),
+                      if (storeOpensSettings && leadingIcon == null)
                         Positioned(
-                          right: 2,
-                          bottom: 2,
+                          right: 3,
+                          bottom: 3,
                           child: Container(
                             padding: const EdgeInsets.all(1.5),
                             decoration: BoxDecoration(
@@ -170,39 +223,6 @@ class GlassHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            if (showStoreIcon) const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  if (subtitle != null && subtitle!.isNotEmpty)
-                    Text(subtitle!,
-                        style: const TextStyle(color: AppColors.textDim, fontSize: 11),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-            if (onRefresh != null)
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                onPressed: onRefresh,
-              ),
-            if (showBell)
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70, size: 22),
-                onPressed: () {
-                  openNotificationsPanel(context);
-                },
               ),
             ...?actions,
           ],

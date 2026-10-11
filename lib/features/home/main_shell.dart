@@ -56,7 +56,7 @@ class MainShellState extends State<MainShell> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.bg,
-      endDrawer: Drawer(
+      drawer: Drawer(
         backgroundColor: AppColors.bg,
         width: MediaQuery.of(context).size.width * 0.88,
         child: const SettingsScreen(asDrawer: true),

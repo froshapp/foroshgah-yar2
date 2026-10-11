@@ -115,8 +115,7 @@ class _TasksScreenState extends State<TasksScreen> {
         GlassHeader(
           title: 'کارهای من',
           subtitle: '$done از ${items.length} انجام‌شده',
-          showBack: true,
-          onRefresh: _load,
+                    onRefresh: _load,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

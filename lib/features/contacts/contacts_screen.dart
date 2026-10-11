@@ -79,8 +79,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             title: 'تماس‌ها',
             actions: [
               IconButton(icon: const Icon(Icons.refresh, color: Colors.white70), onPressed: _load),
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-            ],
+              ],
           ),
           Expanded(
             child: _loading

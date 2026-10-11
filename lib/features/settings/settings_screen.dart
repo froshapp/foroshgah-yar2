@@ -41,6 +41,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const StockThresholdPage()));
           }),
+          _item(Icons.receipt_long_outlined, 'تنظیمات فاکتور', 'آدرس، تماس، اینستاگرام، واتساپ، لوگو', AppColors.cyan, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
+          }),
           _item(Icons.campaign_outlined, 'اطلاعیه‌ها', 'ارسال و مدیریت اعلان عمومی', AppColors.purple, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
           }),
@@ -171,7 +174,7 @@ class _StatusColorsPageState extends State<StatusColorsPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('رنگ وضعیت سفارشات', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+        leading: ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: keys.map((k) {
@@ -253,7 +256,7 @@ class _StockThresholdPageState extends State<StockThresholdPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+        leading: ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
@@ -330,7 +333,7 @@ class _AppNotifyPageState extends State<AppNotifyPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('اعلان‌های اپ', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context))),
+        leading: ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: NeonCard(
@@ -550,6 +553,124 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                         ),
         ),
       ]),
+    );
+  }
+}
+
+
+class InvoiceSettingsPage extends StatefulWidget {
+  const InvoiceSettingsPage({super.key});
+  @override
+  State<InvoiceSettingsPage> createState() => _InvoiceSettingsPageState();
+}
+
+class _InvoiceSettingsPageState extends State<InvoiceSettingsPage> {
+  final name = TextEditingController();
+  final address = TextEditingController();
+  final phone = TextEditingController();
+  final insta = TextEditingController();
+  final whats = TextEditingController();
+  final logo = TextEditingController();
+  bool loading = true;
+  bool saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    name.dispose(); address.dispose(); phone.dispose(); insta.dispose(); whats.dispose(); logo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await context.read<AuthService>().api.dio.get('settings/invoice');
+      if (res.data is Map) {
+        final d = res.data as Map;
+        name.text = d['store_name']?.toString() ?? '';
+        address.text = d['address']?.toString() ?? '';
+        phone.text = d['phone']?.toString() ?? '';
+        insta.text = d['instagram']?.toString() ?? '';
+        whats.text = d['whatsapp']?.toString() ?? '';
+        logo.text = d['logo_url']?.toString() ?? '';
+      }
+    } catch (_) {}
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => saving = true);
+    try {
+      await context.read<AuthService>().api.dio.post('settings/invoice', data: {
+        'store_name': name.text.trim(),
+        'address': address.text.trim(),
+        'phone': phone.text.trim(),
+        'instagram': insta.text.trim(),
+        'whatsapp': whats.text.trim(),
+        'logo_url': logo.text.trim(),
+      });
+      if (mounted) showOk(context, 'ذخیره شد');
+    } catch (_) {
+      if (mounted) showErr(context, 'خطا');
+    }
+    if (mounted) setState(() => saving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
+        GlassHeader(title: 'تنظیمات فاکتور', subtitle: 'اطلاعات چاپ فاکتور', storeOpensSettings: false),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _f(name, 'نام فروشگاه'),
+                    _f(address, 'آدرس فروشگاه', lines: 2),
+                    _f(phone, 'شماره تماس'),
+                    _f(insta, 'اینستاگرام'),
+                    _f(whats, 'واتساپ'),
+                    _f(logo, 'آدرس تصویر لوگو (URL)'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: saving ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.purple,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: saving ? const MiniLoader(size: 20) : const Text('ذخیره'),
+                    ),
+                  ],
+                ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _f(TextEditingController c, String hint, {int lines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: NeonCard(
+        child: TextField(
+          controller: c,
+          maxLines: lines,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: AppColors.textMute),
+            border: InputBorder.none,
+          ),
+        ),
+      ),
     );
   }
 }

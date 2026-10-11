@@ -16,6 +16,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
   String message = '';
   String providerLabel = '';
   List tickets = [];
+  String filter = 'all'; // all | open | answered | closed
 
   @override
   void initState() {
@@ -34,7 +35,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
         message = st.data['message']?.toString() ?? '';
       }
       if (available) {
-        final res = await api.dio.get('tickets', queryParameters: {'per_page': 30});
+        final res = await api.dio.get('tickets', queryParameters: {'per_page': 50});
         if (res.data is Map) {
           if (res.data['available'] == false) {
             available = false;
@@ -44,7 +45,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
         }
       } else {
         message = message.isEmpty
-            ? 'یکی از افزونه‌های تیکت پشتیبانی (مثل مهرنوش، Awesome Support، Support Candy) را روی سایت نصب و فعال کنید.'
+            ? 'یکی از افزونه‌های تیکت پشتیبانی را روی سایت نصب و فعال کنید.'
             : message;
       }
     } catch (e) {
@@ -54,206 +55,181 @@ class _TicketsScreenState extends State<TicketsScreen> {
     if (mounted) setState(() => loading = false);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          GlassHeader(
-            title: 'تیکت و پشتیبانی',
-            actions: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
-          Expanded(
-            child: loading
-                ? const Center(child: MiniLoader())
-                : !available
-                    ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(message.isEmpty ? 'افزونه تیکت فعال نیست' : message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim))))
-                    : tickets.isEmpty
-                        ? Center(child: Text(message.isNotEmpty ? message : 'تیکتی یافت نشد', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim)))
-                        : RefreshIndicator(
-                            color: AppColors.purple,
-                            onRefresh: _load,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: tickets.length,
-                              itemBuilder: (_, i) {
-                                final t = Map<String, dynamic>.from(tickets[i] as Map);
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: NeonCard(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(t['subject']?.toString() ?? t['title']?.toString() ?? 'تیکت', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                      const SizedBox(height: 4),
-                                      Text(t['customer'] is Map ? (t['customer']['name']?.toString() ?? '') : '', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                      if (t['customer'] is Map && t['customer']['id'] != null)
-                                        TextButton(
-                                          onPressed: () {
-                                            final c = Map<String, dynamic>.from(t['customer'] as Map);
-                                            Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: c)));
-                                          },
-                                          child: const Text('مدیریت مشتری', style: TextStyle(fontSize: 11, color: AppColors.purpleGlow)),
-                                        ),
-                                    ]),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-          ),
-        ]),
-      ),
-    );
+  String _statusKey(Map m) {
+    final s = (m['status'] ?? m['status_label'] ?? '').toString().toLowerCase();
+    if (s.contains('close') || s.contains('بسته') || s.contains('حل')) return 'closed';
+    if (s.contains('answer') || s.contains('پاسخ') || s.contains('reply')) return 'answered';
+    return 'open';
   }
 
-  Widget _disabled() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.support_agent, size: 56, color: AppColors.textMute.withOpacity(0.5)),
-        const SizedBox(height: 16),
-        const Text('ماژول تیکت غیرفعال است', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Text(
-          message.isNotEmpty
-              ? message
-              : 'برای فعال‌سازی، یکی از افزونه‌های تیکت پشتیبانی را روی وردپرس نصب کنید:\n• مهرنوش تیکت\n• Awesome Support\n• Support Candy\n• نیر وب / وردپرس‌یار',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.textDim, height: 1.5),
+  List get _filtered {
+    if (filter == 'all') return tickets;
+    return tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == filter).toList();
+  }
+
+  Color _statusColor(String k) {
+    switch (k) {
+      case 'closed': return AppColors.textMute;
+      case 'answered': return AppColors.green;
+      default: return AppColors.red;
+    }
+  }
+
+  String _statusLabel(String k) {
+    switch (k) {
+      case 'closed': return 'بسته شده';
+      case 'answered': return 'پاسخ داده شده';
+      default: return 'جدید';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final open = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'open').length;
+    final answered = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'answered').length;
+    final closed = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'closed').length;
+    final list = _filtered;
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
+        GlassHeader(
+          title: 'تیکت و پشتیبانی',
+          subtitle: providerLabel.isNotEmpty ? providerLabel : 'پاسخگویی به درخواست‌های مشتریان',
+          leadingIcon: Icons.headset_mic_rounded,
+          leadingColor: const Color(0xFFA78BFA),
+          storeOpensSettings: false,
+          onRefresh: _load,
         ),
-        const SizedBox(height: 20),
-        OutlinedButton(onPressed: _load, child: const Text('بررسی مجدد')),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : !available
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim)),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        children: [
+                          Row(children: [
+                            Expanded(child: _statChip('همه', tickets.length, filter == 'all', AppColors.purple, () => setState(() => filter = 'all'))),
+                            const SizedBox(width: 8),
+                            Expanded(child: _statChip('در حال بررسی', open, filter == 'open', AppColors.orange, () => setState(() => filter = 'open'))),
+                            const SizedBox(width: 8),
+                            Expanded(child: _statChip('پاسخ‌داده‌شده', answered, filter == 'answered', AppColors.green, () => setState(() => filter = 'answered'))),
+                          ]),
+                          const SizedBox(height: 12),
+                          if (list.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Center(child: Text('تیکتی یافت نشد', style: TextStyle(color: AppColors.textDim))),
+                            )
+                          else
+                            ...list.map((e) {
+                              final m = Map<String, dynamic>.from(e as Map);
+                              final sk = _statusKey(m);
+                              final id = m['id'] ?? m['number'] ?? '';
+                              final title = m['title']?.toString() ?? m['subject']?.toString() ?? 'بدون عنوان';
+                              final user = m['customer_name']?.toString() ?? m['user_name']?.toString() ?? m['author']?.toString() ?? '';
+                              final ago = m['ago']?.toString() ?? m['date']?.toString() ?? '';
+                              final customerId = int.tryParse('${m['customer_id'] ?? m['user_id'] ?? 0}') ?? 0;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: NeonCard(
+                                  onTap: () {
+                                    // جزئیات ساده
+                                    showModalBottomSheet(
+                                      context: context,
+                                      backgroundColor: AppColors.card,
+                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                      builder: (_) => Padding(
+                                        padding: const EdgeInsets.all(20),
+                                        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                                          Text('#$id — $title', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                          const SizedBox(height: 8),
+                                          Text(user, style: const TextStyle(color: AppColors.textDim)),
+                                          if ((m['content'] ?? m['message'] ?? '').toString().isNotEmpty) ...[
+                                            const SizedBox(height: 12),
+                                            Text((m['content'] ?? m['message']).toString(), style: const TextStyle(color: Colors.white70, height: 1.5)),
+                                          ],
+                                          const SizedBox(height: 16),
+                                          if (customerId > 0)
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: {
+                                                  'id': customerId,
+                                                  'name': user,
+                                                  'phone': m['phone'] ?? '',
+                                                  'email': m['email'] ?? '',
+                                                  'avatar': m['avatar'] ?? '',
+                                                  'billing_address': '',
+                                                })));
+                                              },
+                                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white),
+                                              child: const Text('مدیریت مشتری'),
+                                            ),
+                                        ]),
+                                      ),
+                                    );
+                                  },
+                                  child: Row(children: [
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Row(children: [
+                                          Text('#$id', style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.bold, fontSize: 13)),
+                                          const SizedBox(width: 8),
+                                          Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                        ]),
+                                        const SizedBox(height: 6),
+                                        if (user.isNotEmpty) Text(user, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                        if (ago.isNotEmpty) Text(ago, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _statusColor(sk).withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Text(_statusLabel(sk), style: TextStyle(color: _statusColor(sk), fontSize: 11)),
+                                        ),
+                                      ]),
+                                    ),
+                                    const Icon(Icons.chevron_left, color: AppColors.textMute),
+                                  ]),
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
+                    ),
+        ),
       ]),
     );
   }
-}
 
-class TicketDetailPage extends StatefulWidget {
-  final int id;
-  const TicketDetailPage({super.key, required this.id});
-  @override
-  State<TicketDetailPage> createState() => _TicketDetailPageState();
-}
-
-class _TicketDetailPageState extends State<TicketDetailPage> {
-  bool loading = true;
-  Map? ticket;
-  final replyCtrl = TextEditingController();
-  bool sending = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    replyCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() => loading = true);
-    try {
-      final res = await context.read<AuthService>().api.dio.get('tickets/${widget.id}');
-      if (res.data is Map && res.data['ticket'] is Map) {
-        ticket = Map<String, dynamic>.from(res.data['ticket'] as Map);
-      }
-    } catch (_) {}
-    if (mounted) setState(() => loading = false);
-  }
-
-  Future<void> _send() async {
-    if (replyCtrl.text.trim().isEmpty) return;
-    setState(() => sending = true);
-    try {
-      await context.read<AuthService>().api.dio.post('tickets/${widget.id}', data: {'content': replyCtrl.text.trim()});
-      replyCtrl.clear();
-      await _load();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    }
-    if (mounted) setState(() => sending = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final replies = ticket?['replies'] is List ? ticket!['replies'] as List : [];
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(centerTitle: true, elevation: 0,
-        backgroundColor: AppColors.bg,
-        title: Text(ticket != null ? '#${ticket!['number'] ?? widget.id}' : 'تیکت', style: const TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
+  Widget _statChip(String label, int n, bool sel, Color c, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: sel ? c.withOpacity(0.2) : AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: sel ? c.withOpacity(0.6) : AppColors.cardBorder),
+        ),
+        child: Column(children: [
+          Text('$n', style: TextStyle(color: sel ? c : Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(color: sel ? c : AppColors.textDim, fontSize: 10), textAlign: TextAlign.center),
+        ]),
       ),
-      body: loading
-          ? const Center(child: MiniLoader())
-          : ticket == null
-              ? const Center(child: Text('بارگذاری نشد', style: TextStyle(color: AppColors.textDim)))
-              : Column(children: [
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        NeonCard(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(ticket!['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
-                            const SizedBox(height: 8),
-                            Text(ticket!['content']?.toString() ?? ticket!['excerpt']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 13)),
-                          ]),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text('پاسخ‌ها', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        ...replies.map((r) {
-                          final m = Map<String, dynamic>.from(r as Map);
-                          final staff = m['is_staff'] == true;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: NeonCard(
-                              borderColor: staff ? AppColors.purple.withOpacity(0.35) : null,
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(m['author']?.toString() ?? '', style: TextStyle(color: staff ? AppColors.purpleGlow : Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
-                                const SizedBox(height: 4),
-                                Text(m['content']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 13)),
-                                Text(m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
-                              ]),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(children: [
-                        Expanded(
-                          child: TextField(
-                            controller: replyCtrl,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'پاسخ...',
-                              hintStyle: const TextStyle(color: AppColors.textMute),
-                              filled: true,
-                              fillColor: AppColors.card,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: sending ? null : _send,
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white, minimumSize: const Size(56, 48)),
-                          child: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send),
-                        ),
-                      ]),
-                    ),
-                  ),
-                ]),
     );
   }
 }

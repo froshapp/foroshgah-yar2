@@ -84,8 +84,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           GlassHeader(
             title: 'مدیریت مشتریان',
             subtitle: 'کل: $totalCustomers',
-            showBack: true,
-            onRefresh: _load,
+                        onRefresh: _load,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -153,10 +152,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                             shape: BoxShape.circle,
                                             gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
                                           ),
-                                          child: (m['avatar']?.toString().isNotEmpty == true)
-                          ? ClipOval(child: Image.network(m['avatar'].toString(), width: 40, height: 40, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white70, size: 22)))
-                          : const Icon(Icons.person, color: Colors.white70, size: 22),
+                                          child: _avatar(m, size: 40),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -285,8 +281,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         title: Text(name, style: const TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-        actions: [
+        leading: actions: [
           TextButton(onPressed: saving ? null : _save, child: saving ? const MiniLoader(size: 18) : const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
         ],
       ),
@@ -301,10 +296,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.6), AppColors.blue.withOpacity(0.5)]),
                 ),
-                child: (c['avatar']?.toString().isNotEmpty == true)
-                ? ClipOval(child: Image.network(c['avatar'].toString(), width: 64, height: 64, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 36)))
-                : const Icon(Icons.person, color: Colors.white, size: 36),
+                child: _avatar(c, size: 64),
               ),
               const SizedBox(height: 10),
               Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -345,24 +337,27 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: NeonCard(
-                  child: Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('#${m['number'] ?? m['id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                        Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                        Text(
-                          (m['product_names']?.toString().isNotEmpty == true)
-                              ? m['product_names'].toString()
-                              : '—',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: AppColors.textDim, fontSize: 11),
-                        ),
-                      ]),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Text('#${m['number'] ?? m['id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Text('${m['total'] ?? ''}', style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+                    ]),
+                    const SizedBox(height: 6),
+                    Text(
+                      (m['product_names']?.toString().isNotEmpty == true)
+                          ? m['product_names'].toString()
+                          : '—',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                     ),
-                    Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Text('${m['total'] ?? ''}', style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),
+                      const Spacer(),
+                      Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                    ]),
                   ]),
                 ),
               );

@@ -62,8 +62,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                   GlassHeader(
                     title: 'حسابداری فروشگاه',
                     subtitle: 'گزارش مالی',
-                    showBack: true,
-                    onRefresh: _load,
+                                        onRefresh: _load,
                   ),
                   Expanded(
                     child: RefreshIndicator(
@@ -134,10 +133,20 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                 final m = Map<String, dynamic>.from(e as Map);
                                 final out = m['type'] == 'out';
                                 final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
+                                final detail = m['detail']?.toString() ?? '';
+                                final qty = m['qty'];
                                 return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 6),
-                                  child: Row(children: [
-                                    Expanded(child: Text(m['label']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 13))),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(m['label']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                                        if (detail.isNotEmpty)
+                                          Text(detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                        if (qty != null)
+                                          Text('تعداد: $qty', style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
+                                      ]),
+                                    ),
                                     Text(
                                       '${out ? '-' : '+'}${_fmt(total)}',
                                       style: TextStyle(color: out ? AppColors.red : AppColors.green, fontWeight: FontWeight.w600),
