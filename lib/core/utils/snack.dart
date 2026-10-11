@@ -4,23 +4,25 @@ import '../theme/app_theme.dart';
 void showOk(BuildContext context, String msg) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(msg, style: const TextStyle(fontSize: 13)),
+    content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: Colors.white)),
     backgroundColor: const Color(0xFF34D399),
     behavior: SnackBarBehavior.floating,
-    margin: const EdgeInsets.all(12),
+    margin: const EdgeInsets.fromLTRB(48, 0, 48, 80),
     duration: const Duration(seconds: 2),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ));
 }
 
 void showErr(BuildContext context, String msg) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(msg, style: const TextStyle(fontSize: 13)),
+    content: Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: Colors.white)),
     backgroundColor: AppColors.red,
     behavior: SnackBarBehavior.floating,
-    margin: const EdgeInsets.all(12),
+    margin: const EdgeInsets.fromLTRB(48, 0, 48, 80),
     duration: const Duration(seconds: 3),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ));
 }

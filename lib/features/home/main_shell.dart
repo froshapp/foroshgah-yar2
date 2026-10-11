@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/nav.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../orders/orders_screen.dart';
 import '../products/products_screen.dart';
@@ -18,6 +19,18 @@ class MainShellState extends State<MainShell> {
   int index = 0;
 
   void goTo(int i) => setState(() => index = i);
+
+  @override
+  void initState() {
+    super.initState();
+    AppNav.goToTab = goTo;
+  }
+
+  @override
+  void dispose() {
+    if (AppNav.goToTab == goTo) AppNav.goToTab = null;
+    super.dispose();
+  }
 
   Future<void> openAddProduct() async {
     final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));

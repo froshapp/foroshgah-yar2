@@ -298,7 +298,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Row(children: [
             Expanded(
-              flex: 3,
+              flex: 1,
               child: SizedBox(
                 height: 44,
                 child: TextField(
@@ -321,7 +321,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              flex: 2,
+              flex: 1,
               child: Container(
                 height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 8),

@@ -1,3 +1,4 @@
+import '../nav.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -84,85 +85,101 @@ class GlassHeader extends StatelessWidget {
   final String? subtitle;
   final List<Widget>? actions;
   final bool showStoreIcon;
+  final bool storeOpensSettings;
+  final VoidCallback? onStoreTap;
   const GlassHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.actions,
     this.showStoreIcon = true,
+    this.storeOpensSettings = true,
+    this.onStoreTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2A1A5E), Color(0xFF1A1040), Color(0xFF0F0A28)],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.purple.withOpacity(0.35)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.purple.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+    final topPad = MediaQuery.of(context).padding.top;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, topPad > 0 ? topPad + 4 : 8, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2A1A5E), Color(0xFF1A1040), Color(0xFF0F0A28)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          if (showStoreIcon)
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.purple, Color(0xFF5A3FE0)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.purple.withOpacity(0.4),
-                    blurRadius: 10,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.purple.withOpacity(0.35)),
+          boxShadow: [
+            BoxShadow(color: AppColors.purple.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            if (showStoreIcon)
+              GestureDetector(
+                onTap: () {
+                  if (onStoreTap != null) {
+                    onStoreTap!();
+                    return;
+                  }
+                  if (!storeOpensSettings) return;
+                  // بستن صفحات push‌شده و رفتن به تنظیمات
+                  Navigator.of(context, rootNavigator: false).popUntil((r) => r.isFirst);
+                  AppNav.settings();
+                },
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [AppColors.purple, Color(0xFF5A3FE0)]),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 8)],
                   ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+                      if (storeOpensSettings)
+                        Positioned(
+                          right: 3,
+                          bottom: 3,
+                          child: Container(
+                            padding: const EdgeInsets.all(1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A1040),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(color: Colors.white24, width: 0.5),
+                            ),
+                            child: const Icon(Icons.settings, color: Colors.white, size: 10),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            if (showStoreIcon) const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  if (subtitle != null && subtitle!.isNotEmpty)
+                    Text(subtitle!,
+                        style: const TextStyle(color: AppColors.textDim, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                 ],
               ),
-              child: const Icon(
-                Icons.storefront_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
             ),
-          if (showStoreIcon) const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (subtitle != null && subtitle!.isNotEmpty)
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      color: AppColors.textDim,
-                      fontSize: 11,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          ...?actions,
-        ],
+            ...?actions,
+          ],
+        ),
       ),
     );
   }

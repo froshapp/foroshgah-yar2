@@ -58,17 +58,24 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Future<void> _delete(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.post('tasks/${m['id']}/action', data: {'action': 'delete'});
+      final res = await context.read<AuthService>().api.dio.post('tasks/action', data: {'action': 'delete', 'id': m['id']});
+      if (res.data is Map && res.data['items'] is List) {
+        setState(() {
+          items = res.data['items'] as List;
+          done = items.where((e) => (e as Map)['done'] == true).length;
+        });
+      } else {
+        await _load();
+      }
       if (mounted) showOk(context, 'حذف شد');
-      await _load();
     } catch (e) {
-      if (mounted) showErr(context, 'خطا');
+      if (mounted) showErr(context, 'خطا در حذف');
     }
   }
 
   Future<void> _toggle(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.post('tasks/${m['id']}/action', data: {'action': 'toggle'});
+      await context.read<AuthService>().api.dio.post('tasks/action', data: {'action': 'toggle', 'id': m['id']});
       await _load();
     } catch (_) {}
   }

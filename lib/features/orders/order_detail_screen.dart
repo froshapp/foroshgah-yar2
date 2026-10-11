@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/orders_service.dart';
+import 'invoice_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -259,6 +260,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1B2E),
       appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: 'فاکتور',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InvoiceScreen(order: order))),
+          ),
+        ],
         backgroundColor: const Color(0xFF1A1B2E),
         title: Text('سفارش #${order['number'] ?? order['id'] ?? ''}', style: const TextStyle(fontSize: 16)),
         leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),

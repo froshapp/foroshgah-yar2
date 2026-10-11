@@ -1,3 +1,4 @@
+import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,11 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
           ),
           const SizedBox(height: 12),
-          
-            _item(Icons.extension, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.blue, () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const PluginsScreen()));
-            }),
-_item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
+          _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
           }),
           _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
@@ -231,9 +228,15 @@ class _StockThresholdPageState extends State<StockThresholdPage> {
   Future<void> _save() async {
     final p = await SharedPreferences.getInstance();
     await p.setInt('stock_threshold', int.tryParse(c.text) ?? 5);
+    try {
+      await context.read<AuthService>().api.dio.post('settings/threshold', data: {
+        'threshold': int.tryParse(c.text) ?? 5,
+        'enabled': true,
+      });
+    } catch (_) {}
     await p.setBool('stock_notify', notify);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد')));
+      showOk(context, 'ذخیره شد');
       Navigator.pop(context);
     }
   }
@@ -374,6 +377,21 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     if (mounted) setState(() => loading = false);
   }
 
+  String _normJalali(String s) {
+    s = s.trim().replaceAll('-', '/');
+    final p = s.split('/');
+    if (p.length == 3) {
+      final y = int.tryParse(p[0]) ?? 0;
+      final m = int.tryParse(p[1]) ?? 1;
+      final d = int.tryParse(p[2]) ?? 1;
+      if (y > 1300 && y < 1600) {
+        final g = Jalali(y, m, d).toDateTime();
+        return '${g.year.toString().padLeft(4, '0')}-${g.month.toString().padLeft(2, '0')}-${g.day.toString().padLeft(2, '0')} 00:00:00';
+      }
+    }
+    return s.trim();
+  }
+
   Future<void> _create() async {
     final title = TextEditingController();
     final body = TextEditingController();
@@ -381,62 +399,82 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     final end = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
-            TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
-            TextField(controller: start, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'شروع (1404/07/19 یا 2026-10-11)', hintStyle: TextStyle(color: AppColors.textMute))),
-            TextField(controller: end, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'پایان (اختیاری)', hintStyle: TextStyle(color: AppColors.textMute))),
-            const SizedBox(height: 6),
-            const Text('نمایش در: اپ، پروفایل کاربر سایت', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره')),
-        ],
-      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            Future<void> pick(TextEditingController c) async {
+              final d = await showDatePicker(
+                context: ctx,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2035),
+              );
+              if (d != null) {
+                final j = Jalali.fromDateTime(d);
+                c.text = '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}';
+                setLocal(() {});
+              }
+            }
+            return AlertDialog(
+              backgroundColor: AppColors.card,
+              title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
+              content: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
+                  TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('تاریخ شروع (شمسی)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                    subtitle: Text(start.text.isEmpty ? 'انتخاب' : start.text, style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.calendar_month, color: AppColors.purpleGlow),
+                    onTap: () => pick(start),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('تاریخ پایان (شمسی، اختیاری)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                    subtitle: Text(end.text.isEmpty ? 'نامحدود' : end.text, style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.calendar_month, color: AppColors.purpleGlow),
+                    onTap: () => pick(end),
+                  ),
+                ]),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره')),
+              ],
+            );
+          },
+        );
+      },
     );
     if (ok == true) {
       try {
-        String norm(String s) {
-          s = s.trim().replaceAll('/', '-');
-          final p = s.split('-');
-          if (p.length == 3 && (int.tryParse(p[0]) ?? 0) > 1500 && (int.tryParse(p[0]) ?? 0) < 1600) {
-            // تقریبی: ذخیره همان رشته؛ فیلتر سمت سرور با Y-m-d میلادی بهتر است
-            return s;
-          }
-          return s;
-        }
         final res = await context.read<AuthService>().api.dio.post('announcements', data: {
           'title': title.text.trim(),
           'body': body.text.trim(),
           'places': ['app', 'profile', 'site'],
           'active': true,
-          'start': norm(start.text),
-          'end': norm(end.text),
+          'start': _normJalali(start.text),
+          'end': end.text.trim().isEmpty ? '' : _normJalali(end.text),
         });
         if (res.data is Map && res.data['success'] == true) {
-          if (mounted) {
-            showOk(context, 'ذخیره شد');
-          }
+          if (mounted) showOk(context, 'ذخیره شد');
           await _load();
         }
       } catch (e) {
-        if (mounted) {
-          showErr(context, 'خطا');
-        }
+        if (mounted) showErr(context, 'خطا');
       }
     }
   }
 
   Future<void> _toggle(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.post('announcements/${m['id']}/action', data: {'action': 'toggle'});
-      await _load();
+      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'toggle', 'id': m['id']});
+      if (res.data is Map && res.data['items'] is List) {
+        setState(() => items = res.data['items'] as List);
+      } else {
+        await _load();
+      }
     } catch (e) {
       if (mounted) showErr(context, 'خطا');
     }
@@ -444,8 +482,13 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
   Future<void> _delete(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.post('announcements/${m['id']}/action', data: {'action': 'delete'});
-      await _load();
+      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'delete', 'id': m['id']});
+      if (res.data is Map && res.data['items'] is List) {
+        setState(() => items = res.data['items'] as List);
+      } else {
+        await _load();
+      }
+      if (mounted) showOk(context, 'حذف شد');
     } catch (e) {
       if (mounted) showErr(context, 'خطا');
     }
@@ -455,51 +498,49 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          GlassHeader(
-            title: 'اطلاعیه‌ها',
-            subtitle: 'نمایش در اپ و پروفایل',
-            actions: [IconButton(icon: const Icon(Icons.add, color: Colors.white70), onPressed: _create)],
-          ),
-          Expanded(
-            child: loading
-                ? const Center(child: MiniLoader())
-                : error != null
-                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-                    : items.isEmpty
-                        ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: items.length,
-                            itemBuilder: (_, i) {
-                              final m = Map<String, dynamic>.from(items[i] as Map);
-                              final active = m['active'] == true;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: NeonCard(
-                                  borderColor: active ? const Color(0xFF6EE7B7).withOpacity(0.35) : null,
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Row(children: [
-                                      Expanded(child: Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-                                      Switch(value: active, activeColor: const Color(0xFF6EE7B7), onChanged: (_) => _toggle(m)),
-                                      IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20), onPressed: () => _delete(m)),
-                                    ]),
-                                    if ((m['body']?.toString() ?? '').isNotEmpty)
-                                      Text(m['body'].toString(), style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'از ${m['start']?.toString().isNotEmpty == true ? m['start'] : 'همیشه'} تا ${m['end']?.toString().isNotEmpty == true ? m['end'] : 'نامحدود'}',
-                                      style: const TextStyle(color: AppColors.textMute, fontSize: 10),
-                                    ),
+      body: Column(children: [
+        GlassHeader(
+          title: 'اطلاعیه‌ها',
+          subtitle: 'نمایش در اپ و پروفایل',
+          actions: [IconButton(icon: const Icon(Icons.add, color: Colors.white70), onPressed: _create)],
+        ),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : error != null
+                  ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+                  : items.isEmpty
+                      ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: items.length,
+                          itemBuilder: (_, i) {
+                            final m = Map<String, dynamic>.from(items[i] as Map);
+                            final active = m['active'] == true;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: NeonCard(
+                                borderColor: active ? const Color(0xFF6EE7B7).withOpacity(0.35) : null,
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(children: [
+                                    Expanded(child: Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                                    Switch(value: active, activeColor: const Color(0xFF6EE7B7), onChanged: (_) => _toggle(m)),
+                                    IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20), onPressed: () => _delete(m)),
                                   ]),
-                                ),
-                              );
-                            },
-                          ),
-          ),
-        ]),
-      ),
+                                  if ((m['body']?.toString() ?? '').isNotEmpty)
+                                    Text(m['body'].toString(), style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'از ${m['start']?.toString().isNotEmpty == true ? m['start'] : 'همیشه'} تا ${m['end']?.toString().isNotEmpty == true ? m['end'] : 'نامحدود'}',
+                                    style: const TextStyle(color: AppColors.textMute, fontSize: 10),
+                                  ),
+                                ]),
+                              ),
+                            );
+                          },
+                        ),
+        ),
+      ]),
     );
   }
 }
