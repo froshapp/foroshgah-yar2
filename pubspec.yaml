@@ -1,7 +1,7 @@
 name: foroshgah_yar
 description: اپلیکیشن مدیریت فروشگاه ووکامرس - فروشگاه‌یار
 publish_to: 'none'
-version: 1.7.4+19
+version: 1.7.5+20
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -19,6 +19,8 @@ dependencies:
   shamsi_date: ^1.0.2
   url_launcher: ^6.2.5
   image_picker: ^1.0.7
+  pdf: ^3.10.8
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:

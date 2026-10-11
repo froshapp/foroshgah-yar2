@@ -1,3 +1,4 @@
+import '../../core/utils/shamsi_picker.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +9,8 @@ import '../../core/utils/snack.dart';
 import 'plugins_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool asDrawer;
+  const SettingsScreen({super.key, this.asDrawer = false});
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -26,6 +28,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: (auth.site?['name']?.toString().isNotEmpty == true)
                 ? auth.site!['name'].toString()
                 : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
+            showBell: !widget.asDrawer,
+            storeOpensSettings: false,
+            actions: widget.asDrawer
+                ? [IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context))]
+                : null,
           ),
           const SizedBox(height: 12),
           _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
@@ -403,15 +410,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             Future<void> pick(TextEditingController c) async {
-              final d = await showDatePicker(
-                context: ctx,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2035),
-              );
-              if (d != null) {
-                final j = Jalali.fromDateTime(d);
-                c.text = '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}';
+              final j = await pickShamsiDate(ctx);
+              if (j != null) {
+                c.text = formatJalali(j);
                 setLocal(() {});
               }
             }
@@ -468,15 +469,23 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   }
 
   Future<void> _toggle(Map m) async {
+    final id = m['id'];
+    // optimistic
+    setState(() {
+      items = items.map((e) {
+        final mm = Map<String, dynamic>.from(e as Map);
+        if (mm['id'] == id) mm['active'] = !(mm['active'] == true);
+        return mm;
+      }).toList();
+    });
     try {
-      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'toggle', 'id': m['id']});
+      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'toggle', 'id': id});
       if (res.data is Map && res.data['items'] is List) {
         setState(() => items = res.data['items'] as List);
-      } else {
-        await _load();
       }
     } catch (e) {
-      if (mounted) showErr(context, 'خطا');
+      await _load();
+      if (mounted) showErr(context, 'خطا در تغییر وضعیت');
     }
   }
 

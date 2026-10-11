@@ -54,24 +54,24 @@ class _AccountingScreenState extends State<AccountingScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: loading
-            ? const Center(child: MiniLoader())
-            : error != null
-                ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-                : RefreshIndicator(
+      body: loading
+          ? const Center(child: MiniLoader())
+          : error != null
+              ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+              : Column(children: [
+                  GlassHeader(
+                    title: 'حسابداری فروشگاه',
+                    subtitle: 'گزارش مالی',
+                    showBack: true,
+                    onRefresh: _load,
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
                     color: AppColors.purple,
                     onRefresh: _load,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        GlassHeader(
-                          title: 'حسابداری فروشگاه',
-                          subtitle: 'گزارش مالی',
-                          actions: [
-                            IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-                          ],
-                        ),
                         const SizedBox(height: 12),
                         Row(children: [
                           Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),
@@ -155,7 +155,8 @@ class _AccountingScreenState extends State<AccountingScreen> {
                       ],
                     ),
                   ),
-      ),
+                ),
+              ]),
     );
   }
 

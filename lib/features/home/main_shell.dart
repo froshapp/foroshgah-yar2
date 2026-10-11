@@ -17,6 +17,7 @@ class MainShell extends StatefulWidget {
 
 class MainShellState extends State<MainShell> {
   int index = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void goTo(int i) => setState(() => index = i);
 
@@ -24,11 +25,13 @@ class MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     AppNav.goToTab = goTo;
+    AppNav.scaffoldKey = _scaffoldKey;
   }
 
   @override
   void dispose() {
     if (AppNav.goToTab == goTo) AppNav.goToTab = null;
+    if (AppNav.scaffoldKey == _scaffoldKey) AppNav.scaffoldKey = null;
     super.dispose();
   }
 
@@ -48,11 +51,16 @@ class MainShellState extends State<MainShell> {
       const OrdersScreen(),
       const ProductsScreen(),
       const ModulesScreen(),
-      const SettingsScreen(),
     ];
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.bg,
+      endDrawer: Drawer(
+        backgroundColor: AppColors.bg,
+        width: MediaQuery.of(context).size.width * 0.88,
+        child: const SettingsScreen(asDrawer: true),
+      ),
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
@@ -71,7 +79,6 @@ class MainShellState extends State<MainShell> {
               _nav(1, Icons.receipt_long_rounded, 'سفارشات'),
               _nav(2, Icons.inventory_2_rounded, 'محصولات'),
               _nav(3, Icons.grid_view_rounded, 'ماژول‌ها'),
-              _nav(4, Icons.settings_rounded, 'تنظیمات'),
             ],
           ),
         ),
@@ -85,13 +92,13 @@ class MainShellState extends State<MainShell> {
       onTap: () => setState(() => index = i),
       borderRadius: BorderRadius.circular(14),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: active ? AppColors.purpleGlow : AppColors.textMute, size: 22),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: active ? AppColors.purpleGlow : AppColors.textMute, fontSize: 9, fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
+            Text(label, style: TextStyle(color: active ? AppColors.purpleGlow : AppColors.textMute, fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
             if (active)
               Container(margin: const EdgeInsets.only(top: 3), width: 14, height: 2, decoration: BoxDecoration(color: AppColors.purple, borderRadius: BorderRadius.circular(2))),
           ],

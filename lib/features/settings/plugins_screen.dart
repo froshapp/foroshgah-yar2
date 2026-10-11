@@ -32,7 +32,7 @@ class _PluginsScreenState extends State<PluginsScreen> {
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
     try {
-      final res = await context.read<AuthService>().api.dio.get('plugins');
+      final res = await context.read<AuthService>().api.dio.get('plugins', options: Options(receiveTimeout: const Duration(seconds: 90)));
       if (res.data is Map) {
         plugins = res.data['plugins'] is List ? res.data['plugins'] as List : [];
         activeCount = int.tryParse('${res.data['active'] ?? 0}') ?? 0;
@@ -79,7 +79,9 @@ class _PluginsScreenState extends State<PluginsScreen> {
       backgroundColor: AppColors.bg,
       
       body: Column(children: [
-          GlassHeader(title: 'افزونه‌های سایت', actions: [
+          GlassHeader(title: 'افزونه‌های سایت',
+            showBack: true,
+            onRefresh: _load, actions: [
             IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
           ]),
         Padding(

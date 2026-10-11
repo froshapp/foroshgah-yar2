@@ -59,8 +59,8 @@ class ApiClient {
   void _buildDio(String baseUrl, {String? hostHeader}) {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl.endsWith('/') ? baseUrl : '$baseUrl/',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 90),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -74,7 +74,7 @@ class ApiClient {
     (_dio!.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
-      client.connectionTimeout = const Duration(seconds: 30);
+      client.connectionTimeout = const Duration(seconds: 60);
       return client;
     };
 

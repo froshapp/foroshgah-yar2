@@ -14,6 +14,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   bool loading = true;
   String? error;
   List customers = [];
+  int totalCustomers = 0;
   final search = TextEditingController();
   String filter = 'all';
 
@@ -38,6 +39,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       });
       if (res.data is Map && res.data['customers'] is List) {
         customers = res.data['customers'] as List;
+        totalCustomers = int.tryParse('${res.data['total'] ?? customers.length}') ?? customers.length;
       }
     } catch (e) {
       error = e.toString();
@@ -81,10 +83,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: Column(children: [
           GlassHeader(
             title: 'مدیریت مشتریان',
-            subtitle: 'اطلاعات و سفارش‌ها',
-            actions: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-            ],
+            subtitle: 'کل: $totalCustomers',
+            showBack: true,
+            onRefresh: _load,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -152,7 +153,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                             shape: BoxShape.circle,
                                             gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
                                           ),
-                                          child: const Icon(Icons.person, color: Colors.white70, size: 22),
+                                          child: (m['avatar']?.toString().isNotEmpty == true)
+                          ? ClipOval(child: Image.network(m['avatar'].toString(), width: 40, height: 40, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white70, size: 22)))
+                          : const Icon(Icons.person, color: Colors.white70, size: 22),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -297,7 +301,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.6), AppColors.blue.withOpacity(0.5)]),
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 36),
+                child: (m['avatar']?.toString().isNotEmpty == true)
+                ? ClipOval(child: Image.network(m['avatar'].toString(), width: 64, height: 64, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 36)))
+                : const Icon(Icons.person, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 10),
               Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),

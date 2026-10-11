@@ -42,17 +42,28 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   Future<void> _add() async {
-    if (titleCtrl.text.trim().isEmpty) return;
+    final t = titleCtrl.text.trim();
+    if (t.isEmpty) {
+      showErr(context, 'عنوان کار را بنویسید');
+      return;
+    }
     try {
-      await context.read<AuthService>().api.dio.post('tasks', data: {
-        'title': titleCtrl.text.trim(),
+      final res = await context.read<AuthService>().api.dio.post('tasks', data: {
+        'title': t,
         'priority': priority,
       });
       titleCtrl.clear();
+      if (res.data is Map && res.data['items'] is List) {
+        setState(() {
+          items = res.data['items'] as List;
+          done = items.where((e) => (e as Map)['done'] == true).length;
+        });
+      } else {
+        await _load();
+      }
       if (mounted) showOk(context, 'ثبت شد');
-      await _load();
     } catch (e) {
-      if (mounted) showErr(context, 'خطا');
+      if (mounted) showErr(context, 'خطا در ثبت');
     }
   }
 
@@ -100,104 +111,119 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          GlassHeader(
-            title: 'کارهای من',
-            subtitle: '$done از ${items.length}',
-            actions: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
-            ],
+      body: Column(children: [
+        GlassHeader(
+          title: 'کارهای من',
+          subtitle: '$done از ${items.length} انجام‌شده',
+          showBack: true,
+          onRefresh: _load,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: NeonCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              TextField(
+                controller: titleCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'عنوان کار جدید...',
+                  hintStyle: TextStyle(color: AppColors.textMute),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (_) => _add(),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                _priChip('low', 'پایین'),
+                const SizedBox(width: 6),
+                _priChip('medium', 'متوسط'),
+                const SizedBox(width: 6),
+                _priChip('high', 'بالا'),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _add,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.purple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                  child: const Text('ثبت'),
+                ),
+              ]),
+            ]),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: NeonCard(
-              child: Column(children: [
-                Row(children: [
-                  Expanded(
-                    child: TextField(
-                      controller: titleCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: 'افزودن کار جدید...',
-                        hintStyle: TextStyle(color: AppColors.textMute),
-                        border: InputBorder.none,
+        ),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : items.isEmpty
+                  ? const Center(child: Text('کاری ثبت نشده', style: TextStyle(color: AppColors.textDim)))
+                  : RefreshIndicator(
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: items.length,
+                        itemBuilder: (_, i) {
+                          final m = Map<String, dynamic>.from(items[i] as Map);
+                          final doneItem = m['done'] == true;
+                          final pri = m['priority']?.toString() ?? 'medium';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: NeonCard(
+                              child: InkWell(
+                                onTap: () => _toggle(m),
+                                child: Row(children: [
+                                  Icon(doneItem ? Icons.check_circle : Icons.circle_outlined,
+                                      color: doneItem ? AppColors.green : AppColors.textMute),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(m['title']?.toString() ?? '',
+                                          style: TextStyle(
+                                            color: doneItem ? AppColors.textDim : Colors.white,
+                                            decoration: doneItem ? TextDecoration.lineThrough : null,
+                                          )),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _priColor(pri).withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(_priLabel(pri), style: TextStyle(color: _priColor(pri), fontSize: 11)),
+                                      ),
+                                    ]),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 18),
+                                    onPressed: () => _delete(m),
+                                  ),
+                                ]),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ),
-                  DropdownButton<String>(
-                    value: priority,
-                    dropdownColor: AppColors.card,
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'low', child: Text('پایین', style: TextStyle(color: Colors.white, fontSize: 12))),
-                      DropdownMenuItem(value: 'medium', child: Text('متوسط', style: TextStyle(color: Colors.white, fontSize: 12))),
-                      DropdownMenuItem(value: 'high', child: Text('بالا', style: TextStyle(color: Colors.white, fontSize: 12))),
-                    ],
-                    onChanged: (v) => setState(() => priority = v ?? 'medium'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _add,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue, foregroundColor: Colors.white),
-                    child: const Text('ثبت'),
-                  ),
-                ]),
-              ]),
-            ),
-          ),
-          Expanded(
-            child: loading
-                ? const Center(child: MiniLoader())
-                : RefreshIndicator(
-                    color: AppColors.purple,
-                    onRefresh: _load,
-                    child: items.isEmpty
-                        ? ListView(children: const [SizedBox(height: 80), Center(child: Text('کاری ثبت نشده', style: TextStyle(color: AppColors.textDim)))])
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            itemCount: items.length,
-                            itemBuilder: (_, i) {
-                              final m = Map<String, dynamic>.from(items[i] as Map);
-                              final doneItem = m['done'] == true;
-                              final pr = m['priority']?.toString() ?? 'medium';
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: NeonCard(
-                                  onTap: () => _toggle(m),
-                                  child: Row(children: [
-                                    Icon(doneItem ? Icons.check_circle : Icons.circle_outlined,
-                                        color: doneItem ? AppColors.green : AppColors.textMute),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        m['title']?.toString() ?? '',
-                                        style: TextStyle(
-                                          color: doneItem ? AppColors.textDim : Colors.white,
-                                          decoration: doneItem ? TextDecoration.lineThrough : null,
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: (doneItem ? AppColors.green : AppColors.orange).withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(doneItem ? 'انجام شد' : 'در انتظار', style: TextStyle(color: doneItem ? AppColors.green : AppColors.orange, fontSize: 11)),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 18),
-                                      onPressed: () => _delete(m),
-                                    ),
-                                  ]),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-          ),
-        ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _priChip(String key, String label) {
+    final sel = priority == key;
+    return GestureDetector(
+      onTap: () => setState(() => priority = key),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: sel ? _priColor(key).withOpacity(0.25) : AppColors.cardBorder.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: sel ? _priColor(key) : Colors.transparent),
+        ),
+        child: Text(label, style: TextStyle(color: sel ? _priColor(key) : AppColors.textDim, fontSize: 11)),
       ),
     );
   }

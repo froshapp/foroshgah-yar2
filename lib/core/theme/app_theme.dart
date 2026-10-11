@@ -87,6 +87,9 @@ class GlassHeader extends StatelessWidget {
   final bool showStoreIcon;
   final bool storeOpensSettings;
   final VoidCallback? onStoreTap;
+  final VoidCallback? onRefresh;
+  final bool showBell;
+  final bool showBack;
   const GlassHeader({
     super.key,
     required this.title,
@@ -95,15 +98,18 @@ class GlassHeader extends StatelessWidget {
     this.showStoreIcon = true,
     this.storeOpensSettings = true,
     this.onStoreTap,
+    this.onRefresh,
+    this.showBell = true,
+    this.showBack = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, topPad > 0 ? topPad + 4 : 8, 16, 0),
+      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 4 : 8, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF2A1A5E), Color(0xFF1A1040), Color(0xFF0F0A28)],
@@ -118,6 +124,13 @@ class GlassHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
+            if (showBack)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                onPressed: () => Navigator.maybePop(context),
+              ),
             if (showStoreIcon)
               GestureDetector(
                 onTap: () {
@@ -125,14 +138,11 @@ class GlassHeader extends StatelessWidget {
                     onStoreTap!();
                     return;
                   }
-                  if (!storeOpensSettings) return;
-                  // بستن صفحات push‌شده و رفتن به تنظیمات
-                  Navigator.of(context, rootNavigator: false).popUntil((r) => r.isFirst);
-                  AppNav.settings();
+                  if (storeOpensSettings) AppNav.openSettingsDrawer();
                 },
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(colors: [AppColors.purple, Color(0xFF5A3FE0)]),
                     borderRadius: BorderRadius.circular(12),
@@ -141,11 +151,11 @@ class GlassHeader extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+                      const Icon(Icons.storefront_rounded, color: Colors.white, size: 18),
                       if (storeOpensSettings)
                         Positioned(
-                          right: 3,
-                          bottom: 3,
+                          right: 2,
+                          bottom: 2,
                           child: Container(
                             padding: const EdgeInsets.all(1.5),
                             decoration: BoxDecoration(
@@ -153,14 +163,14 @@ class GlassHeader extends StatelessWidget {
                               borderRadius: BorderRadius.circular(5),
                               border: Border.all(color: Colors.white24, width: 0.5),
                             ),
-                            child: const Icon(Icons.settings, color: Colors.white, size: 10),
+                            child: const Icon(Icons.settings, color: Colors.white, size: 9),
                           ),
                         ),
                     ],
                   ),
                 ),
               ),
-            if (showStoreIcon) const SizedBox(width: 10),
+            if (showStoreIcon) const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,6 +187,24 @@ class GlassHeader extends StatelessWidget {
                 ],
               ),
             ),
+            if (onRefresh != null)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                onPressed: onRefresh,
+              ),
+            if (showBell)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70, size: 22),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              ),
             ...?actions,
           ],
         ),
