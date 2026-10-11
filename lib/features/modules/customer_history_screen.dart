@@ -102,7 +102,7 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                         color: AppColors.purple,
                         onRefresh: _load,
                         child: list.isEmpty
-                            ? const ListView(children: [SizedBox(height: 100), Center(child: Text('سابقه‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
+                            ? ListView(children: [SizedBox(height: 100), Center(child: Text('سابقه‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
                             : ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                                 itemCount: list.length,

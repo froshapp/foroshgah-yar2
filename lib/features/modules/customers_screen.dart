@@ -143,7 +143,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         color: AppColors.purple,
                         onRefresh: _load,
                         child: list.isEmpty
-                            ? const ListView(children: [SizedBox(height: 120), Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
+                            ? ListView(children: [SizedBox(height: 120), Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
                             : ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                                 itemCount: list.length,
