@@ -7,6 +7,7 @@ class AppColors {
   static const cardBorder = Color(0xFF2A2A4A);
   static const purple = Color(0xFF7B5CFF);
   static const purpleGlow = Color(0xFF9B7BFF);
+  static const pink = Color(0xFFF472B6);
   static const cyan = Color(0xFF2EE6A6);
   static const orange = Color(0xFFFF9F43);
   static const blue = Color(0xFF4C8DFF);

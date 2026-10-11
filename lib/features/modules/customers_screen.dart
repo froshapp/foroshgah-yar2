@@ -32,9 +32,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Future<void> _load({String? q}) async {
     setState(() { loading = true; error = null; });
     try {
-      final auth = context.read<AuthService>();
-      final res = await auth.api.dio.get('customers', queryParameters: {
-        'per_page': 50,
+      final res = await context.read<AuthService>().api.dio.get('customers', queryParameters: {
+        'per_page': 80,
         if (q != null && q.isNotEmpty) 'search': q,
       });
       if (res.data is Map && res.data['customers'] is List) {
@@ -47,133 +46,166 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   List get filtered {
+    final q = search.text.trim();
+    Iterable list = customers;
     if (filter == 'active') {
-      return customers.where((c) => (c is Map && (int.tryParse(c['order_count']?.toString() ?? '0') ?? 0) > 0)).toList();
+      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0);
+    } else if (filter == 'inactive') {
+      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) == 0);
     }
-    if (filter == 'inactive') {
-      return customers.where((c) => (c is Map && (int.tryParse(c['order_count']?.toString() ?? '0') ?? 0) == 0)).toList();
+    if (q.isNotEmpty) {
+      list = list.where((c) {
+        if (c is! Map) return false;
+        final blob = '${c['name'] ?? ''} ${c['phone'] ?? ''} ${c['email'] ?? ''}';
+        return blob.contains(q);
+      });
     }
-    return customers;
+    return list.toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final list = filtered;
     final total = customers.length;
-    final active = customers.where((c) => c is Map && (int.tryParse(c['order_count']?.toString() ?? '0') ?? 0) > 0).length;
-    final inactive = total - active;
+    final active = customers.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0).length;
+    final neu = customers.where((c) {
+      if (c is! Map) return false;
+      final r = c['registered_jalali']?.toString() ?? '';
+      // تقریبی: اگر تاریخ عضویت اخیر در لیست باشد به‌عنوان جدید
+      return (int.tryParse('${c['order_count'] ?? 0}') ?? 0) <= 1;
+    }).length;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        title: const Text('مدیریت مشتریان', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-      ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(children: [
-            Expanded(child: _top('کل', '$total', AppColors.blue)),
-            const SizedBox(width: 8),
-            Expanded(child: _top('فعال', '$active', AppColors.green)),
-            const SizedBox(width: 8),
-            Expanded(child: _top('جدید/بدون خرید', '$inactive', AppColors.orange)),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: search,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'جستجوی مشتری...',
-              hintStyle: const TextStyle(color: AppColors.textMute),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
-              filled: true,
-              fillColor: AppColors.card,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            ),
-            onSubmitted: (v) => _load(q: v),
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(children: [
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white), onPressed: () => Navigator.pop(context)),
+              const Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('مدیریت مشتریان', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('اطلاعات و ارتباط با مشتریان', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 42, height: 42,
+                decoration: BoxDecoration(color: AppColors.orange.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.people_alt_rounded, color: AppColors.orange),
+              ),
+            ]),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(children: [
-            _fchip('همه', 'all'),
-            _fchip('فعال', 'active'),
-            _fchip('غیرفعال', 'inactive'),
-          ]),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: loading
-              ? const Center(child: MiniLoader())
-              : error != null
-                  ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-                  : list.isEmpty
-                      ? const Center(child: Text('مشتری یافت نشد', style: TextStyle(color: AppColors.textDim)))
-                      : RefreshIndicator(
-                          color: AppColors.purple,
-                          onRefresh: () => _load(q: search.text),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            itemCount: list.length,
-                            itemBuilder: (_, i) {
-                              final c = Map<String, dynamic>.from(list[i] as Map);
-                              final phone = c['phone']?.toString() ?? '';
-                              final orders = int.tryParse(c['order_count']?.toString() ?? '0') ?? 0;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: NeonCard(
-                                  onTap: () {
-                                    Navigator.push(context, MaterialPageRoute(
-                                      builder: (_) => CustomerDetailPage(customer: c),
-                                    ));
-                                  },
-                                  child: Row(children: [
-                                    CircleAvatar(
-                                      backgroundColor: AppColors.purple.withOpacity(0.2),
-                                      child: Text(
-                                        (c['name']?.toString() ?? '?').isNotEmpty ? c['name'].toString()[0] : '?',
-                                        style: const TextStyle(color: AppColors.purpleGlow),
-                                      ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(children: [
+              Expanded(child: _stat('کل مشتریان', '$total', AppColors.blue)),
+              const SizedBox(width: 8),
+              Expanded(child: _stat('مشتریان فعال', '$active', AppColors.cyan)),
+              const SizedBox(width: 8),
+              Expanded(child: _stat('مشتریان جدید', '$neu', AppColors.purpleGlow)),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: TextField(
+              controller: search,
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.right,
+              decoration: InputDecoration(
+                hintText: 'جستجوی مشتری...',
+                hintStyle: const TextStyle(color: AppColors.textMute),
+                prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
+                filled: true,
+                fillColor: AppColors.card,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (v) => _load(q: v),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+            child: Row(children: [
+              _chip('همه', 'all'),
+              _chip('مشتریان فعال', 'active'),
+              _chip('مشتریان غیرفعال', 'inactive'),
+            ]),
+          ),
+          Expanded(
+            child: loading
+                ? const Center(child: MiniLoader())
+                : error != null
+                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+                    : RefreshIndicator(
+                        color: AppColors.purple,
+                        onRefresh: _load,
+                        child: list.isEmpty
+                            ? const ListView(children: [SizedBox(height: 120), Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                itemCount: list.length,
+                                itemBuilder: (_, i) {
+                                  final m = Map<String, dynamic>.from(list[i] as Map);
+                                  final activeC = (int.tryParse('${m['order_count'] ?? 0}') ?? 0) > 0;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: NeonCard(
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                                        builder: (_) => CustomerDetailPage(customer: m),
+                                      )).then((_) => _load()),
+                                      child: Row(children: [
+                                        Container(
+                                          width: 44, height: 44,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
+                                          ),
+                                          child: const Icon(Icons.person, color: Colors.white70, size: 22),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            Text(m['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                            const SizedBox(height: 3),
+                                            Text(m['phone']?.toString().isNotEmpty == true ? m['phone'].toString() : (m['email']?.toString() ?? ''),
+                                                style: const TextStyle(color: AppColors.textDim, fontSize: 12), textDirection: TextDirection.ltr),
+                                          ]),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: (activeC ? AppColors.green : AppColors.textMute).withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(activeC ? 'فعال' : 'غیرفعال',
+                                              style: TextStyle(color: activeC ? AppColors.green : AppColors.textMute, fontSize: 11)),
+                                        ),
+                                      ]),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(c['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                      if (phone.isNotEmpty) Text(phone, style: const TextStyle(color: AppColors.textDim, fontSize: 12), textDirection: TextDirection.ltr),
-                                      Text('$orders سفارش', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                    ])),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: (orders > 0 ? AppColors.green : AppColors.textMute).withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(orders > 0 ? 'فعال' : 'جدید', style: TextStyle(color: orders > 0 ? AppColors.green : AppColors.textMute, fontSize: 11)),
-                                    ),
-                                  ]),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-        ),
-      ]),
+                                  );
+                                },
+                              ),
+                      ),
+          ),
+        ]),
+      ),
     );
   }
 
-  Widget _top(String t, String v, Color c) => NeonCard(
+  Widget _stat(String t, String v, Color c) => NeonCard(
         borderColor: c.withOpacity(0.35),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Column(children: [
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 4),
           Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 10)),
         ]),
       );
 
-  Widget _fchip(String label, String val) {
+  Widget _chip(String label, String val) {
     final sel = filter == val;
     return Padding(
       padding: const EdgeInsets.only(left: 8),
@@ -188,92 +220,178 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 }
 
-class CustomerDetailPage extends StatelessWidget {
+class CustomerDetailPage extends StatefulWidget {
   final Map<String, dynamic> customer;
   const CustomerDetailPage({super.key, required this.customer});
+  @override
+  State<CustomerDetailPage> createState() => _CustomerDetailPageState();
+}
+
+class _CustomerDetailPageState extends State<CustomerDetailPage> {
+  late TextEditingController phone;
+  late TextEditingController address;
+  bool saving = false;
+  bool loadingOrders = true;
+  List orders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    phone = TextEditingController(text: widget.customer['phone']?.toString() ?? '');
+    address = TextEditingController(text: widget.customer['billing_address']?.toString() ?? '');
+    _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    phone.dispose();
+    address.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() => loadingOrders = true);
+    try {
+      final id = widget.customer['id'];
+      final res = await context.read<AuthService>().api.dio.get('customers/$id/orders');
+      if (res.data is Map && res.data['orders'] is List) {
+        orders = res.data['orders'] as List;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => loadingOrders = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => saving = true);
+    try {
+      final id = widget.customer['id'];
+      await context.read<AuthService>().api.dio.post('customers/$id', data: {
+        'phone': phone.text.trim(),
+        'billing': {'address_1': address.text.trim()},
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد')));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+    if (mounted) setState(() => saving = false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final phone = customer['phone']?.toString() ?? '';
-    final email = customer['email']?.toString() ?? '';
-    final orders = customer['order_count'] ?? 0;
-    final reg = customer['registered']?.toString() ?? '—';
-    final level = (int.tryParse(orders.toString()) ?? 0) >= 5
-        ? 'ویژه'
-        : (int.tryParse(orders.toString()) ?? 0) >= 1
-            ? 'عادی'
-            : 'جدید';
+    final c = widget.customer;
+    final name = c['name']?.toString() ?? '—';
+    final reg = c['registered_jalali']?.toString().isNotEmpty == true
+        ? c['registered_jalali'].toString()
+        : (c['registered']?.toString() ?? '—');
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg,
-        title: Text(customer['name']?.toString() ?? 'مشتری', style: const TextStyle(fontSize: 16)),
+        title: Text(name, style: const TextStyle(fontSize: 16)),
         leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
+        actions: [
+          TextButton(onPressed: saving ? null : _save, child: saving ? const MiniLoader(size: 18) : const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          NeonCard(
-            borderColor: AppColors.purple.withOpacity(0.35),
+          Center(
             child: Column(children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: AppColors.purple.withOpacity(0.25),
-                child: Text(
-                  (customer['name']?.toString() ?? '?').isNotEmpty ? customer['name'].toString()[0] : '?',
-                  style: const TextStyle(color: Colors.white, fontSize: 22),
+              Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.6), AppColors.blue.withOpacity(0.5)]),
                 ),
+                child: const Icon(Icons.person, color: Colors.white, size: 36),
               ),
               const SizedBox(height: 10),
-              Text(customer['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
+              Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(color: AppColors.purple.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                child: Text('سطح: $level', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12)),
+                child: const Text('سطح: عادی', style: TextStyle(color: AppColors.purpleGlow, fontSize: 12)),
               ),
             ]),
           ),
-          const SizedBox(height: 12),
-          _row(Icons.phone, 'موبایل', phone.isEmpty ? '—' : phone, phone.isNotEmpty
-              ? () async {
-                  final u = Uri.parse('tel:$phone');
-                  if (await canLaunchUrl(u)) await launchUrl(u);
-                }
-              : null),
-          _row(Icons.email_outlined, 'ایمیل', email.isEmpty ? '—' : email, null),
-          _row(Icons.shopping_bag_outlined, 'تعداد سفارشات', '$orders', null),
-          _row(Icons.calendar_today_outlined, 'تاریخ عضویت', reg, null),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           NeonCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('آدرس پیش‌فرض', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              const Text('از اطلاعات صورتحساب سفارشات خوانده می‌شود. برای ویرایش کامل از پنل وردپرس استفاده کنید.',
-                  style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+            child: Column(children: [
+              _editRow(Icons.phone, 'موبایل', phone, ltr: true),
+              const Divider(color: Colors.white10),
+              _editRow(Icons.location_on_outlined, 'آدرس', address),
+              const Divider(color: Colors.white10),
+              Row(children: [
+                const Icon(Icons.calendar_today, color: AppColors.textMute, size: 18),
+                const SizedBox(width: 10),
+                const Text('تاریخ عضویت', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                const Spacer(),
+                Text(reg, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ]),
             ]),
           ),
+          const SizedBox(height: 16),
+          const Text('سفارشات اخیر', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          if (loadingOrders)
+            const Center(child: Padding(padding: EdgeInsets.all(16), child: MiniLoader()))
+          else if (orders.isEmpty)
+            const NeonCard(child: Text('سفارشی ثبت نشده', style: TextStyle(color: AppColors.textDim)))
+          else
+            ...orders.map((o) {
+              final m = Map<String, dynamic>.from(o as Map);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: NeonCard(
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('#${m['number'] ?? m['id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                      ]),
+                    ),
+                    Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Text('${m['total'] ?? ''}', style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              );
+            }),
+          const SizedBox(height: 12),
+          if ((c['phone']?.toString() ?? '').isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () => launchUrl(Uri.parse('tel:${c['phone']}')),
+              icon: const Icon(Icons.call),
+              label: const Text('تماس'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(48)),
+            ),
         ],
       ),
     );
   }
 
-  Widget _row(IconData icon, String label, String value, VoidCallback? onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: NeonCard(
-        onTap: onTap,
-        child: Row(children: [
-          Icon(icon, color: AppColors.purpleGlow, size: 20),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          ])),
-          if (onTap != null) const Icon(Icons.chevron_left, color: AppColors.textMute),
-        ]),
+  Widget _editRow(IconData icon, String label, TextEditingController ctrl, {bool ltr = false}) {
+    return Row(children: [
+      Icon(icon, color: AppColors.textMute, size: 18),
+      const SizedBox(width: 10),
+      Expanded(
+        child: TextField(
+          controller: ctrl,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          textDirection: ltr ? TextDirection.ltr : TextDirection.rtl,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: AppColors.textDim, fontSize: 12),
+            border: InputBorder.none,
+          ),
+        ),
       ),
-    );
+    ]);
   }
 }
