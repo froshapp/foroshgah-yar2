@@ -173,8 +173,7 @@ class _StatusColorsPageState extends State<StatusColorsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('رنگ وضعیت سفارشات', style: TextStyle(fontSize: 16)),
-        leading: ),
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('رنگ وضعیت سفارشات', style: TextStyle(fontSize: 16))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: keys.map((k) {
@@ -255,8 +254,7 @@ class _StockThresholdPageState extends State<StockThresholdPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16)),
-        leading: ),
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
@@ -332,8 +330,7 @@ class _AppNotifyPageState extends State<AppNotifyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('اعلان‌های اپ', style: TextStyle(fontSize: 16)),
-        leading: ),
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('اعلان‌های اپ', style: TextStyle(fontSize: 16))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: NeonCard(

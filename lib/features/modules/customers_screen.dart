@@ -4,6 +4,51 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
+Color avatarColor(dynamic id) {
+  const colors = [
+    Color(0xFF7B5CFF), Color(0xFF2EE6A6), Color(0xFFF472B6),
+    Color(0xFFFF9F43), Color(0xFF4C8DFF), Color(0xFF06B6D4),
+    Color(0xFFA78BFA), Color(0xFFEF4444),
+  ];
+  final i = (int.tryParse('$id') ?? 0).abs() % colors.length;
+  return colors[i];
+}
+
+Widget letterAvatar(String letter, Color c, double size) {
+  return Container(
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: c.withOpacity(0.35),
+      shape: BoxShape.circle,
+      border: Border.all(color: c.withOpacity(0.6)),
+    ),
+    child: Text(letter, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: size * 0.4)),
+  );
+}
+
+Widget avatarWidget(Map m, {double size = 40}) {
+  final url = m['avatar']?.toString() ?? '';
+  final name = m['name']?.toString() ?? '?';
+  final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
+  final c = avatarColor(m['id']);
+  if (url.isNotEmpty) {
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
+      ),
+    );
+  }
+  return letterAvatar(letter, c, size);
+}
+
+
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
   @override
@@ -152,7 +197,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                             shape: BoxShape.circle,
                                             gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
                                           ),
-                                          child: _avatar(m, size: 40),
+                                          child: avatarWidget(m, size: 40),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -281,7 +326,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         title: Text(name, style: const TextStyle(fontSize: 16)),
-        leading: actions: [
+        actions: [
           TextButton(onPressed: saving ? null : _save, child: saving ? const MiniLoader(size: 18) : const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
         ],
       ),
@@ -296,7 +341,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.6), AppColors.blue.withOpacity(0.5)]),
                 ),
-                child: _avatar(c, size: 64),
+                child: avatarWidget(c, size: 64),
               ),
               const SizedBox(height: 10),
               Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),

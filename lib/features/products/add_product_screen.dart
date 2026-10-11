@@ -176,7 +176,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1B2E),
         title: Text('افزودن محصول (${_step + 1}/3)', style: const TextStyle(fontSize: 16)),
-        leading: ),
+      ),
       body: Column(
         children: [
           // steps indicator
