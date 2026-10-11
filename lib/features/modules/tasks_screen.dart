@@ -48,9 +48,10 @@ class _TasksScreenState extends State<TasksScreen> {
         'priority': priority,
       });
       titleCtrl.clear();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کار ثبت شد'), backgroundColor: Color(0xFF6EE7B7)));
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
     }
   }
 

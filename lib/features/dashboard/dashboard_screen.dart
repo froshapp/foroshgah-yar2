@@ -4,6 +4,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/dashboard_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../home/notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final void Function(int index)? onNavigate;
@@ -16,12 +17,24 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  List _announces = [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardService>().fetchStats(context.read<AuthService>());
+      _loadAnnounces();
     });
+  }
+
+  Future<void> _loadAnnounces() async {
+    try {
+      final res = await context.read<AuthService>().api.dio.get('announcements/active', queryParameters: {'place': 'app'});
+      if (res.data is Map && res.data['items'] is List && mounted) {
+        setState(() => _announces = res.data['items'] as List);
+      }
+    } catch (_) {}
   }
 
   String _fmt(dynamic v) {
@@ -64,8 +77,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
-                  tooltip: 'سفارشات',
-                  onPressed: () => widget.onNavigate?.call(1),
+                  tooltip: 'اعلان‌ها',
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
                 ),
                 if (dash.loading)
                   const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18)),
@@ -82,6 +95,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ]),
               ),
             ),
+            if (_announces.isNotEmpty)
+              ..._announces.take(3).map((a) {
+                final m = Map<String, dynamic>.from(a as Map);
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: NeonCard(
+                    borderColor: const Color(0xFF6EE7B7).withOpacity(0.35),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(children: [
+                      const Icon(Icons.campaign_outlined, color: Color(0xFF6EE7B7), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                          if ((m['body']?.toString() ?? '').isNotEmpty)
+                            Text(m['body'].toString(), maxLines: 2, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                        ]),
+                      ),
+                    ]),
+                  ),
+                );
+              }),
             const SizedBox(height: 14),
             if (dash.loading && (stats['total_orders'] == 0 && stats['total_products'] == 0))
               const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))

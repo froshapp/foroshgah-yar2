@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import 'plugins_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -25,7 +26,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
           ),
           const SizedBox(height: 12),
-          _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
+          
+            _item(Icons.extension, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.blue, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PluginsScreen()));
+            }),
+_item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
           }),
           _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
@@ -371,15 +376,23 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Future<void> _create() async {
     final title = TextEditingController();
     final body = TextEditingController();
+    final start = TextEditingController();
+    final end = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
         title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
-          TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
-        ]),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
+            TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
+            TextField(controller: start, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'شروع (1404/07/19 یا 2026-10-11)', hintStyle: TextStyle(color: AppColors.textMute))),
+            TextField(controller: end, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'پایان (اختیاری)', hintStyle: TextStyle(color: AppColors.textMute))),
+            const SizedBox(height: 6),
+            const Text('نمایش در: اپ، پروفایل کاربر سایت', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+          ]),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره')),
@@ -388,21 +401,55 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     );
     if (ok == true) {
       try {
+        String norm(String s) {
+          s = s.trim().replaceAll('/', '-');
+          final p = s.split('-');
+          if (p.length == 3 && (int.tryParse(p[0]) ?? 0) > 1500 && (int.tryParse(p[0]) ?? 0) < 1600) {
+            // تقریبی: ذخیره همان رشته؛ فیلتر سمت سرور با Y-m-d میلادی بهتر است
+            return s;
+          }
+          return s;
+        }
         final res = await context.read<AuthService>().api.dio.post('announcements', data: {
           'title': title.text.trim(),
           'body': body.text.trim(),
-          'places': ['app', 'site'],
+          'places': ['app', 'profile', 'site'],
           'active': true,
+          'start': norm(start.text),
+          'end': norm(end.text),
         });
         if (res.data is Map && res.data['success'] == true) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اطلاعیه ثبت شد')));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('اطلاعیه ثبت شد'),
+              backgroundColor: Color(0xFF6EE7B7),
+            ));
+          }
           await _load();
-        } else {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ثبت نشد: ${res.data}')));
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: AppColors.red));
+        }
       }
+    }
+  }
+
+  Future<void> _toggle(Map m) async {
+    try {
+      await context.read<AuthService>().api.dio.put('announcements/${m['id']}', data: {'active': !(m['active'] == true)});
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
+    }
+  }
+
+  Future<void> _delete(Map m) async {
+    try {
+      await context.read<AuthService>().api.dio.delete('announcements/${m['id']}');
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
     }
   }
 
@@ -410,45 +457,51 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        title: const Text('اطلاعیه‌ها', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: _create)],
-      ),
-      body: loading
-          ? const Center(child: MiniLoader())
-          : error != null
-              ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-              : items.isEmpty
-                  ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: items.length,
-                      itemBuilder: (_, i) {
-                        final it = Map<String, dynamic>.from(items[i] as Map);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: NeonCard(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Row(children: [
-                                Expanded(child: Text(it['title']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: (it['active'] == true ? AppColors.green : AppColors.textMute).withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(it['active'] == true ? 'فعال' : 'غیرفعال', style: TextStyle(color: it['active'] == true ? AppColors.green : AppColors.textMute, fontSize: 11)),
+      body: SafeArea(
+        child: Column(children: [
+          GlassHeader(
+            title: 'اطلاعیه‌ها',
+            subtitle: 'نمایش در اپ و پروفایل',
+            actions: [IconButton(icon: const Icon(Icons.add, color: Colors.white70), onPressed: _create)],
+          ),
+          Expanded(
+            child: loading
+                ? const Center(child: MiniLoader())
+                : error != null
+                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+                    : items.isEmpty
+                        ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: items.length,
+                            itemBuilder: (_, i) {
+                              final m = Map<String, dynamic>.from(items[i] as Map);
+                              final active = m['active'] == true;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: NeonCard(
+                                  borderColor: active ? const Color(0xFF6EE7B7).withOpacity(0.35) : null,
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Row(children: [
+                                      Expanded(child: Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                                      Switch(value: active, activeColor: const Color(0xFF6EE7B7), onChanged: (_) => _toggle(m)),
+                                      IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20), onPressed: () => _delete(m)),
+                                    ]),
+                                    if ((m['body']?.toString() ?? '').isNotEmpty)
+                                      Text(m['body'].toString(), style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'از ${m['start']?.toString().isNotEmpty == true ? m['start'] : 'همیشه'} تا ${m['end']?.toString().isNotEmpty == true ? m['end'] : 'نامحدود'}',
+                                      style: const TextStyle(color: AppColors.textMute, fontSize: 10),
+                                    ),
+                                  ]),
                                 ),
-                              ]),
-                              const SizedBox(height: 6),
-                              Text(it['body']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                            ]),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+          ),
+        ]),
+      ),
     );
   }
 }

@@ -180,8 +180,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                             color: (activeC ? AppColors.green : AppColors.textMute).withOpacity(0.15),
                                             borderRadius: BorderRadius.circular(20),
                                           ),
-                                          child: Text(activeC ? 'فعال' : 'غیرفعال',
-                                              style: TextStyle(color: activeC ? AppColors.green : AppColors.textMute, fontSize: 11)),
+                                          child: Text(activeC ? 'دارای سفارش' : 'بدون سفارش',
+                                              style: TextStyle(color: activeC ? const Color(0xFF6EE7B7) : AppColors.textMute, fontSize: 11)),
                                         ),
                                       ]),
                                     ),
@@ -354,6 +354,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('#${m['number'] ?? m['id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                        if ((m['product_names']?.toString() ?? '').isNotEmpty)
+                          Text(m['product_names'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
                       ]),
                     ),
                     Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 11)),

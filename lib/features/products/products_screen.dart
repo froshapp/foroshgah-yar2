@@ -295,58 +295,66 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: TextField(
-            controller: _search,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'جستجوی محصول...',
-              hintStyle: const TextStyle(color: AppColors.textMute),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
-              filled: true,
-              fillColor: AppColors.card,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.cardBorder)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.cardBorder)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            ),
-            onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v),
-          ),
-        ),
-        Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.cardBorder),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                isExpanded: true,
-                dropdownColor: AppColors.card,
-                menuMaxHeight: 240,
-                value: svc.categoryId,
-                hint: const Text('همه دسته‌ها', style: TextStyle(color: AppColors.textDim)),
-                icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute),
-                items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white))),
-                  ...svc.categories.map((c) {
-                    final id = int.tryParse(c['id']?.toString() ?? '');
-                    return DropdownMenuItem<int?>(value: id, child: Text(c['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)));
-                  }),
-                ],
-                onChanged: (v) {
-                  if (v == null) {
-                    svc.clearCategory();
-                    svc.fetchProducts(auth, refresh: true, categoryId: 0);
-                  } else {
-                    svc.fetchProducts(auth, refresh: true, categoryId: v);
-                  }
-                },
+          child: Row(children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _search,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'جستجو...',
+                  hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.textMute, size: 20),
+                  filled: true,
+                  fillColor: AppColors.card,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  isDense: true,
+                ),
+                onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v),
               ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    isExpanded: true,
+                    isDense: true,
+                    dropdownColor: AppColors.card,
+                    menuMaxHeight: 240,
+                    value: svc.categoryId,
+                    hint: const Text('دسته', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute, size: 18),
+                    items: [
+                      const DropdownMenuItem<int?>(value: null, child: Text('همه', style: TextStyle(color: Colors.white, fontSize: 12))),
+                      ...svc.categories.map((c) {
+                        final id = int.tryParse(c['id']?.toString() ?? '');
+                        return DropdownMenuItem<int?>(value: id, child: Text(c['name']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis));
+                      }),
+                    ],
+                    onChanged: (v) {
+                      if (v == null) {
+                        svc.clearCategory();
+                        svc.fetchProducts(auth, refresh: true, categoryId: 0);
+                      } else {
+                        svc.fetchProducts(auth, refresh: true, categoryId: v);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ]),
         ),
         if (_selectMode)
           Padding(
