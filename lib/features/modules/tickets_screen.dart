@@ -69,10 +69,10 @@ class _TicketsScreenState extends State<TicketsScreen> {
           Expanded(
             child: loading
                 ? const Center(child: MiniLoader())
-                : error != null
-                    ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.red))))
+                : !available
+                    ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(message.isEmpty ? 'افزونه تیکت فعال نیست' : message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim))))
                     : tickets.isEmpty
-                        ? const Center(child: Text('تیکتی یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                        ? Center(child: Text(message.isNotEmpty ? message : 'تیکتی یافت نشد', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim)))
                         : RefreshIndicator(
                             color: AppColors.purple,
                             onRefresh: _load,
