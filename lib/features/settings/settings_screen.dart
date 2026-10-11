@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snack.dart';
 import 'plugins_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -420,16 +421,13 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
         });
         if (res.data is Map && res.data['success'] == true) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('اطلاعیه ثبت شد'),
-              backgroundColor: Color(0xFF6EE7B7),
-            ));
+            showOk(context, 'ذخیره شد');
           }
           await _load();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: AppColors.red));
+          showErr(context, 'خطا');
         }
       }
     }
@@ -437,19 +435,19 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
   Future<void> _toggle(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.put('announcements/${m['id']}', data: {'active': !(m['active'] == true)});
+      await context.read<AuthService>().api.dio.post('announcements/${m['id']}/action', data: {'action': 'toggle'});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
+      if (mounted) showErr(context, 'خطا');
     }
   }
 
   Future<void> _delete(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.delete('announcements/${m['id']}');
+      await context.read<AuthService>().api.dio.post('announcements/${m['id']}/action', data: {'action': 'delete'});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
+      if (mounted) showErr(context, 'خطا');
     }
   }
 

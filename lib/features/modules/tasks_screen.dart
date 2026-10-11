@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snack.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -48,18 +49,26 @@ class _TasksScreenState extends State<TasksScreen> {
         'priority': priority,
       });
       titleCtrl.clear();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کار ثبت شد'), backgroundColor: Color(0xFF6EE7B7)));
+      if (mounted) showOk(context, 'ثبت شد');
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.red));
+      if (mounted) showErr(context, 'خطا');
+    }
+  }
+
+  Future<void> _delete(Map m) async {
+    try {
+      await context.read<AuthService>().api.dio.post('tasks/${m['id']}/action', data: {'action': 'delete'});
+      if (mounted) showOk(context, 'حذف شد');
+      await _load();
+    } catch (e) {
+      if (mounted) showErr(context, 'خطا');
     }
   }
 
   Future<void> _toggle(Map m) async {
     try {
-      await context.read<AuthService>().api.dio.put('tasks/${m['id']}', data: {
-        'done': !(m['done'] == true),
-      });
+      await context.read<AuthService>().api.dio.post('tasks/${m['id']}/action', data: {'action': 'toggle'});
       await _load();
     } catch (_) {}
   }
@@ -86,17 +95,12 @@ class _TasksScreenState extends State<TasksScreen> {
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white), onPressed: () => Navigator.pop(context)),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  const Text('کارهای من', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text('$done / ${items.length}', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                ]),
-              ),
-            ]),
+          GlassHeader(
+            title: 'کارهای من',
+            subtitle: '$done از ${items.length}',
+            actions: [
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -170,10 +174,14 @@ class _TasksScreenState extends State<TasksScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: _priColor(pr).withOpacity(0.15),
+                                        color: (doneItem ? AppColors.green : AppColors.orange).withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Text(_priLabel(pr), style: TextStyle(color: _priColor(pr), fontSize: 11)),
+                                      child: Text(doneItem ? 'انجام شد' : 'در انتظار', style: TextStyle(color: doneItem ? AppColors.green : AppColors.orange, fontSize: 11)),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 18),
+                                      onPressed: () => _delete(m),
                                     ),
                                   ]),
                                 ),

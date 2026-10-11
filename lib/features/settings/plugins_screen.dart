@@ -77,12 +77,11 @@ class _PluginsScreenState extends State<PluginsScreen> {
     final list = filtered;
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        title: const Text('افزونه‌های سایت', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-      ),
+      
       body: Column(children: [
+          GlassHeader(title: 'افزونه‌های سایت', actions: [
+            IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+          ]),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: NeonCard(

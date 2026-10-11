@@ -78,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded, color: Colors.white70),
                   tooltip: 'اعلان‌ها',
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                  onPressed: () => openNotificationsPanel(context),
                 ),
                 if (dash.loading)
                   const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18)),

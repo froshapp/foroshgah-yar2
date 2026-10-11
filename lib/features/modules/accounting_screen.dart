@@ -65,20 +65,13 @@ class _AccountingScreenState extends State<AccountingScreen> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        Row(children: [
-                          IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                          const Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                              Text('حسابداری فروشگاه', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                              Text('گزارشات مالی و تراکنش‌ها', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
-                            ]),
-                          ),
-                          Container(
-                            width: 42, height: 42,
-                            decoration: BoxDecoration(color: AppColors.cyan.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.cyan),
-                          ),
-                        ]),
+                        GlassHeader(
+                          title: 'حسابداری فروشگاه',
+                          subtitle: 'گزارش مالی',
+                          actions: [
+                            IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+                          ],
+                        ),
                         const SizedBox(height: 12),
                         Row(children: [
                           Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),

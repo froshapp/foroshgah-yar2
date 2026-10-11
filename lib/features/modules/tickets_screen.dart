@@ -58,58 +58,53 @@ class _TicketsScreenState extends State<TicketsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        title: const Text('تیکت و پشتیبانی', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-        actions: [if (available) IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
-      ),
-      body: loading
-          ? const Center(child: MiniLoader())
-          : !available
-              ? _disabled()
-              : tickets.isEmpty
-                  ? Center(child: Text('تیکتی ثبت نشده\n($providerLabel)', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textDim)))
-                  : RefreshIndicator(
-                      color: AppColors.purple,
-                      onRefresh: _load,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: tickets.length,
-                        itemBuilder: (_, i) {
-                          final t = Map<String, dynamic>.from(tickets[i] as Map);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: NeonCard(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(
-                                builder: (_) => TicketDetailPage(id: int.tryParse(t['id'].toString()) ?? 0),
-                              )).then((_) => _load()),
-                              child: Row(children: [
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text('#${t['number'] ?? t['id']} — ${t['title'] ?? ''}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 4),
-                                  Text(t['customer'] is Map ? (t['customer']['name']?.toString() ?? 'کاربر #${t['customer']['id'] ?? ''}') : 'کاربر نامشخص', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                  if (t['customer'] is Map && t['customer']['id'] != null)
-                                    TextButton(
-                                      onPressed: () {
-                                        final c = Map<String, dynamic>.from(t['customer'] as Map);
-                                        Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: c)));
-                                      },
-                                      child: const Text('مدیریت مشتری', style: TextStyle(fontSize: 11, color: AppColors.purpleGlow)),
-                                    ),
-                                  Text(t['updated_at']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                ])),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: AppColors.purple.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                                  child: Text(t['status_label']?.toString() ?? t['status']?.toString() ?? '', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),
-                                ),
-                              ]),
+      body: SafeArea(
+        child: Column(children: [
+          GlassHeader(
+            title: 'تیکت و پشتیبانی',
+            actions: [
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+          Expanded(
+            child: loading
+                ? const Center(child: MiniLoader())
+                : error != null
+                    ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.red))))
+                    : tickets.isEmpty
+                        ? const Center(child: Text('تیکتی یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                        : RefreshIndicator(
+                            color: AppColors.purple,
+                            onRefresh: _load,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: tickets.length,
+                              itemBuilder: (_, i) {
+                                final t = Map<String, dynamic>.from(tickets[i] as Map);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: NeonCard(
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(t['subject']?.toString() ?? t['title']?.toString() ?? 'تیکت', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      Text(t['customer'] is Map ? (t['customer']['name']?.toString() ?? '') : '', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                      if (t['customer'] is Map && t['customer']['id'] != null)
+                                        TextButton(
+                                          onPressed: () {
+                                            final c = Map<String, dynamic>.from(t['customer'] as Map);
+                                            Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: c)));
+                                          },
+                                          child: const Text('مدیریت مشتری', style: TextStyle(fontSize: 11, color: AppColors.purpleGlow)),
+                                        ),
+                                    ]),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+          ),
+        ]),
+      ),
     );
   }
 
@@ -189,7 +184,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     final replies = ticket?['replies'] is List ? ticket!['replies'] as List : [];
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
+      appBar: AppBar(centerTitle: true, elevation: 0,
         backgroundColor: AppColors.bg,
         title: Text(ticket != null ? '#${ticket!['number'] ?? widget.id}' : 'تیکت', style: const TextStyle(fontSize: 16)),
         leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),

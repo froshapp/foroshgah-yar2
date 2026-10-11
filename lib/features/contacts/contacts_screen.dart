@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -71,58 +72,46 @@ class _ContactsScreenState extends State<ContactsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1B2E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1B2E),
-        title: const Text('تماس‌ها', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh, color: Colors.white54), onPressed: _load),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6C63FF))))
-          : _contacts.isEmpty
-              ? const Center(child: Text('تماسی یافت نشد', style: TextStyle(color: Colors.white54)))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _contacts.length,
-                  itemBuilder: (ctx, i) {
-                    final c = _contacts[i];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: const Color(0xFF252640), borderRadius: BorderRadius.circular(14)),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.2),
-                            child: Text(c['name']!.isNotEmpty ? c['name']![0] : '?',
-                                style: const TextStyle(color: Color(0xFF6C63FF))),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(c['name']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                Text(c['phone']!, style: const TextStyle(color: Colors.white54, fontSize: 12), textDirection: TextDirection.ltr),
-                              ],
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(children: [
+          GlassHeader(
+            title: 'تماس‌ها',
+            actions: [
+              IconButton(icon: const Icon(Icons.refresh, color: Colors.white70), onPressed: _load),
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: MiniLoader())
+                : _contacts.isEmpty
+                    ? const Center(child: Text('تماسی یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _contacts.length,
+                        itemBuilder: (ctx, i) {
+                          final c = _contacts[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: NeonCard(
+                              child: Row(children: [
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(c['name'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                    Text(c['phone'] ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 12), textDirection: TextDirection.ltr),
+                                  ]),
+                                ),
+                                IconButton(icon: const Icon(Icons.call, color: AppColors.green), onPressed: () => _call(c['phone'] ?? '')),
+                                IconButton(icon: const Icon(Icons.chat, color: AppColors.cyan), onPressed: () => _whatsapp(c['phone'] ?? '')),
+                              ]),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.phone, color: Color(0xFF10B981)),
-                            onPressed: () => _call(c['phone']!),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
-                            onPressed: () => _whatsapp(c['phone']!),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ]),
+      ),
     );
   }
 }

@@ -79,30 +79,19 @@ class _CustomersScreenState extends State<CustomersScreen> {
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white), onPressed: () => Navigator.pop(context)),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('مدیریت مشتریان', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text('اطلاعات و ارتباط با مشتریان', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
-                ]),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(color: AppColors.orange.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.people_alt_rounded, color: AppColors.orange),
-              ),
-            ]),
+          GlassHeader(
+            title: 'مدیریت مشتریان',
+            subtitle: 'اطلاعات و سفارش‌ها',
+            actions: [
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
               Expanded(child: _stat('کل مشتریان', '$total', AppColors.blue)),
               const SizedBox(width: 8),
-              Expanded(child: _stat('مشتریان فعال', '$active', AppColors.cyan)),
+              Expanded(child: _stat('دارای سفارش', '$active', AppColors.cyan)),
               const SizedBox(width: 8),
               Expanded(child: _stat('مشتریان جدید', '$neu', AppColors.purpleGlow)),
             ]),
@@ -130,8 +119,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Row(children: [
               _chip('همه', 'all'),
-              _chip('مشتریان فعال', 'active'),
-              _chip('مشتریان غیرفعال', 'inactive'),
+              _chip('دارای سفارش', 'active'),
+              _chip('بدون سفارش', 'inactive'),
             ]),
           ),
           Expanded(
@@ -354,8 +343,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('#${m['number'] ?? m['id']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                        if ((m['product_names']?.toString() ?? '').isNotEmpty)
-                          Text(m['product_names'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                        Text(
+                          (m['product_names']?.toString().isNotEmpty == true)
+                              ? m['product_names'].toString()
+                              : '—',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: AppColors.textDim, fontSize: 11),
+                        ),
                       ]),
                     ),
                     Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.textDim, fontSize: 11)),

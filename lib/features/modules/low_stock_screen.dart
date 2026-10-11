@@ -54,74 +54,80 @@ class _LowStockScreenState extends State<LowStockScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        title: const Text('یادآوری موجودی', style: TextStyle(fontSize: 16)),
-        leading: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => Navigator.pop(context)),
-      ),
-      body: loading
-          ? const Center(child: MiniLoader())
-          : error != null
-              ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(error!, style: const TextStyle(color: AppColors.red), textAlign: TextAlign.center)))
-              : RefreshIndicator(
-                  color: AppColors.purple,
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      Text('آستانه: $threshold عدد (از تنظیمات قابل تغییر)', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Expanded(child: _stat('کل', '$total', AppColors.blue)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _stat('تمام‌شده', '${out.length}', AppColors.red)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _stat('کم‌موجود', '${low.length}', AppColors.orange)),
-                      ]),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        _chip('همه', 'all'),
-                        _chip('کم‌موجود', 'low'),
-                        _chip('تمام‌شده', 'out'),
-                      ]),
-                      const SizedBox(height: 12),
-                      if (_items.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('محصولی با این فیلتر یافت نشد.\nمحصولات ناموجود و کم‌موجود از وضعیت انبار ووکامرس خوانده می‌شوند.',
-                              textAlign: TextAlign.center, style: TextStyle(color: AppColors.textDim)),
-                        ),
-                      ..._items.map((e) {
-                        final m = Map<String, dynamic>.from(e as Map);
-                        final stock = m['stock'];
-                        final isOut = (m['stock_status']?.toString() == 'outofstock') || (stock is num && stock <= 0);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: NeonCard(
-                            borderColor: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.4),
-                            child: Row(children: [
-                              Expanded(
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(m['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 4),
-                                  Text('موجودی: ${stock ?? '—'}', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                ]),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(isOut ? 'تمام شده' : 'کم‌موجود', style: TextStyle(color: isOut ? AppColors.red : AppColors.orange, fontSize: 11)),
-                              ),
+      body: SafeArea(
+        child: Column(children: [
+          GlassHeader(
+            title: 'یادآوری موجودی',
+            actions: [
+              IconButton(icon: const Icon(Icons.arrow_forward, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+          Expanded(
+            child: loading
+                ? const Center(child: MiniLoader())
+                : error != null
+                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+                    : RefreshIndicator(
+                        color: AppColors.purple,
+                        onRefresh: _load,
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            Text('آستانه: $threshold عدد (از تنظیمات قابل تغییر)', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                            const SizedBox(height: 10),
+                            Row(children: [
+                              Expanded(child: _stat('کل', '$total', AppColors.blue)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _stat('تمام‌شده', '${out.length}', AppColors.red)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _stat('کم‌موجود', '${low.length}', AppColors.orange)),
                             ]),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
+                            const SizedBox(height: 12),
+                            Row(children: [
+                              _chip('همه', 'all'),
+                              _chip('کم‌موجود', 'low'),
+                              _chip('تمام‌شده', 'out'),
+                            ]),
+                            const SizedBox(height: 12),
+                            if (_items.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Text('محصولی با این فیلتر یافت نشد', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textDim)),
+                              ),
+                            ..._items.map((e) {
+                              final m = Map<String, dynamic>.from(e as Map);
+                              final stock = m['stock'];
+                              final isOut = (m['stock_status']?.toString() == 'outofstock') || (stock is num && stock <= 0);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: NeonCard(
+                                  borderColor: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.4),
+                                  child: Row(children: [
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(m['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text('موجودی: ${stock ?? '—'}', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                      ]),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(isOut ? 'تمام شده' : 'کم‌موجود', style: TextStyle(color: isOut ? AppColors.red : AppColors.orange, fontSize: 11)),
+                                    ),
+                                  ]),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+          ),
+        ]),
+      ),
     );
   }
 

@@ -299,7 +299,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
           child: Row(children: [
             Expanded(
               flex: 3,
-              child: TextField(
+              child: SizedBox(
+                height: 44,
+                child: TextField(
                 controller: _search,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
@@ -315,12 +317,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
                 onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v),
               ),
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
               child: Container(
+                height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(14),
