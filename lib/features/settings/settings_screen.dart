@@ -220,6 +220,8 @@ class StockThresholdPage extends StatefulWidget {
 class _StockThresholdPageState extends State<StockThresholdPage> {
   final c = TextEditingController(text: '5');
   bool notify = true;
+  bool loading = true;
+  bool saving = false;
 
   @override
   void initState() {
@@ -227,75 +229,118 @@ class _StockThresholdPageState extends State<StockThresholdPage> {
     _load();
   }
 
+  @override
+  void dispose() {
+    c.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final p = await SharedPreferences.getInstance();
-    c.text = (p.getInt('stock_threshold') ?? 5).toString();
-    notify = p.getBool('stock_notify') ?? true;
-    setState(() {});
+    setState(() => loading = true);
+    final prefs = await SharedPreferences.getInstance();
+    var th = prefs.getInt('stock_threshold') ?? 5;
+    notify = prefs.getBool('stock_notify') ?? true;
+    try {
+      final res = await context.read<AuthService>().api.dio.get('settings/threshold');
+      if (res.data is Map) {
+        final v = int.tryParse('${res.data['threshold'] ?? th}');
+        if (v != null) th = v;
+        if (res.data['enabled'] != null) notify = res.data['enabled'] == true;
+      }
+    } catch (_) {}
+    c.text = '$th';
+    if (mounted) setState(() => loading = false);
   }
 
   Future<void> _save() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setInt('stock_threshold', int.tryParse(c.text) ?? 5);
+    setState(() => saving = true);
+    final th = int.tryParse(c.text.trim()) ?? 5;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('stock_threshold', th);
+    await prefs.setBool('stock_notify', notify);
     try {
       await context.read<AuthService>().api.dio.post('settings/threshold', data: {
-        'threshold': int.tryParse(c.text) ?? 5,
-        'enabled': true,
+        'threshold': th,
+        'enabled': notify,
       });
-    } catch (_) {}
-    await p.setBool('stock_notify', notify);
-    if (mounted) {
-      showOk(context, 'ذخیره شد');
-      Navigator.pop(context);
+      if (mounted) {
+        showOk(context, 'ذخیره شد');
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) showErr(context, e.toString());
     }
+    if (mounted) setState(() => saving = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16))),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          NeonCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('اگر موجودی محصول به این عدد یا کمتر برسد، در بخش یادآوری نمایش داده می‌شود.', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: c,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'تعداد آستانه',
-                  labelStyle: const TextStyle(color: AppColors.textDim),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      body: Column(children: [
+        GlassHeader(
+          title: 'آستانه موجودی کم',
+          subtitle: 'تنظیم اعلان کمبود موجودی',
+          leadingIcon: Icons.inventory_2_rounded,
+          leadingColor: AppColors.cyan,
+          storeOpensSettings: false,
+          showBell: false,
+        ),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    NeonCard(
+                      borderColor: AppColors.cyan.withOpacity(0.35),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text(
+                          'اگر موجودی محصول به این عدد یا کمتر برسد، در یادآوری و اعلان‌های اپ نمایش داده می‌شود.',
+                          style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.45),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text('تعداد آستانه', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: c,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: 'مثلاً 5',
+                            hintStyle: const TextStyle(color: AppColors.textMute),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('فعال بودن اعلان کمبود', style: TextStyle(color: Colors.white, fontSize: 13)),
+                          subtitle: const Text('در زنگوله و صفحه یادآوری', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                          value: notify,
+                          activeColor: AppColors.purple,
+                          onChanged: (v) => setState(() => notify = v),
+                        ),
+                      ]),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: saving ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.purple,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: saving ? const MiniLoader(size: 22) : const Text('ذخیره آستانه', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
                 ),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('نمایش هشدار در اپ', style: TextStyle(color: Colors.white, fontSize: 13)),
-                value: notify,
-                activeColor: AppColors.purple,
-                onChanged: (v) => setState(() => notify = v),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.purple,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: const Text('ذخیره'),
-          ),
-        ]),
-      ),
+        ),
+      ]),
     );
   }
 }

@@ -28,9 +28,16 @@ class _LowStockScreenState extends State<LowStockScreen> {
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
     final prefs = await SharedPreferences.getInstance();
+    final auth = context.read<AuthService>();
     threshold = prefs.getInt('stock_threshold') ?? 5;
     try {
-      final auth = context.read<AuthService>();
+      final st = await auth.api.dio.get('settings/threshold');
+      if (st.data is Map && st.data['threshold'] != null) {
+        threshold = int.tryParse('${st.data['threshold']}') ?? threshold;
+        await prefs.setInt('stock_threshold', threshold);
+      }
+    } catch (_) {}
+    try {
       final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
       if (res.data is Map) {
         final m = res.data as Map;
