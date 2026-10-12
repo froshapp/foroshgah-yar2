@@ -70,11 +70,10 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   bool loading = true;
-  String? error;
-  List customers = [];
-  int totalCustomers = 0;
-  final search = TextEditingController();
+  List items = [];
   String filter = 'all';
+  final search = TextEditingController();
+  int total = 0;
 
   @override
   void initState() {
@@ -88,174 +87,151 @@ class _CustomersScreenState extends State<CustomersScreen> {
     super.dispose();
   }
 
-  Future<void> _load({String? q}) async {
-    setState(() { loading = true; error = null; });
+  Future<void> _load() async {
+    setState(() => loading = true);
     try {
-      final res = await context.read<AuthService>().api.dio.get('customers', queryParameters: {
-        'per_page': 80,
-        if (q != null && q.isNotEmpty) 'search': q,
-      });
-      if (res.data is Map && res.data['customers'] is List) {
-        customers = res.data['customers'] as List;
-        totalCustomers = int.tryParse('${res.data['total'] ?? customers.length}') ?? customers.length;
+      final res = await context.read<AuthService>().api.dio.get('customers', queryParameters: {'per_page': 100});
+      if (res.data is Map) {
+        items = res.data['customers'] is List ? res.data['customers'] as List : (res.data['items'] is List ? res.data['items'] as List : []);
+        total = int.tryParse('${res.data['total'] ?? items.length}') ?? items.length;
       }
-    } catch (e) {
-      error = e.toString();
+    } catch (_) {
+      items = [];
     }
     if (mounted) setState(() => loading = false);
   }
 
-  List get filtered {
+  List get _filtered {
     final q = search.text.trim();
-    Iterable list = customers;
-    if (filter == 'active') {
-      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0);
-    } else if (filter == 'inactive') {
-      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) == 0);
-    }
-    if (q.isNotEmpty) {
-      list = list.where((c) {
-        if (c is! Map) return false;
-        final blob = '${c['name'] ?? ''} ${c['phone'] ?? ''} ${c['email'] ?? ''}';
-        return blob.contains(q);
-      });
-    }
-    return list.toList();
+    return items.where((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      final orders = int.tryParse('${m['orders_count'] ?? m['order_count'] ?? 0}') ?? 0;
+      if (filter == 'active' && orders <= 0) return false;
+      if (filter == 'inactive' && orders > 0) return false;
+      if (q.isEmpty) return true;
+      final name = m['name']?.toString() ?? '';
+      final email = m['email']?.toString() ?? '';
+      return name.contains(q) || email.contains(q);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final list = filtered;
-    final total = customers.length;
-    final active = customers.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0).length;
-    final neu = customers.where((c) {
-      if (c is! Map) return false;
-      final r = c['registered_jalali']?.toString() ?? '';
-      // تقریبی: اگر تاریخ عضویت اخیر در لیست باشد به‌عنوان جدید
-      return (int.tryParse('${c['order_count'] ?? 0}') ?? 0) <= 1;
+    final list = _filtered;
+    final active = items.where((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      return (int.tryParse('${m['orders_count'] ?? m['order_count'] ?? 0}') ?? 0) > 0;
     }).length;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          GlassHeader(
-            title: 'مدیریت مشتریان',
-            subtitle: 'کل: $totalCustomers',
-            onRefresh: _load,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(children: [
-              Expanded(child: _stat('کل مشتریان', '$totalCustomers', AppColors.blue)),
-              const SizedBox(width: 8),
-              Expanded(child: _stat('دارای سفارش', '$active', AppColors.cyan)),
-              const SizedBox(width: 8),
-              Expanded(child: _stat('مشتریان جدید', '$neu', AppColors.purpleGlow)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: TextField(
-              controller: search,
-              style: const TextStyle(color: Colors.white),
-              textAlign: TextAlign.right,
-              decoration: InputDecoration(
-                hintText: 'جستجوی مشتری...',
-                hintStyle: const TextStyle(color: AppColors.textMute),
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
-                filled: true,
-                fillColor: AppColors.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (v) => _load(q: v),
+      body: Column(children: [
+        GlassHeader(
+          title: 'مشتریان',
+          subtitle: 'مدیریت مشتریان فروشگاه',
+          leadingIcon: Icons.people_alt_rounded,
+          leadingColor: AppColors.blue,
+          onRefresh: _load,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B1230),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF1E2A55)),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Row(children: [
-              _chip('همه', 'all'),
-              _chip('دارای سفارش', 'active'),
-              _chip('بدون سفارش', 'inactive'),
+              const SizedBox(width: 12),
+              const Icon(Icons.search, color: AppColors.textMute, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: search,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'جستجو در مشتریان...',
+                    hintStyle: TextStyle(color: AppColors.textMute, fontSize: 13),
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                ),
+              ),
             ]),
           ),
-          Expanded(
-            child: loading
-                ? const Center(child: MiniLoader())
-                : error != null
-                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-                    : RefreshIndicator(
-                        color: AppColors.purple,
-                        onRefresh: _load,
-                        child: list.isEmpty
-                            ? ListView(children: [SizedBox(height: 120), Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                                itemCount: list.length,
-                                itemBuilder: (_, i) {
-                                  final m = Map<String, dynamic>.from(list[i] as Map);
-                                  final activeC = (int.tryParse('${m['order_count'] ?? 0}') ?? 0) > 0;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: NeonCard(
-                                      onTap: () => Navigator.push(context, MaterialPageRoute(
-                                        builder: (_) => CustomerDetailPage(customer: m),
-                                      )).then((_) => _load()),
-                                      child: Row(children: [
-                                        avatarWidget(m, size: 44),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            Text(m['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                            const SizedBox(height: 3),
-                                            Text(m['phone']?.toString().isNotEmpty == true ? m['phone'].toString() : (m['email']?.toString() ?? ''),
-                                                style: const TextStyle(color: AppColors.textDim, fontSize: 12), textDirection: TextDirection.ltr),
-                                          ]),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: (activeC ? AppColors.green : AppColors.textMute).withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(activeC ? 'دارای سفارش' : 'بدون سفارش',
-                                              style: TextStyle(color: activeC ? const Color(0xFF6EE7B7) : AppColors.textMute, fontSize: 11)),
-                                        ),
-                                      ]),
-                                    ),
-                                  );
-                                },
-                              ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Row(children: [
+            Expanded(child: NeonCard(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(children: [
+                SoftIconBox(icon: Icons.people_outline, color: AppColors.blue, size: 36),
+                const SizedBox(height: 8),
+                Text('$total', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 2),
+                const Text('مشتریان کل', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ]),
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: NeonCard(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(children: [
+                SoftIconBox(icon: Icons.person_add_alt_1_rounded, color: AppColors.purple, size: 36),
+                const SizedBox(height: 8),
+                Text('$active', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 2),
+                const Text('دارای سفارش', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ]),
+            )),
+          ]),
+        ),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : list.isEmpty
+                  ? const Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                  : RefreshIndicator(
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
+                        itemCount: list.length,
+                        itemBuilder: (ctx, i) {
+                          final m = Map<String, dynamic>.from(list[i] as Map);
+                          final name = m['name']?.toString() ?? '—';
+                          final email = m['email']?.toString() ?? '';
+                          final orders = m['orders_count'] ?? m['order_count'] ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: NeonCard(
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: m))).then((_) => _load()),
+                              padding: const EdgeInsets.all(12),
+                              child: Row(children: [
+                                avatarWidget(m, size: 48),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                                    if (email.isNotEmpty) ...[
+                                      const SizedBox(height: 3),
+                                      Text(email, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Text('$orders سفارش', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                  ]),
+                                ),
+                                const Icon(Icons.chevron_left, color: AppColors.textMute),
+                              ]),
+                            ),
+                          );
+                        },
                       ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _stat(String t, String v, Color c) => NeonCard(
-        borderColor: c.withOpacity(0.35),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Column(children: [
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 4),
-          Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 10)),
-        ]),
-      );
-
-  Widget _chip(String label, String val) {
-    final sel = filter == val;
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: ChoiceChip(
-        label: Text(label, style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontSize: 12)),
-        selected: sel,
-        selectedColor: AppColors.purple.withOpacity(0.45),
-        backgroundColor: AppColors.card,
-        onSelected: (_) => setState(() => filter = val),
-      ),
+                    ),
+        ),
+      ]),
     );
   }
 }

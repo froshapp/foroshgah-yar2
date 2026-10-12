@@ -9,6 +9,7 @@ import '../modules/modules_screen.dart';
 import '../settings/settings_screen.dart';
 import '../products/add_product_screen.dart';
 import '../contacts/contacts_screen.dart';
+import '../modules/customers_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -17,6 +18,7 @@ class MainShell extends StatefulWidget {
 }
 
 class MainShellState extends State<MainShell> {
+  /// 0 پیشخوان | 1 سفارشات | 2 محصولات | 3 ماژول‌ها | 4 بیشتر
   int index = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   DateTime? _lastBack;
@@ -53,13 +55,13 @@ class MainShellState extends State<MainShell> {
       const OrdersScreen(),
       const ProductsScreen(),
       const ModulesScreen(),
+      const _MoreTab(),
     ];
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // اول مسیرهای push شده (جزئیات سفارش، مشتری، ...) را ببند
         final nav = Navigator.of(context);
         if (nav.canPop()) {
           nav.pop();
@@ -80,7 +82,7 @@ class MainShellState extends State<MainShell> {
             const SnackBar(
               content: Text('برای خروج دوباره دکمه بازگشت را بزنید'),
               duration: Duration(seconds: 2),
-              backgroundColor: Color(0xFF2A2A4A),
+              backgroundColor: Color(0xFF152048),
             ),
           );
           return;
@@ -88,68 +90,143 @@ class MainShellState extends State<MainShell> {
         SystemNavigator.pop();
       },
       child: Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.bg,
-      drawer: Drawer(
+        key: _scaffoldKey,
         backgroundColor: AppColors.bg,
-        width: MediaQuery.of(context).size.width * 0.88,
-        child: const SettingsScreen(asDrawer: true),
-      ),
-      body: IndexedStack(index: index, children: pages),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1430),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0xFF252B4A)),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 18, offset: const Offset(0, 6)),
-          ],
+        drawer: Drawer(
+          backgroundColor: AppColors.bg,
+          width: MediaQuery.of(context).size.width * 0.82,
+          child: const SettingsScreen(asDrawer: true),
         ),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _nav(0, Icons.home_rounded, 'خانه'),
-              _nav(1, Icons.receipt_long_rounded, 'سفارشات'),
-              _nav(2, Icons.inventory_2_rounded, 'محصولات'),
-              _nav(3, Icons.grid_view_rounded, 'ماژول‌ها'),
+        body: IndexedStack(index: index, children: pages),
+        bottomNavigationBar: Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0B1230),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0xFF1E2A55)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 20, offset: const Offset(0, 8)),
             ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // ترتیب بصری RTL: ماژول‌ها | محصولات | پیشخوان | سفارشات | بیشتر
+                _nav(3, Icons.grid_view_rounded, 'ماژول‌ها'),
+                _nav(2, Icons.inventory_2_outlined, 'محصولات'),
+                _nav(0, Icons.home_rounded, 'پیشخوان'),
+                _nav(1, Icons.shopping_cart_outlined, 'سفارشات'),
+                _nav(4, Icons.more_horiz_rounded, 'بیشتر'),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
   Widget _nav(int i, IconData icon, String label) {
     final active = index == i;
-    return InkWell(
-      onTap: () => setState(() => index = i),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: active
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  colors: [AppColors.purple.withOpacity(0.35), AppColors.blue.withOpacity(0.2)],
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (i == 4) {
+            // بیشتر = باز کردن دراور تنظیمات
+            _scaffoldKey.currentState?.openDrawer();
+            return;
+          }
+          setState(() => index = i);
+        },
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: active
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7047F5), Color(0xFF2868FF)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                  ],
+                )
+              : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: active ? Colors.white : AppColors.textMute, size: 22),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? Colors.white : AppColors.textMute,
+                  fontSize: 9.5,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 ),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: active ? Colors.white : AppColors.textMute, size: 22),
-            const SizedBox(height: 3),
-            Text(label, style: TextStyle(color: active ? Colors.white : AppColors.textMute, fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
-            if (active)
-              Container(margin: const EdgeInsets.only(top: 3), width: 16, height: 3, decoration: BoxDecoration(color: AppColors.purpleGlow, borderRadius: BorderRadius.circular(2))),
-          ],
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// تب بیشتر — میانبرهای سریع مثل مرجع
+class _MoreTab extends StatelessWidget {
+  const _MoreTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          const GlassHeader(
+            title: 'بیشتر',
+            subtitle: 'میانبرها و تنظیمات',
+            leadingIcon: Icons.apps_rounded,
+            leadingColor: AppColors.blue,
+          ),
+          const SizedBox(height: 12),
+          _item(context, Icons.people_alt_rounded, 'مشتریان', 'مدیریت مشتریان', AppColors.purple, const CustomersScreen()),
+          _item(context, Icons.phone_in_talk_rounded, 'تماس‌ها', 'تماس سریع', AppColors.cyan, const ContactsScreen()),
+          _item(context, Icons.settings_outlined, 'تنظیمات', 'پروفایل و تنظیمات فروشگاه', AppColors.blue, null, openDrawer: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _item(BuildContext context, IconData icon, String title, String sub, Color c, Widget? page, {bool openDrawer = false}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: NeonCard(
+        onTap: () {
+          if (openDrawer) {
+            AppNav.openSettingsDrawer();
+            return;
+          }
+          if (page != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+          }
+        },
+        child: Row(children: [
+          SoftIconBox(icon: icon, color: c, size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+            ]),
+          ),
+          const Icon(Icons.chevron_left, color: AppColors.textMute),
+        ]),
       ),
     );
   }

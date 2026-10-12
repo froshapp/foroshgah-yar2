@@ -126,7 +126,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
-          title: 'یادآوری موجودی',
+          title: 'یادآوری موجودی محصول',
           subtitle: 'آستانه فعلی: $threshold',
           leadingIcon: Icons.inventory_2_rounded,
           leadingColor: const Color(0xFF60A5FA),

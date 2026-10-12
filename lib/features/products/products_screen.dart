@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/products_service.dart';
 import '../../core/theme/app_theme.dart';
+import 'add_product_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -15,8 +16,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final _search = TextEditingController();
-  final Set<int> _selected = {};
-  bool _selectMode = false;
+  String stockFilter = 'all'; // all | instock | outofstock
 
   @override
   void initState() {
@@ -47,6 +47,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return b.toString();
   }
 
+  bool _inStock(Map p) {
+    final status = (p['stock_status'] ?? '').toString().toLowerCase();
+    if (status == 'outofstock') return false;
+    if (status == 'instock') return true;
+    final q = p['stock_quantity'];
+    if (q == null) return true;
+    final n = int.tryParse(q.toString());
+    if (n == null) return true;
+    return n > 0;
+  }
+
+  List<Map<String, dynamic>> _filtered(List products) {
+    final q = _search.text.trim();
+    return products.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).where((p) {
+      if (stockFilter == 'instock' && !_inStock(p)) return false;
+      if (stockFilter == 'outofstock' && _inStock(p)) return false;
+      if (q.isEmpty) return true;
+      return (p['name']?.toString() ?? '').contains(q) || (p['id']?.toString() ?? '').contains(q);
+    }).toList();
+  }
+
+  Widget _ph({double s = 56}) => Container(
+        width: s,
+        height: s,
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.image_outlined, color: AppColors.textMute),
+      );
+
   Future<void> _editProduct(Map<String, dynamic> p) async {
     final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
     if (id == 0) return;
@@ -74,62 +102,63 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   IconButton(icon: const Icon(Icons.close, color: AppColors.textDim), onPressed: () => Navigator.pop(ctx, false)),
                 ]),
                 const SizedBox(height: 12),
-                // image
                 Row(children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: newImage != null
                         ? Image.file(File(newImage!.path), width: 64, height: 64, fit: BoxFit.cover)
                         : (p['image'] != null && p['image'].toString().isNotEmpty)
-                            ? Image.network(p['image'].toString(), width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _ph())
-                            : _ph(),
+                            ? Image.network(p['image'].toString(), width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _ph(s: 64))
+                            : _ph(s: 64),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final f = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
-                      if (f != null) setModal(() => newImage = f);
-                    },
-                    icon: const Icon(Icons.image, size: 18),
-                    label: const Text('تغییر تصویر', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.purpleGlow),
-                  )),
-                ]),
-                const SizedBox(height: 16),
-                const Text('وضعیت', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, children: [
-                  for (final s in [('publish', 'منتشر', AppColors.cyan), ('draft', 'پیش‌نویس', AppColors.orange), ('pending', 'انتظار', AppColors.textDim)])
-                    ChoiceChip(
-                      label: Text(s.$2, style: TextStyle(color: status == s.$1 ? Colors.white : AppColors.textDim, fontSize: 12)),
-                      selected: status == s.$1,
-                      selectedColor: s.$3.withOpacity(0.35),
-                      backgroundColor: AppColors.surface,
-                      onSelected: (_) => setModal(() => status = s.$1),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final f = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+                        if (f != null) setModal(() => newImage = f);
+                      },
+                      icon: const Icon(Icons.image_outlined, size: 18),
+                      label: const Text('تغییر تصویر'),
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.purpleGlow),
                     ),
+                  ),
                 ]),
                 const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: _field(priceCtrl, 'قیمت اصلی')),
-                  const SizedBox(width: 10),
-                  Expanded(child: _field(saleCtrl, 'قیمت ویژه')),
-                ]),
-                const SizedBox(height: 8),
+                TextField(
+                  controller: priceCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _dec('قیمت اصلی'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: saleCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _dec('قیمت ویژه'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: stockCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _dec('موجودی'),
+                ),
+                const SizedBox(height: 10),
                 SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
                   title: const Text('مدیریت موجودی', style: TextStyle(color: Colors.white, fontSize: 13)),
                   value: manageStock,
                   activeColor: AppColors.purple,
                   onChanged: (v) => setModal(() => manageStock = v),
                 ),
-                if (manageStock) _field(stockCtrl, 'موجودی', number: true),
-                const SizedBox(height: 14),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.purple,
                     foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text('ذخیره تغییرات'),
@@ -144,7 +173,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (ok == true && mounted) {
       final auth = context.read<AuthService>();
       final svc = context.read<ProductsService>();
-      // upload image
       if (newImage != null) {
         try {
           final form = FormData.fromMap({'file': await MultipartFile.fromFile(newImage!.path, filename: newImage!.name)});
@@ -155,7 +183,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
           }
         } catch (_) {}
       }
-      await svc.updateProduct(auth, id,
+      await svc.updateProduct(
+        auth,
+        id,
         price: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
         regularPrice: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
         stock: manageStock ? int.tryParse(stockCtrl.text.trim()) : null,
@@ -167,7 +197,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         } catch (_) {}
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد'), backgroundColor: Color(0xFF152048)));
         svc.fetchProducts(auth, refresh: true);
       }
     }
@@ -176,298 +206,200 @@ class _ProductsScreenState extends State<ProductsScreen> {
     stockCtrl.dispose();
   }
 
-  Widget _ph() => Container(width: 64, height: 64, color: AppColors.surface, child: const Icon(Icons.image, color: AppColors.textMute));
-
-  Widget _field(TextEditingController c, String label, {bool number = false}) {
-    return TextField(
-      controller: c,
-      keyboardType: number ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
+  InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppColors.textDim),
         filled: true,
         fillColor: AppColors.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      ),
-    );
-  }
-
-  Future<void> _bulkPrice() async {
-    if (_selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ابتدا محصول انتخاب کنید')));
-      return;
-    }
-    final ctrl = TextEditingController();
-    String mode = 'fixed'; // fixed | percent
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
-        return AlertDialog(
-          backgroundColor: AppColors.card,
-          title: const Text('تغییر قیمت گروهی', style: TextStyle(color: Colors.white)),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [
-              Expanded(child: ChoiceChip(
-                label: const Text('مبلغ ثابت', style: TextStyle(fontSize: 12)),
-                selected: mode == 'fixed',
-                selectedColor: AppColors.purple.withOpacity(0.4),
-                onSelected: (_) => setD(() => mode = 'fixed'),
-              )),
-              const SizedBox(width: 8),
-              Expanded(child: ChoiceChip(
-                label: const Text('درصد', style: TextStyle(fontSize: 12)),
-                selected: mode == 'percent',
-                selectedColor: AppColors.purple.withOpacity(0.4),
-                onSelected: (_) => setD(() => mode = 'percent'),
-              )),
-            ]),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: mode == 'fixed' ? 'مثلاً ۵۰۰۰۰ تومان اضافه' : 'مثلاً ۱۰ درصد افزایش',
-                hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 12),
-              ),
-            ),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('اعمال')),
-          ],
-        );
-      }),
-    );
-    if (ok != true || ctrl.text.trim().isEmpty || !mounted) {
-      ctrl.dispose();
-      return;
-    }
-    final auth = context.read<AuthService>();
-    final svc = context.read<ProductsService>();
-    final val = double.tryParse(ctrl.text.trim()) ?? 0;
-    int done = 0;
-    for (final id in _selected) {
-      final p = svc.products.firstWhere((e) => e['id'].toString() == id.toString(), orElse: () => {});
-      if (p.isEmpty) continue;
-      final current = double.tryParse(p['regular_price']?.toString() ?? p['price']?.toString() ?? '0') ?? 0;
-      double next;
-      if (mode == 'percent') {
-        next = current + (current * val / 100);
-      } else {
-        next = current + val;
-      }
-      if (await svc.updateProduct(auth, id, price: next.round().toString(), regularPrice: next.round().toString())) {
-        done++;
-      }
-    }
-    setState(() {
-      _selected.clear();
-      _selectMode = false;
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$done محصول به‌روز شد')));
-      svc.fetchProducts(auth, refresh: true);
-    }
-    ctrl.dispose();
-  }
+      );
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final svc = context.watch<ProductsService>();
+    final list = _filtered(svc.products);
 
-    return SafeArea(
-      child: Column(children: [
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
         GlassHeader(
           title: 'محصولات',
-          subtitle: 'مدیریت موجودی و قیمت',
-          onRefresh: svc.loading ? null : () => svc.fetchProducts(auth, refresh: true),
-          actions: [
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              icon: Icon(_selectMode ? Icons.close : Icons.attach_money_rounded, color: _selectMode ? Colors.white70 : AppColors.cyan, size: 22),
-              tooltip: 'قیمت گروهی',
-              onPressed: () => setState(() { _selectMode = !_selectMode; _selected.clear(); }),
-            ),
-          ],
+          subtitle: 'مدیریت محصولات فروشگاه',
+          leadingIcon: Icons.inventory_2_rounded,
+          leadingColor: AppColors.purple,
+          onRefresh: () => svc.fetchProducts(auth, refresh: true, search: _search.text.trim().isEmpty ? null : _search.text.trim()),
         ),
+        // جستجو
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: Row(children: [
-            Expanded(
-              flex: 1,
-              child: SizedBox(
-                height: 44,
-                child: TextField(
-                controller: _search,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'جستجو...',
-                  hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.textMute, size: 20),
-                  filled: true,
-                  fillColor: AppColors.card,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  isDense: true,
-                ),
-                onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v),
-              ),
-              ),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B1230),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF1E2A55)),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 1,
-              child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int?>(
-                    isExpanded: true,
-                    isDense: true,
-                    dropdownColor: AppColors.card,
-                    menuMaxHeight: 240,
-                    value: svc.categoryId,
-                    hint: const Text('دسته', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
-                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute, size: 18),
-                    items: [
-                      const DropdownMenuItem<int?>(value: null, child: Text('همه', style: TextStyle(color: Colors.white, fontSize: 12))),
-                      ...svc.categories.map((c) {
-                        final id = int.tryParse(c['id']?.toString() ?? '');
-                        return DropdownMenuItem<int?>(value: id, child: Text(c['name']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 12), overflow: TextOverflow.ellipsis));
-                      }),
-                    ],
-                    onChanged: (v) {
-                      if (v == null) {
-                        svc.clearCategory();
-                        svc.fetchProducts(auth, refresh: true, categoryId: 0);
-                      } else {
-                        svc.fetchProducts(auth, refresh: true, categoryId: v);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ]),
-        ),
-        if (_selectMode)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    if (_selected.length == svc.products.length) {
-                      _selected.clear();
-                    } else {
-                      for (final p in svc.products) {
-                        final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
-                        if (id > 0) _selected.add(id);
-                      }
-                    }
-                  });
-                },
-                child: Text(_selected.length == svc.products.length && svc.products.isNotEmpty ? 'لغو همه' : 'انتخاب همه'),
-              ),
-              Text('${_selected.length} انتخاب', style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-              const Spacer(),
-              if (_selected.isNotEmpty)
-                ElevatedButton.icon(
-                  onPressed: _bulkPrice,
-                  icon: const Icon(Icons.attach_money_rounded, size: 18),
-                  label: const Text('قیمت گروهی', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              const SizedBox(width: 12),
+              const Icon(Icons.search, color: AppColors.textMute, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  onSubmitted: (v) => svc.fetchProducts(auth, refresh: true, search: v.trim().isEmpty ? null : v.trim()),
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'جستجو در محصولات...',
+                    hintStyle: TextStyle(color: AppColors.textMute, fontSize: 13),
+                    border: InputBorder.none,
+                    isDense: true,
                   ),
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.tune_rounded, color: AppColors.textMute, size: 20),
+                onPressed: () {},
+              ),
             ]),
           ),
-        const SizedBox(height: 8),
+        ),
+        // دکمه افزودن محصول — گرادیان مثل مرجع
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: GestureDetector(
+            onTap: () async {
+              final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+              if (ok == true && mounted) svc.fetchProducts(auth, refresh: true);
+            },
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
+                boxShadow: [
+                  BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                  SizedBox(width: 8),
+                  Text('افزودن محصول', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // فیلتر موجودی
+        SizedBox(
+          height: 48,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            children: [
+              _chip('همه', 'all', AppColors.purple),
+              _chip('موجود', 'instock', AppColors.green),
+              _chip('ناموجود', 'outofstock', AppColors.red),
+            ],
+          ),
+        ),
         Expanded(
           child: svc.loading && svc.products.isEmpty
               ? const Center(child: MiniLoader())
-              : svc.error != null && svc.products.isEmpty
-                  ? Center(child: Text(svc.error!, style: const TextStyle(color: AppColors.red)))
-                  : svc.products.isEmpty
-                      ? const Center(child: Text('محصولی یافت نشد', style: TextStyle(color: AppColors.textDim)))
-                      : RefreshIndicator(
-                          color: AppColors.purple,
-                          onRefresh: () => svc.fetchProducts(auth, refresh: true),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            itemCount: svc.products.length + (svc.hasMore ? 1 : 0),
-                            itemBuilder: (ctx, i) {
-                              if (i >= svc.products.length) {
-                                svc.fetchProducts(auth);
-                                return const Padding(padding: EdgeInsets.all(16), child: Center(child: MiniLoader(size: 22)));
-                              }
-                              final p = svc.products[i];
-                              final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
-                              final selected = _selected.contains(id);
-                              final stock = p['stock_quantity'];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: NeonCard(
-                                  onTap: () {
-                                    if (_selectMode) {
-                                      setState(() => selected ? _selected.remove(id) : _selected.add(id));
-                                    } else {
-                                      _editProduct(p);
-                                    }
-                                  },
-                                  borderColor: AppColors.purple.withOpacity(0.25),
-                                  child: Row(children: [
-                                    if (_selectMode)
-                                      Checkbox(value: selected, activeColor: AppColors.purple, onChanged: (_) => setState(() => selected ? _selected.remove(id) : _selected.add(id)))
-                                    else
-                                      Container(
-                                        width: 40, height: 40,
-                                        decoration: BoxDecoration(color: AppColors.purple.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                                        child: const Icon(Icons.edit, color: AppColors.purpleGlow, size: 18),
+              : list.isEmpty
+                  ? const Center(child: Text('محصولی یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                  : RefreshIndicator(
+                      color: AppColors.purple,
+                      backgroundColor: AppColors.card,
+                      onRefresh: () => svc.fetchProducts(auth, refresh: true),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+                        itemCount: list.length,
+                        itemBuilder: (ctx, i) {
+                          final p = list[i];
+                          final inStock = _inStock(p);
+                          final stock = p['stock_quantity'];
+                          final img = p['image']?.toString() ?? '';
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: NeonCard(
+                              onTap: () => _editProduct(p),
+                              padding: const EdgeInsets.all(12),
+                              child: Row(children: [
+                                // تصویر محصول
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: img.isNotEmpty
+                                      ? Image.network(img, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _ph(s: 64))
+                                      : _ph(s: 64),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(
+                                      p['name']?.toString() ?? '—',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '${_fmt(p['price'] ?? p['regular_price'])} تومان',
+                                      style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.w700, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: (inStock ? AppColors.green : AppColors.red).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: (inStock ? AppColors.green : AppColors.red).withOpacity(0.35)),
                                       ),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(p['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 6),
-                                      Row(children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(color: AppColors.purple.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                                          child: Text('${_fmt(p['price'] ?? p['regular_price'])} تومان', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text('موجودی: ${stock ?? '—'}', style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                      ]),
-                                    ])),
-                                    const SizedBox(width: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: (p['image'] != null && p['image'].toString().isNotEmpty)
-                                          ? Image.network(p['image'].toString(), width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _ph())
-                                          : _ph(),
+                                      child: Text(
+                                        inStock ? 'موجود${stock != null ? ' · $stock' : ''}' : 'ناموجود',
+                                        style: TextStyle(color: inStock ? AppColors.green : AppColors.red, fontSize: 10, fontWeight: FontWeight.w600),
+                                      ),
                                     ),
                                   ]),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
+                                const Icon(Icons.chevron_left, color: AppColors.textMute),
+                              ]),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
         ),
       ]),
+    );
+  }
+
+  Widget _chip(String label, String val, Color c) {
+    final sel = stockFilter == val;
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => stockFilter = val),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: sel ? LinearGradient(colors: [c, c.withOpacity(0.75)]) : null,
+            color: sel ? null : const Color(0xFF0B1230),
+            border: Border.all(color: sel ? c.withOpacity(0.5) : const Color(0xFF1E2A55)),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontSize: 12, fontWeight: sel ? FontWeight.w700 : FontWeight.w500),
+          ),
+        ),
+      ),
     );
   }
 }
