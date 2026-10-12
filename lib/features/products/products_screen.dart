@@ -282,16 +282,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
       child: Column(children: [
         GlassHeader(
           title: 'محصولات',
+          subtitle: 'مدیریت موجودی و قیمت',
+          onRefresh: svc.loading ? null : () => svc.fetchProducts(auth, refresh: true),
           actions: [
             IconButton(
-              icon: Icon(_selectMode ? Icons.close : Icons.attach_money_rounded, color: _selectMode ? Colors.white70 : AppColors.cyan),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(_selectMode ? Icons.close : Icons.attach_money_rounded, color: _selectMode ? Colors.white70 : AppColors.cyan, size: 22),
               tooltip: 'قیمت گروهی',
               onPressed: () => setState(() { _selectMode = !_selectMode; _selected.clear(); }),
             ),
-            if (svc.loading)
-              const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18))
-            else
-              IconButton(icon: const Icon(Icons.refresh, color: Colors.white70), onPressed: () => svc.fetchProducts(auth, refresh: true)),
           ],
         ),
         Padding(

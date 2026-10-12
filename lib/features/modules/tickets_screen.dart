@@ -143,7 +143,6 @@ class _TicketsScreenState extends State<TicketsScreen> {
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: NeonCard(
                                   onTap: () {
-                                    // جزئیات ساده
                                     showModalBottomSheet(
                                       context: context,
                                       backgroundColor: AppColors.card,

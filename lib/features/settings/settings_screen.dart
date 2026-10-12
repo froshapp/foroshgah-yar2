@@ -463,7 +463,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           await _load();
         }
       } catch (e) {
-        if (mounted) showErr(context, 'خطا');
+        if (mounted) showErr(context, e.toString());
       }
     }
   }

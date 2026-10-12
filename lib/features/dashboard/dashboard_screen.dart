@@ -74,10 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             GlassHeader(
               title: siteName,
               subtitle: manager.isEmpty ? null : manager,
-              actions: [
-                if (dash.loading)
-                  const Padding(padding: EdgeInsets.all(8), child: MiniLoader(size: 18)),
-              ],
+              onRefresh: dash.loading ? null : () => dash.load(auth),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),

@@ -238,8 +238,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final id = o['id']?.toString() ?? o['number']?.toString() ?? '—';
           final status = o['status']?.toString();
           final total = o['total'] ?? o['total_formatted'];
+          final dateJ = o['date_created_jalali']?.toString() ?? '';
           final date = o['date_created']?.toString() ?? o['date']?.toString() ?? '';
-          final dateShort = date.length >= 10 ? _toJalali(date) : date;
+          final dateShort = dateJ.isNotEmpty ? dateJ : (date.length >= 10 ? _toJalali(date) : date);
           final products = o['product_names']?.toString() ?? '';
 
           return Padding(

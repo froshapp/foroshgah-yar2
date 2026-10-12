@@ -128,8 +128,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: Column(children: [
           GlassHeader(
             title: 'مدیریت مشتریان',
-            subtitle: 'کل: $totalCustomers',
-                        onRefresh: _load,
+            subtitle: 'کل: \$totalCustomers',
+            onRefresh: _load,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

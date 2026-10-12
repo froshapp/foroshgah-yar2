@@ -13,9 +13,9 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   bool loading = true;
   List items = [];
-  int done = 0;
   final titleCtrl = TextEditingController();
-  String priority = 'medium';
+  String priority = 'normal';
+  String filter = 'all'; // all | pending | done
 
   @override
   void initState() {
@@ -33,9 +33,8 @@ class _TasksScreenState extends State<TasksScreen> {
     setState(() => loading = true);
     try {
       final res = await context.read<AuthService>().api.dio.get('tasks');
-      if (res.data is Map) {
-        items = res.data['items'] is List ? res.data['items'] as List : [];
-        done = int.tryParse('${res.data['done'] ?? 0}') ?? 0;
+      if (res.data is Map && res.data['items'] is List) {
+        items = List.from(res.data['items'] as List);
       }
     } catch (_) {}
     if (mounted) setState(() => loading = false);
@@ -44,168 +43,229 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _add() async {
     final t = titleCtrl.text.trim();
     if (t.isEmpty) {
-      showErr(context, 'عنوان کار را بنویسید');
+      showErr(context, 'عنوان کار را وارد کنید');
       return;
     }
     try {
       final res = await context.read<AuthService>().api.dio.post('tasks', data: {
         'title': t,
         'priority': priority,
+        'done': false,
       });
-      titleCtrl.clear();
       if (res.data is Map && res.data['items'] is List) {
-        setState(() {
-          items = res.data['items'] as List;
-          done = items.where((e) => (e as Map)['done'] == true).length;
-        });
-      } else {
+        items = List.from(res.data['items'] as List);
+        titleCtrl.clear();
+        if (mounted) {
+          setState(() {});
+          showOk(context, 'ثبت شد');
+        }
+      } else if (res.data is Map && res.data['success'] == true) {
         await _load();
-      }
-      if (mounted) showOk(context, 'ثبت شد');
-    } catch (e) {
-      if (mounted) showErr(context, 'خطا در ثبت');
-    }
-  }
-
-  Future<void> _delete(Map m) async {
-    try {
-      final res = await context.read<AuthService>().api.dio.post('tasks/action', data: {'action': 'delete', 'id': m['id']});
-      if (res.data is Map && res.data['items'] is List) {
-        setState(() {
-          items = res.data['items'] as List;
-          done = items.where((e) => (e as Map)['done'] == true).length;
-        });
+        titleCtrl.clear();
+        showOk(context, 'ثبت شد');
       } else {
-        await _load();
+        showErr(context, 'ثبت نشد');
       }
-      if (mounted) showOk(context, 'حذف شد');
     } catch (e) {
-      if (mounted) showErr(context, 'خطا در حذف');
+      showErr(context, e.toString());
     }
   }
 
   Future<void> _toggle(Map m) async {
+    final id = m['id'];
+    final wasDone = m['done'] == true;
+    setState(() {
+      items = items.map((e) {
+        final mm = Map<String, dynamic>.from(e as Map);
+        if (mm['id'] == id) mm['done'] = !wasDone;
+        return mm;
+      }).toList();
+    });
     try {
-      await context.read<AuthService>().api.dio.post('tasks/action', data: {'action': 'toggle', 'id': m['id']});
+      final res = await context.read<AuthService>().api.dio.post('tasks/action', data: {
+        'action': 'toggle',
+        'id': id,
+      });
+      if (res.data is Map && res.data['items'] is List) {
+        items = List.from(res.data['items'] as List);
+        if (mounted) setState(() {});
+      }
+    } catch (_) {
       await _load();
-    } catch (_) {}
+    }
   }
+
+  Future<void> _delete(Map m) async {
+    final id = m['id'];
+    setState(() {
+      items = items.where((e) => (e as Map)['id'] != id).toList();
+    });
+    try {
+      await context.read<AuthService>().api.dio.post('tasks/action', data: {
+        'action': 'delete',
+        'id': id,
+      });
+      showOk(context, 'حذف شد');
+    } catch (_) {
+      await _load();
+    }
+  }
+
+  List get _filtered {
+    if (filter == 'done') return items.where((e) => (e as Map)['done'] == true).toList();
+    if (filter == 'pending') return items.where((e) => (e as Map)['done'] != true).toList();
+    return items;
+  }
+
+  int get _doneCount => items.where((e) => (e as Map)['done'] == true).length;
+  int get _pendingCount => items.length - _doneCount;
 
   Color _priColor(String p) {
     switch (p) {
       case 'high': return AppColors.red;
-      case 'low': return AppColors.green;
-      default: return AppColors.orange;
+      case 'low': return AppColors.cyan;
+      default: return AppColors.purpleGlow;
     }
   }
 
   String _priLabel(String p) {
     switch (p) {
-      case 'high': return 'بالا';
-      case 'low': return 'پایین';
-      default: return 'متوسط';
+      case 'high': return 'فوری';
+      case 'low': return 'کم';
+      default: return 'عادی';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final list = _filtered;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
           title: 'کارهای من',
-          subtitle: '$done از ${items.length} انجام‌شده',
-                    onRefresh: _load,
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: NeonCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              TextField(
-                controller: titleCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'عنوان کار جدید...',
-                  hintStyle: TextStyle(color: AppColors.textMute),
-                  border: InputBorder.none,
-                ),
-                onSubmitted: (_) => _add(),
-              ),
-              const SizedBox(height: 8),
-              Row(children: [
-                _priChip('low', 'پایین'),
-                const SizedBox(width: 6),
-                _priChip('medium', 'متوسط'),
-                const SizedBox(width: 6),
-                _priChip('high', 'بالا'),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _add,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.purple,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
-                  child: const Text('ثبت'),
-                ),
-              ]),
-            ]),
-          ),
+          subtitle: '$_doneCount از ${items.length} انجام‌شده',
+          leadingIcon: Icons.checklist_rtl_rounded,
+          leadingColor: AppColors.blue,
+          storeOpensSettings: false,
+          onRefresh: _load,
         ),
         Expanded(
           child: loading
               ? const Center(child: MiniLoader())
-              : items.isEmpty
-                  ? const Center(child: Text('کاری ثبت نشده', style: TextStyle(color: AppColors.textDim)))
-                  : RefreshIndicator(
-                      color: AppColors.purple,
-                      onRefresh: _load,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: items.length,
-                        itemBuilder: (_, i) {
-                          final m = Map<String, dynamic>.from(items[i] as Map);
-                          final doneItem = m['done'] == true;
-                          final pri = m['priority']?.toString() ?? 'medium';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: NeonCard(
-                              child: InkWell(
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    NeonCard(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        TextField(
+                          controller: titleCtrl,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'عنوان کار جدید...',
+                            hintStyle: TextStyle(color: AppColors.textMute),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          _priChip('high', 'فوری'),
+                          const SizedBox(width: 6),
+                          _priChip('normal', 'عادی'),
+                          const SizedBox(width: 6),
+                          _priChip('low', 'کم'),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: _add,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.purple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('ثبت'),
+                          ),
+                        ]),
+                      ]),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      _filterChip('all', 'همه', items.length),
+                      const SizedBox(width: 8),
+                      _filterChip('pending', 'در صف انجام', _pendingCount),
+                      const SizedBox(width: 8),
+                      _filterChip('done', 'انجام شد', _doneCount),
+                    ]),
+                    const SizedBox(height: 12),
+                    if (list.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: Text('کاری ثبت نشده', style: TextStyle(color: AppColors.textDim))),
+                      )
+                    else
+                      ...list.map((e) {
+                        final m = Map<String, dynamic>.from(e as Map);
+                        final doneItem = m['done'] == true;
+                        final pri = m['priority']?.toString() ?? 'normal';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: NeonCard(
+                            child: Row(children: [
+                              GestureDetector(
                                 onTap: () => _toggle(m),
-                                child: Row(children: [
-                                  Icon(doneItem ? Icons.check_circle : Icons.circle_outlined,
-                                      color: doneItem ? AppColors.green : AppColors.textMute),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(m['title']?.toString() ?? '',
-                                          style: TextStyle(
-                                            color: doneItem ? AppColors.textDim : Colors.white,
-                                            decoration: doneItem ? TextDecoration.lineThrough : null,
-                                          )),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: _priColor(pri).withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(_priLabel(pri), style: TextStyle(color: _priColor(pri), fontSize: 11)),
+                                child: Icon(
+                                  doneItem ? Icons.check_circle : Icons.circle_outlined,
+                                  color: doneItem ? AppColors.green : AppColors.textMute,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(
+                                    m['title']?.toString() ?? '',
+                                    style: TextStyle(
+                                      color: doneItem ? AppColors.textDim : Colors.white,
+                                      decoration: doneItem ? TextDecoration.lineThrough : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _priColor(pri).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                    ]),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 18),
-                                    onPressed: () => _delete(m),
-                                  ),
+                                      child: Text(_priLabel(pri), style: TextStyle(color: _priColor(pri), fontSize: 11)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: (doneItem ? AppColors.green : AppColors.orange).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        doneItem ? 'انجام شد' : 'در صف انجام',
+                                        style: TextStyle(
+                                          color: doneItem ? AppColors.green : AppColors.orange,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                  ]),
                                 ]),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 18),
+                                onPressed: () => _delete(m),
+                              ),
+                            ]),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
         ),
       ]),
     );
@@ -218,11 +278,32 @@ class _TasksScreenState extends State<TasksScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: sel ? _priColor(key).withOpacity(0.25) : AppColors.cardBorder.withOpacity(0.3),
+          color: sel ? AppColors.purple.withOpacity(0.25) : AppColors.card,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: sel ? _priColor(key) : Colors.transparent),
+          border: Border.all(color: sel ? AppColors.purple : AppColors.cardBorder),
         ),
-        child: Text(label, style: TextStyle(color: sel ? _priColor(key) : AppColors.textDim, fontSize: 11)),
+        child: Text(label, style: TextStyle(color: sel ? AppColors.purpleGlow : AppColors.textDim, fontSize: 12)),
+      ),
+    );
+  }
+
+  Widget _filterChip(String key, String label, int n) {
+    final sel = filter == key;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => filter = key),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: sel ? AppColors.purple.withOpacity(0.2) : AppColors.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: sel ? AppColors.purple.withOpacity(0.5) : AppColors.cardBorder),
+          ),
+          child: Column(children: [
+            Text('$n', style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontWeight: FontWeight.bold)),
+            Text(label, style: TextStyle(color: sel ? AppColors.purpleGlow : AppColors.textMute, fontSize: 10)),
+          ]),
+        ),
       ),
     );
   }
