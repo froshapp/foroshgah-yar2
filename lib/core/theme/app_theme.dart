@@ -2,26 +2,26 @@ import '../nav.dart';
 import 'package:flutter/material.dart';
 import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
+/// پالت تیره نرم — سبک claymorphism (نه نئون)
 class AppColors {
-  // پس‌زمینه عمیق مثل مرجع
-  static const bg = Color(0xFF0A0B1E);
-  static const surface = Color(0xFF12132A);
-  static const card = Color(0xFF16183A);
-  static const cardBorder = Color(0xFF2E3060);
-  static const purple = Color(0xFF7C5CFF);
-  static const purpleGlow = Color(0xFFA78BFF);
-  static const pink = Color(0xFFF472B6);
-  static const cyan = Color(0xFF2EE6C5);
-  static const orange = Color(0xFFFF9F43);
-  static const blue = Color(0xFF4C8DFF);
-  static const red = Color(0xFFFF4D6D);
-  static const green = Color(0xFF22C55E);
+  static const bg = Color(0xFF0E0F1C);
+  static const surface = Color(0xFF17192B);
+  static const card = Color(0xFF1C1E33);
+  static const cardBorder = Color(0xFF2A2D4A);
+  static const purple = Color(0xFF7B6CFF);
+  static const purpleGlow = Color(0xFF9B8CFF);
+  static const pink = Color(0xFFE879A9);
+  static const cyan = Color(0xFF3DDBB0);
+  static const orange = Color(0xFFFFA45B);
+  static const blue = Color(0xFF5B8DEF);
+  static const red = Color(0xFFFF5C7A);
+  static const green = Color(0xFF34D399);
   static const text = Colors.white;
-  static const textDim = Color(0xFFA0A3C0);
-  static const textMute = Color(0xFF6E7190);
+  static const textDim = Color(0xFFA8AABC);
+  static const textMute = Color(0xFF6E7189);
 }
 
-/// کارت شیشه‌ای با درخشش رنگی — نزدیک به مرجع
+/// کارت clay — سایه نرم بالا/پایین، بدون درخشش نئون
 class NeonCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -35,34 +35,50 @@ class NeonCard extends StatelessWidget {
     this.padding,
     this.borderColor,
     this.onTap,
-    this.radius = 20,
+    this.radius = 22,
     this.elevated = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final glow = borderColor ?? AppColors.purple;
+    final accent = borderColor ?? AppColors.cardBorder;
     final content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: accent.withOpacity(0.35), width: 1),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF1E2048).withOpacity(0.98),
-            const Color(0xFF12143A).withOpacity(0.95),
+            Color.lerp(AppColors.card, Colors.white, 0.04)!,
+            AppColors.card,
+            Color.lerp(AppColors.card, Colors.black, 0.12)!,
           ],
+          stops: const [0.0, 0.45, 1.0],
         ),
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: glow.withOpacity(0.55), width: 1.3),
         boxShadow: elevated
             ? [
-                BoxShadow(color: glow.withOpacity(0.28), blurRadius: 28, offset: const Offset(0, 10)),
-                BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 14, offset: const Offset(0, 5)),
-                BoxShadow(color: glow.withOpacity(0.08), blurRadius: 2, spread: const Offset(0, 1)),
+                // سایه پایین (عمق clay)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.45),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+                // هایلایت نرم بالا
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, -2),
+                ),
               ]
             : [
-                BoxShadow(color: glow.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
               ],
       ),
       child: child,
@@ -88,12 +104,15 @@ class MiniLoader extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: const CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.purple),
+      child: const CircularProgressIndicator(
+        strokeWidth: 2.5,
+        color: AppColors.purple,
+      ),
     );
   }
 }
 
-/// هدر شیشه‌ای — زنگوله چپ | عنوان وسط | فروشگاه راست (مثل مرجع)
+/// هدر clay — زنگوله چپ | عنوان وسط | فروشگاه راست
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -137,14 +156,20 @@ class GlassHeader extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 12)],
-            border: Border.all(color: Colors.white.withOpacity(0.15)),
+            color: color.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.08),
+                blurRadius: 4,
+                offset: const Offset(0, -1),
+              ),
+            ],
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -159,7 +184,6 @@ class GlassHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1A1040),
                       borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: Colors.white24, width: 0.5),
                     ),
                     child: const Icon(Icons.settings, color: Colors.white, size: 9),
                   ),
@@ -173,26 +197,38 @@ class GlassHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 6 : 10, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF4A2BB8), Color(0xFF2A1570), Color(0xFF140A3A)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          color: const Color(0xFF1A1C35),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.purple.withOpacity(0.4)),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2A2D55),
+              Color(0xFF1A1C35),
+              Color(0xFF141628),
+            ],
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.06)),
           boxShadow: [
-            BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 8)),
-            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.white.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, -2),
+            ),
           ],
         ),
-        // LTR: چپ = اول، راست = آخر
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Row(
             children: [
-              // === چپ: زنگوله + رفرش ===
+              // چپ: زنگوله + رفرش
               if (showBell)
                 IconButton(
                   padding: EdgeInsets.zero,
@@ -208,7 +244,7 @@ class GlassHeader extends StatelessWidget {
                   onPressed: onRefresh,
                 ),
               if (actions != null) ...actions!,
-              // === وسط: عنوان RTL ===
+              // وسط: عنوان
               Expanded(
                 child: Directionality(
                   textDirection: TextDirection.rtl,
@@ -218,7 +254,11 @@ class GlassHeader extends StatelessWidget {
                       Text(
                         title,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -226,7 +266,7 @@ class GlassHeader extends StatelessWidget {
                         Text(
                           subtitle!,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11),
+                          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -234,7 +274,7 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              // === راست: فروشگاه ===
+              // راست: فروشگاه
               if (showStoreIcon) storeBtn(),
             ],
           ),
@@ -244,28 +284,7 @@ class GlassHeader extends StatelessWidget {
   }
 }
 
-/// تبدیل تاریخ میلادی به شمسی خوانا
 String toShamsiStr(dynamic raw) {
   if (raw == null) return '';
-  final s = raw.toString().trim();
-  if (s.isEmpty) return '';
-  // اگر از قبل شمسی است (شامل / و سال ۱۳ یا ۱۴)
-  if (s.contains('/') && (s.startsWith('13') || s.startsWith('14'))) return s;
-  try {
-    DateTime? dt;
-    if (s.contains('T') || s.contains(' ')) {
-      dt = DateTime.tryParse(s.replaceFirst(' ', 'T'));
-    } else if (RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(s)) {
-      dt = DateTime.tryParse(s.substring(0, 10));
-    } else if (RegExp(r'^\d{4}/\d{2}/\d{2}').hasMatch(s)) {
-      final p = s.split(RegExp(r'[/\s]'));
-      dt = DateTime(int.parse(p[0]), int.parse(p[1]), int.parse(p[2]));
-    }
-    if (dt == null) return s;
-    // Jalali via simple algorithm if package not imported here - use approximate via DateTime
-    // Prefer shamsi_date in callers; here basic fallback
-    return s; // callers should use formatJalali
-  } catch (_) {
-    return s;
-  }
+  return raw.toString().trim();
 }
