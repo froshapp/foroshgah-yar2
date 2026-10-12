@@ -43,10 +43,44 @@ class _AccountingScreenState extends State<AccountingScreen> {
     return buf.toString();
   }
 
+  List<Map<String, dynamic>> get _grouped {
+    final recent = data['recent'] is List ? data['recent'] as List : [];
+    final map = <String, Map<String, dynamic>>{};
+    for (final e in recent) {
+      final m = Map<String, dynamic>.from(e as Map);
+      final key = '${m['order_number'] ?? m['id'] ?? ''}';
+      if (key.isEmpty) continue;
+      final st = m['status']?.toString() ?? '';
+      final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('failed');
+      final label = m['label']?.toString() ?? '';
+      final isShip = label.contains('ارسال') || label.contains('بسته');
+      final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
+      map.putIfAbsent(key, () => {
+            'order_number': key,
+            'detail': '',
+            'qty': 0,
+            'sale': 0.0,
+            'ship': 0.0,
+            'cancelled': isCancel,
+            'status': st,
+          });
+      final g = map[key]!;
+      if (isShip) {
+        g['ship'] = (g['ship'] as double) + total;
+      } else {
+        g['sale'] = (g['sale'] as double) + total;
+        g['detail'] = m['detail']?.toString() ?? g['detail'];
+        g['qty'] = m['qty'] ?? g['qty'];
+        g['cancelled'] = isCancel;
+      }
+    }
+    return map.values.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final daily = data['daily_sales'] is List ? data['daily_sales'] as List : [];
-    final recent = data['recent'] is List ? data['recent'] as List : [];
+    final groups = _grouped;
     final maxY = daily.fold<double>(1, (m, e) {
       final t = double.tryParse('${(e as Map)['total'] ?? 0}') ?? 0;
       return t > m ? t : m;
@@ -59,124 +93,125 @@ class _AccountingScreenState extends State<AccountingScreen> {
           : error != null
               ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
               : Column(children: [
-                  GlassHeader(
-                    title: 'حسابداری فروشگاه',
-                    subtitle: 'گزارش مالی',
-                                        onRefresh: _load,
-                  ),
+                  GlassHeader(title: 'حسابداری فروشگاه', subtitle: 'گزارش مالی', onRefresh: _load),
                   Expanded(
                     child: RefreshIndicator(
-                    color: AppColors.purple,
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        const SizedBox(height: 12),
-                        Row(children: [
-                          Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _kpi('خالص', _fmt(data['net']), AppColors.cyan)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _kpi('هزینه‌ها', _fmt(data['shipping_cost']), AppColors.pink)),
-                        ]),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Row(children: [
-                              Text('نمودار فروش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                              Spacer(),
-                              Text('۷ روز اخیر', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                            ]),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              height: 120,
-                              child: daily.isEmpty
-                                  ? const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute)))
-                                  : Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: daily.map((e) {
-                                        final m = Map<String, dynamic>.from(e as Map);
-                                        final t = double.tryParse('${m['total'] ?? 0}') ?? 0;
-                                        final h = (t / maxY) * 100;
-                                        return Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                                            child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                              Container(
-                                                height: h.clamp(4, 100),
-                                                decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  gradient: LinearGradient(
-                                                    begin: Alignment.bottomCenter,
-                                                    end: Alignment.topCenter,
-                                                    colors: [AppColors.purple.withOpacity(0.3), AppColors.purpleGlow],
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                        children: [
+                          Row(children: [
+                            Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpi('خالص', _fmt(data['net']), AppColors.cyan)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpi('هزینه‌ها', _fmt(data['shipping_cost']), AppColors.pink)),
+                          ]),
+                          const SizedBox(height: 12),
+                          NeonCard(
+                            borderColor: AppColors.purple,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Row(children: [
+                                Text('نمودار فروش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                Spacer(),
+                                Text('۷ روز اخیر', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                              ]),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 120,
+                                child: daily.isEmpty
+                                    ? const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute)))
+                                    : Row(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: daily.map((e) {
+                                          final m = Map<String, dynamic>.from(e as Map);
+                                          final t = double.tryParse('${m['total'] ?? 0}') ?? 0;
+                                          final h = (t / maxY) * 100;
+                                          return Expanded(
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 3),
+                                              child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                                                Container(
+                                                  height: h.clamp(4, 100),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    gradient: const LinearGradient(
+                                                      begin: Alignment.bottomCenter,
+                                                      end: Alignment.topCenter,
+                                                      colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ]),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                            ),
-                          ]),
-                        ),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Text('آخرین تراکنش‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 10),
-                            if (recent.isEmpty)
-                              const Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim))
-                            else
-                              ...recent.map((e) {
-                                final m = Map<String, dynamic>.from(e as Map);
-                                final label = m['label']?.toString() ?? '';
-                                final st = m['status']?.toString() ?? '';
-                                final isShip = label.contains('ارسال') || label.contains('بسته');
-                                final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('failed');
-                                // فروش محصول: سبز مثبت؛ لغو: قرمز؛ هزینه ارسال: قرمز
-                                final out = isShip || isCancel;
-                                final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
-                                final detail = m['detail']?.toString() ?? '';
-                                final qty = m['qty'];
-                                final displayLabel = isCancel && !isShip ? 'لغو فروش' : label;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Expanded(
+                                              ]),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                              ),
+                            ]),
+                          ),
+                          const SizedBox(height: 12),
+                          NeonCard(
+                            borderColor: AppColors.cyan,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Text('آخرین تراکنش‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              const Text('هر سفارش یک ردیف', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                              const SizedBox(height: 12),
+                              if (groups.isEmpty)
+                                const Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim))
+                              else
+                                ...groups.map((g) {
+                                  final cancelled = g['cancelled'] == true;
+                                  final sale = g['sale'] as double;
+                                  final ship = g['ship'] as double;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface.withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: (cancelled ? AppColors.red : AppColors.green).withOpacity(0.3)),
+                                      ),
                                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(displayLabel, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                                        if (detail.isNotEmpty)
-                                          Text(detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                        if (qty != null)
-                                          Text('تعداد: $qty', style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
+                                        Row(children: [
+                                          Text('سفارش #${g['order_number']}', style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.w600, fontSize: 13)),
+                                          const Spacer(),
+                                          Text(cancelled ? 'لغو' : 'فروش', style: TextStyle(color: cancelled ? AppColors.red : AppColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
+                                        ]),
+                                        if ((g['detail'] ?? '').toString().isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(g['detail'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                        ],
+                                        if (g['qty'] != null && g['qty'] != 0)
+                                          Text('تعداد: ${g['qty']}', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                        const SizedBox(height: 8),
+                                        Row(children: [
+                                          Text('${cancelled ? '-' : '+'}${_fmt(sale)}', style: TextStyle(color: cancelled ? AppColors.red : AppColors.green, fontWeight: FontWeight.bold, fontSize: 15)),
+                                          const Text(' تومان', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                          if (ship > 0) ...[
+                                            const Spacer(),
+                                            Text('ارسال ${_fmt(ship)}-', style: const TextStyle(color: AppColors.red, fontSize: 12)),
+                                          ],
+                                        ]),
                                       ]),
                                     ),
-                                    Text(
-                                      '${out ? '-' : '+'}${_fmt(total)}',
-                                      style: TextStyle(color: out ? AppColors.red : AppColors.green, fontWeight: FontWeight.w600),
-                                    ),
-                                  ]),
-                                );
-                              }),
-                          ]),
-                        ),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Text('تعداد سفارشات محاسبه‌شده: ${data['order_count'] ?? 0}',
-                              style: const TextStyle(color: Colors.white70)),
-                        ),
-                      ],
+                                  );
+                                }),
+                            ]),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ]),
     );
   }
 
   Widget _kpi(String t, String v, Color c) => NeonCard(
-        borderColor: c.withOpacity(0.35),
+        borderColor: c,
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),

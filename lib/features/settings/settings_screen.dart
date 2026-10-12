@@ -1,4 +1,4 @@
-import '../../core/utils/shamsi_picker.dart';
+import '../../core/utils/shamsi_picker.dart'; // formatJalali, pickShamsiDate, formatAnyDate
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,11 +35,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : null,
           ),
           const SizedBox(height: 12),
+          _item(Icons.person_outline_rounded, 'پروفایل کاربری', 'نام مدیر، ایمیل، نقش و فروشگاه', AppColors.purpleGlow, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+          }),
           _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
-          }),
-          _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const StockThresholdPage()));
           }),
           _item(Icons.receipt_long_outlined, 'تنظیمات فاکتور', 'آدرس، تماس، اینستاگرام، واتساپ، لوگو', AppColors.cyan, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
@@ -552,11 +552,18 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _create,
+        backgroundColor: AppColors.purple,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Column(children: [
         GlassHeader(
           title: 'اطلاعیه‌ها',
           subtitle: 'نمایش در اپ و پروفایل',
-          actions: [IconButton(icon: const Icon(Icons.add, color: Colors.white70), onPressed: _create)],
+          storeOpensSettings: false,
+          leadingIcon: Icons.campaign_rounded,
+          leadingColor: AppColors.purple,
         ),
         Expanded(
           child: loading
@@ -585,7 +592,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                     Text(m['body'].toString(), style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'از ${m['start']?.toString().isNotEmpty == true ? m['start'] : 'همیشه'} تا ${m['end']?.toString().isNotEmpty == true ? m['end'] : 'نامحدود'}',
+                                    'از ${(m['start']?.toString().isNotEmpty == true) ? formatAnyDate(m['start']) : 'همیشه'} تا ${(m['end']?.toString().isNotEmpty == true) ? formatAnyDate(m['end']) : 'نامحدود'}',
                                     style: const TextStyle(color: AppColors.textMute, fontSize: 10),
                                   ),
                                 ]),
@@ -713,6 +720,127 @@ class _InvoiceSettingsPageState extends State<InvoiceSettingsPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final user = auth.user ?? {};
+    final site = auth.site ?? {};
+    final name = user['display_name']?.toString() ?? auth.siteName;
+    final email = user['email']?.toString() ?? '—';
+    final roles = user['roles'];
+    final roleStr = roles is List
+        ? roles.map((e) => e.toString()).join('، ')
+        : (roles?.toString() ?? 'administrator');
+    final siteName = site['name']?.toString() ?? auth.siteName;
+    final siteUrl = site['url']?.toString() ?? '';
+    final currency = site['currency_symbol']?.toString() ?? site['currency']?.toString() ?? 'تومان';
+    final letter = name.isNotEmpty ? name.substring(0, 1) : 'م';
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
+        GlassHeader(
+          title: 'پروفایل کاربری',
+          subtitle: 'اطلاعات مدیر و فروشگاه',
+          leadingIcon: Icons.person_rounded,
+          leadingColor: AppColors.purpleGlow,
+          storeOpensSettings: false,
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+            children: [
+              NeonCard(
+                borderColor: AppColors.purple,
+                padding: const EdgeInsets.all(20),
+                child: Column(children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7C5CFF), Color(0xFF4C8DFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 18),
+                      ],
+                      border: Border.all(color: Colors.white24, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(letter, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(email, style: const TextStyle(color: AppColors.textDim, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.purple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.purple.withOpacity(0.4)),
+                    ),
+                    child: Text(roleStr, style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              NeonCard(
+                borderColor: AppColors.cyan,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('فروشگاه متصل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 12),
+                  _row(Icons.storefront_rounded, 'نام فروشگاه', siteName.isNotEmpty ? siteName : '—'),
+                  _row(Icons.link_rounded, 'آدرس سایت', siteUrl.isNotEmpty ? siteUrl : '—'),
+                  _row(Icons.payments_outlined, 'واحد پول', currency),
+                  _row(Icons.badge_outlined, 'شناسه کاربر', '${user['id'] ?? '—'}'),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              NeonCard(
+                borderColor: AppColors.orange,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('امنیت اتصال', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'توکن اتصال روی دستگاه ذخیره شده و تا زمان خروج دستی یا ابطال از پنل وردپرس معتبر است.',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.5),
+                  ),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  static Widget _row(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, color: AppColors.cyan, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+          ]),
+        ),
+      ]),
     );
   }
 }

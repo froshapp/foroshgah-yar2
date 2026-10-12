@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/shamsi_picker.dart';
 
 Color avatarColor(dynamic id) {
   const colors = [
@@ -33,7 +34,8 @@ Widget avatarWidget(Map m, {double size = 40}) {
   final name = m['name']?.toString() ?? '?';
   final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
   final c = avatarColor(m['id']);
-  if (url.isNotEmpty) {
+  final isGravatar = url.contains('gravatar.com');
+  if (url.isNotEmpty && !isGravatar) {
     return ClipOval(
       child: Image.network(
         url,
@@ -134,7 +136,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
-              Expanded(child: _stat('کل مشتریان', '$total', AppColors.blue)),
+              Expanded(child: _stat('کل مشتریان', '$totalCustomers', AppColors.blue)),
               const SizedBox(width: 8),
               Expanded(child: _stat('دارای سفارش', '$active', AppColors.cyan)),
               const SizedBox(width: 8),
@@ -191,14 +193,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                         builder: (_) => CustomerDetailPage(customer: m),
                                       )).then((_) => _load()),
                                       child: Row(children: [
-                                        Container(
-                                          width: 44, height: 44,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
-                                          ),
-                                          child: avatarWidget(m, size: 40),
-                                        ),
+                                        avatarWidget(m, size: 44),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -399,7 +394,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                     if ((m['date_jalali'] ?? m['date_created_jalali'] ?? m['date'] ?? '').toString().isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text((m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']).toString(), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                      Text(formatAnyDate(m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                     ],
                     const SizedBox(height: 6),
                     Row(children: [

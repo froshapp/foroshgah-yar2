@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/shamsi_picker.dart';
 
 class ReviewsScreen extends StatefulWidget {
   const ReviewsScreen({super.key});
@@ -250,7 +251,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                               child: Text(author, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                                             ),
                                             if (ago.isNotEmpty)
-                                              Text(ago, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                              Text(formatAnyDate(ago), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                                             const SizedBox(width: 4),
                                             const Icon(Icons.chevron_left, color: AppColors.textMute, size: 18),
                                           ]),

@@ -75,3 +75,27 @@ Future<Jalali?> pickShamsiDate(BuildContext context, {Jalali? initial}) async {
 
 String formatJalali(Jalali j) =>
     '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}';
+
+
+String formatAnyDate(dynamic raw) {
+  if (raw == null) return '';
+  final s = raw.toString().trim();
+  if (s.isEmpty) return '';
+  if (s.contains('/') && (s.startsWith('13') || s.startsWith('14'))) return s;
+  try {
+    DateTime? dt = DateTime.tryParse(s.replaceFirst(' ', 'T'));
+    if (dt == null && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(s)) {
+      dt = DateTime.tryParse(s.substring(0, 10));
+    }
+    if (dt == null) return s;
+    final j = Jalali.fromDateTime(dt);
+    final date = formatJalali(j);
+    final hasTime = s.contains(':') || s.contains('T') || s.length > 12;
+    if (!hasTime) return date;
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$date  $hh:$mm';
+  } catch (_) {
+    return s;
+  }
+}

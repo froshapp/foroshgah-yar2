@@ -3,52 +3,66 @@ import 'package:flutter/material.dart';
 import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
 class AppColors {
-  static const bg = Color(0xFF0B0B1A);
-  static const surface = Color(0xFF141428);
-  static const card = Color(0xFF1A1A32);
-  static const cardBorder = Color(0xFF2A2A4A);
-  static const purple = Color(0xFF7B5CFF);
-  static const purpleGlow = Color(0xFF9B7BFF);
+  // پس‌زمینه عمیق مثل مرجع
+  static const bg = Color(0xFF0A0B1E);
+  static const surface = Color(0xFF12132A);
+  static const card = Color(0xFF16183A);
+  static const cardBorder = Color(0xFF2E3060);
+  static const purple = Color(0xFF7C5CFF);
+  static const purpleGlow = Color(0xFFA78BFF);
   static const pink = Color(0xFFF472B6);
-  static const cyan = Color(0xFF2EE6A6);
+  static const cyan = Color(0xFF2EE6C5);
   static const orange = Color(0xFFFF9F43);
   static const blue = Color(0xFF4C8DFF);
   static const red = Color(0xFFFF4D6D);
-  static const green = Color(0xFF10B981);
+  static const green = Color(0xFF22C55E);
   static const text = Colors.white;
-  static const textDim = Color(0xFF9A9AB5);
-  static const textMute = Color(0xFF6B6B8A);
+  static const textDim = Color(0xFFA0A3C0);
+  static const textMute = Color(0xFF6E7190);
 }
 
+/// کارت شیشه‌ای با درخشش رنگی — نزدیک به مرجع
 class NeonCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final Color? borderColor;
   final VoidCallback? onTap;
+  final double radius;
+  final bool elevated;
   const NeonCard({
     super.key,
     required this.child,
     this.padding,
     this.borderColor,
     this.onTap,
+    this.radius = 20,
+    this.elevated = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = borderColor ?? AppColors.cardBorder;
+    final glow = borderColor ?? AppColors.purple;
     final content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.7), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: (borderColor ?? AppColors.purple).withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.card.withOpacity(0.95),
+            const Color(0xFF12142E).withOpacity(0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: glow.withOpacity(0.45), width: 1.2),
+        boxShadow: elevated
+            ? [
+                BoxShadow(color: glow.withOpacity(0.18), blurRadius: 22, offset: const Offset(0, 8)),
+                BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
+              ]
+            : [
+                BoxShadow(color: glow.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 3)),
+              ],
       ),
       child: child,
     );
@@ -57,7 +71,7 @@ class NeonCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(radius),
         child: content,
       ),
     );
@@ -73,14 +87,12 @@ class MiniLoader extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: const CircularProgressIndicator(
-        strokeWidth: 2.5,
-        color: AppColors.purple,
-      ),
+      child: const CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.purple),
     );
   }
 }
 
+/// هدر شیشه‌ای با موج بنفش — الگوی ثابت: آیکون ماژول چپ | عنوان | رفرش + زنگوله راست
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -111,27 +123,26 @@ class GlassHeader extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     final color = leadingColor ?? AppColors.purple;
     return Padding(
-      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 4 : 8, 12, 0),
+      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 6 : 10, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF3B1F8E), Color(0xFF1E1248), Color(0xFF120A2E)],
+            colors: [Color(0xFF4A2BB8), Color(0xFF2A1570), Color(0xFF140A3A)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.purple.withOpacity(0.35)),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.purple.withOpacity(0.4)),
           boxShadow: [
-            BoxShadow(color: AppColors.purple.withOpacity(0.22), blurRadius: 18, offset: const Offset(0, 5)),
+            BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 8)),
+            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
-        // جهت ثابت تا در RTL جابه‌جا نشود — مطابق مرجع
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Row(
             children: [
-              // فروشگاه / آیکون ماژول — سمت چپ
               if (showStoreIcon)
                 GestureDetector(
                   onTap: () {
@@ -142,21 +153,26 @@ class GlassHeader extends StatelessWidget {
                     if (storeOpensSettings) AppNav.openSettingsDrawer();
                   },
                   child: Container(
-                    width: 42,
-                    height: 42,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [color, color.withOpacity(0.75)]),
+                      gradient: LinearGradient(
+                        colors: [color, color.withOpacity(0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 10)],
+                      boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 12)],
+                      border: Border.all(color: Colors.white.withOpacity(0.15)),
                     ),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 20),
+                        Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 22),
                         if (storeOpensSettings && leadingIcon == null)
                           Positioned(
-                            right: 3,
-                            bottom: 3,
+                            right: 2,
+                            bottom: 2,
                             child: Container(
                               padding: const EdgeInsets.all(1.5),
                               decoration: BoxDecoration(
@@ -172,7 +188,6 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               if (showStoreIcon) const SizedBox(width: 10),
-              // عنوان
               Expanded(
                 child: Directionality(
                   textDirection: TextDirection.rtl,
@@ -181,14 +196,14 @@ class GlassHeader extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.2),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null && subtitle!.isNotEmpty)
                         Text(
                           subtitle!,
-                          style: const TextStyle(color: AppColors.textDim, fontSize: 11),
+                          style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -196,7 +211,6 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              // اکشن‌های سفارشی
               if (actions != null) ...actions!,
               if (onRefresh != null)
                 IconButton(
@@ -205,7 +219,6 @@ class GlassHeader extends StatelessWidget {
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
                   onPressed: onRefresh,
                 ),
-              // زنگوله — همیشه سمت راست ثابت
               if (showBell)
                 IconButton(
                   padding: EdgeInsets.zero,
@@ -218,5 +231,31 @@ class GlassHeader extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// تبدیل تاریخ میلادی به شمسی خوانا
+String toShamsiStr(dynamic raw) {
+  if (raw == null) return '';
+  final s = raw.toString().trim();
+  if (s.isEmpty) return '';
+  // اگر از قبل شمسی است (شامل / و سال ۱۳ یا ۱۴)
+  if (s.contains('/') && (s.startsWith('13') || s.startsWith('14'))) return s;
+  try {
+    DateTime? dt;
+    if (s.contains('T') || s.contains(' ')) {
+      dt = DateTime.tryParse(s.replaceFirst(' ', 'T'));
+    } else if (RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(s)) {
+      dt = DateTime.tryParse(s.substring(0, 10));
+    } else if (RegExp(r'^\d{4}/\d{2}/\d{2}').hasMatch(s)) {
+      final p = s.split(RegExp(r'[/\s]'));
+      dt = DateTime(int.parse(p[0]), int.parse(p[1]), int.parse(p[2]));
+    }
+    if (dt == null) return s;
+    // Jalali via simple algorithm if package not imported here - use approximate via DateTime
+    // Prefer shamsi_date in callers; here basic fallback
+    return s; // callers should use formatJalali
+  } catch (_) {
+    return s;
   }
 }

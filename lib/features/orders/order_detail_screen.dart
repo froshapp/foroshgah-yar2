@@ -1,3 +1,4 @@
+import '../../core/utils/shamsi_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -288,7 +289,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           const SizedBox(width: 10),
                           const Text('تاریخ سفارش', style: TextStyle(color: Color(0xFF9A9AB5), fontSize: 12)),
                           const Spacer(),
-                          Text((order['date_created_jalali'] ?? order['date_created']).toString(),
+                          Text(formatAnyDate(order['date_created_jalali'] ?? order['date_created']),
                               style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                         ]),
                       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snack.dart';
+import '../../core/utils/shamsi_picker.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -255,7 +256,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                     ),
                                     if ((m['created'] ?? m['date'] ?? '').toString().isNotEmpty) ...[
                                       const SizedBox(width: 8),
-                                      Flexible(child: Text((m['created'] ?? m['date']).toString(), style: const TextStyle(color: AppColors.textMute, fontSize: 10), overflow: TextOverflow.ellipsis)),
+                                      Flexible(child: Text(formatAnyDate(m['created'] ?? m['date']), style: const TextStyle(color: AppColors.textMute, fontSize: 10), overflow: TextOverflow.ellipsis)),
                                     ],
                                   ]),
                                 ]),
