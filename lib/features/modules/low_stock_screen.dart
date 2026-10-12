@@ -88,6 +88,13 @@ class _LowStockScreenState extends State<LowStockScreen> {
         'settings/threshold',
         data: {'threshold': th, 'enabled': true},
       );
+      final code = res.statusCode ?? 0;
+      if (code >= 400) {
+        final msg = (res.data is Map) ? '${res.data}' : '$code';
+        if (mounted) showErr(context, 'ذخیره نشد: $msg');
+        if (mounted) setState(() => savingTh = false);
+        return;
+      }
       int saved = th;
       if (res.data is Map && res.data['threshold'] != null) {
         saved = int.tryParse('${res.data['threshold']}') ?? th;

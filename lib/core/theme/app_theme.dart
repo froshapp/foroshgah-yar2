@@ -2,26 +2,26 @@ import '../nav.dart';
 import 'package:flutter/material.dart';
 import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
-/// پالت تیره نرم — سبک claymorphism (نه نئون)
+/// Premium Dark Glassmorphism — مرجع
 class AppColors {
-  static const bg = Color(0xFF0E0F1C);
-  static const surface = Color(0xFF17192B);
-  static const card = Color(0xFF1C1E33);
-  static const cardBorder = Color(0xFF2A2D4A);
-  static const purple = Color(0xFF7B6CFF);
+  static const bg = Color(0xFF070B20);
+  static const surface = Color(0xFF0F1430);
+  static const card = Color(0xFF141A38);
+  static const cardBorder = Color(0xFF252B4A);
+  static const purple = Color(0xFF7C6CFF);
   static const purpleGlow = Color(0xFF9B8CFF);
   static const pink = Color(0xFFE879A9);
-  static const cyan = Color(0xFF3DDBB0);
-  static const orange = Color(0xFFFFA45B);
+  static const cyan = Color(0xFF2DD4BF);
+  static const orange = Color(0xFFFBBF24);
   static const blue = Color(0xFF5B8DEF);
-  static const red = Color(0xFFFF5C7A);
+  static const red = Color(0xFFF43F5E);
   static const green = Color(0xFF34D399);
-  static const text = Colors.white;
-  static const textDim = Color(0xFFA8AABC);
-  static const textMute = Color(0xFF6E7189);
+  static const text = Color(0xFFF1F5F9);
+  static const textDim = Color(0xFFA5B0C8);
+  static const textMute = Color(0xFF6B7594);
 }
 
-/// کارت clay — سایه نرم بالا/پایین، بدون درخشش نئون
+/// کارت عمیق — بدون حاشیه نئون، عمق نرم
 class NeonCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -35,51 +35,40 @@ class NeonCard extends StatelessWidget {
     this.padding,
     this.borderColor,
     this.onTap,
-    this.radius = 22,
+    this.radius = 18,
     this.elevated = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = borderColor ?? AppColors.cardBorder;
+    final accent = borderColor;
     final content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.card,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: accent.withOpacity(0.35), width: 1),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color.lerp(AppColors.card, Colors.white, 0.04)!,
-            AppColors.card,
-            Color.lerp(AppColors.card, Colors.black, 0.12)!,
+            Color(0xFF1A2145),
+            Color(0xFF121832),
+            Color(0xFF0E1328),
           ],
-          stops: const [0.0, 0.45, 1.0],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        border: Border.all(
+          color: accent != null ? accent.withOpacity(0.28) : const Color(0xFF2A3158),
+          width: 1,
         ),
         boxShadow: elevated
             ? [
-                // سایه پایین (عمق clay)
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-                // هایلایت نرم بالا
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, -2),
+                  color: Colors.black.withOpacity(0.38),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+            : null,
       ),
       child: child,
     );
@@ -98,21 +87,47 @@ class NeonCard extends StatelessWidget {
 class MiniLoader extends StatelessWidget {
   final double size;
   const MiniLoader({super.key, this.size = 28});
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: const CircularProgressIndicator(
-        strokeWidth: 2.5,
-        color: AppColors.purple,
-      ),
+      child: const CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.purple),
     );
   }
 }
 
-/// هدر clay — زنگوله چپ | عنوان وسط | فروشگاه راست
+/// آیکون داخل باکس گرد نرم ۳بعدی
+class SoftIconBox extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  const SoftIconBox({super.key, required this.icon, required this.color, this.size = 42});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.85),
+            color.withOpacity(0.55),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white, size: size * 0.48),
+    );
+  }
+}
+
+/// هدر لایه‌ای با منحنی گرادیان — مثل مرجع
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -152,139 +167,129 @@ class GlassHeader extends StatelessWidget {
           }
           if (storeOpensSettings) AppNav.openSettingsDrawer();
         },
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.35),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.08),
-                blurRadius: 4,
-                offset: const Offset(0, -1),
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 22),
-              if (storeOpensSettings && leadingIcon == null)
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A1040),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: const Icon(Icons.settings, color: Colors.white, size: 9),
-                  ),
-                ),
-            ],
-          ),
+        child: SoftIconBox(
+          icon: leadingIcon ?? Icons.storefront_rounded,
+          color: color,
+          size: 44,
         ),
       );
     }
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 6 : 10, 12, 0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1C35),
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2A2D55),
-              Color(0xFF1A1C35),
-              Color(0xFF141628),
-            ],
+      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 4 : 8, 12, 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          height: 72,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF2A1F6E),
+                Color(0xFF1A2A6B),
+                Color(0xFF0F1840),
+              ],
+            ),
           ),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: Colors.white.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Row(
+          child: Stack(
             children: [
-              // چپ: زنگوله + رفرش
-              if (showBell)
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
-                  onPressed: () => openNotificationsPanel(context),
+              // لایه منحنی بنفش
+              Positioned(
+                left: -30,
+                top: -40,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF6C5CE7).withOpacity(0.45),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
-              if (onRefresh != null)
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                  onPressed: onRefresh,
+              ),
+              Positioned(
+                right: 40,
+                bottom: -50,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF3B82F6).withOpacity(0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
-              if (actions != null) ...actions!,
-              // وسط: عنوان
-              Expanded(
+              ),
+              // محتوا
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  textDirection: TextDirection.ltr,
+                  child: Row(
                     children: [
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                      if (showBell)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
+                          onPressed: () => openNotificationsPanel(context),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      if (onRefresh != null)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                          onPressed: onRefresh,
+                        ),
+                      if (actions != null) ...actions!,
+                      Expanded(
+                        child: Directionality(
+                          textDirection: TextDirection.rtl,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (subtitle != null && subtitle!.isNotEmpty)
+                                Text(
+                                  subtitle!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                      if (subtitle != null && subtitle!.isNotEmpty)
-                        Text(
-                          subtitle!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      if (showStoreIcon) storeBtn(),
                     ],
                   ),
                 ),
               ),
-              // راست: فروشگاه
-              if (showStoreIcon) storeBtn(),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-String toShamsiStr(dynamic raw) {
-  if (raw == null) return '';
-  return raw.toString().trim();
 }

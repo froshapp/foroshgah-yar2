@@ -97,12 +97,15 @@ class MainShellState extends State<MainShell> {
       ),
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.cardBorder),
+          color: const Color(0xFF0F1430),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: const Color(0xFF252B4A)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 18, offset: const Offset(0, 6)),
+          ],
         ),
         child: SafeArea(
           top: false,
@@ -125,17 +128,26 @@ class MainShellState extends State<MainShell> {
     final active = index == i;
     return InkWell(
       onTap: () => setState(() => index = i),
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: active
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [AppColors.purple.withOpacity(0.35), AppColors.blue.withOpacity(0.2)],
+                ),
+              )
+            : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: active ? AppColors.purpleGlow : AppColors.textMute, size: 22),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: active ? AppColors.purpleGlow : AppColors.textMute, fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.normal)),
+            Icon(icon, color: active ? Colors.white : AppColors.textMute, size: 22),
+            const SizedBox(height: 3),
+            Text(label, style: TextStyle(color: active ? Colors.white : AppColors.textMute, fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
             if (active)
-              Container(margin: const EdgeInsets.only(top: 3), width: 14, height: 2, decoration: BoxDecoration(color: AppColors.purple, borderRadius: BorderRadius.circular(2))),
+              Container(margin: const EdgeInsets.only(top: 3), width: 16, height: 3, decoration: BoxDecoration(color: AppColors.purpleGlow, borderRadius: BorderRadius.circular(2))),
           ],
         ),
       ),

@@ -34,38 +34,52 @@ class _TasksScreenState extends State<TasksScreen> {
     setState(() => loading = true);
     try {
       final res = await context.read<AuthService>().api.dio.get('tasks');
-      if (res.data is Map && res.data['items'] is List) {
+      final code = res.statusCode ?? 0;
+      if (code >= 400) {
+        items = [];
+        if (mounted) showErr(context, 'خطا در بارگذاری ($code)');
+      } else if (res.data is Map && res.data['items'] is List) {
         items = List.from(res.data['items'] as List);
       } else {
         items = [];
       }
     } catch (e) {
       items = [];
-      if (mounted) showErr(context, 'خطا در بارگذاری کارها: $e');
+      if (mounted) showErr(context, 'خطا در بارگذاری کارها');
     }
     if (mounted) setState(() => loading = false);
   }
 
   Future<void> _add() async {
-    final t = titleCtrl.text.trim();
-    if (t.isEmpty) {
+    final text = titleCtrl.text.trim();
+    if (text.isEmpty) {
       showErr(context, 'عنوان کار را وارد کنید');
       return;
     }
     try {
       final pri = (priority == 'normal') ? 'medium' : priority;
       final res = await context.read<AuthService>().api.dio.post('tasks', data: {
-        'title': t,
+        'title': text,
         'priority': pri,
         'done': false,
       });
+      final code = res.statusCode ?? 0;
+      if (code >= 400) {
+        final msg = (res.data is Map) ? (res.data['message'] ?? res.data['code'] ?? code) : code;
+        showErr(context, 'ثبت نشد ($msg)');
+        return;
+      }
       titleCtrl.clear();
       if (res.data is Map && res.data['items'] is List) {
         items = List.from(res.data['items'] as List);
         if (mounted) setState(() {});
+      } else {
+        await _load();
       }
-      await _load();
-      if (mounted) showOk(context, 'ثبت شد');
+      if (mounted) {
+        setState(() {});
+        showOk(context, 'ثبت شد');
+      }
     } catch (e) {
       showErr(context, e.toString());
     }

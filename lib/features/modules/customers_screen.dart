@@ -6,13 +6,18 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/shamsi_picker.dart';
 
 Color avatarColor(dynamic id) {
-  const colors = [
-    Color(0xFF7B5CFF), Color(0xFF2EE6A6), Color(0xFFF472B6),
-    Color(0xFFFF9F43), Color(0xFF4C8DFF), Color(0xFF06B6D4),
-    Color(0xFFA78BFA), Color(0xFFEF4444),
+  final colors = [
+    const Color(0xFF7C6CFF),
+    const Color(0xFF5B8DEF),
+    const Color(0xFF2DD4BF),
+    const Color(0xFFFBBF24),
+    const Color(0xFFE879A9),
+    const Color(0xFF34D399),
+    const Color(0xFFF43F5E),
+    const Color(0xFF60A5FA),
   ];
-  final i = (int.tryParse('$id') ?? 0).abs() % colors.length;
-  return colors[i];
+  final n = int.tryParse('${id ?? 0}') ?? 0;
+  return colors[n.abs() % colors.length];
 }
 
 Widget letterAvatar(String letter, Color c, double size) {
@@ -21,11 +26,18 @@ Widget letterAvatar(String letter, Color c, double size) {
     height: size,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: c.withOpacity(0.35),
       shape: BoxShape.circle,
-      border: Border.all(color: c.withOpacity(0.6)),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [c, c.withOpacity(0.65)],
+      ),
+      boxShadow: [BoxShadow(color: c.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
     ),
-    child: Text(letter, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: size * 0.4)),
+    child: Text(
+      letter.toUpperCase(),
+      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: size * 0.4),
+    ),
   );
 }
 
@@ -34,8 +46,9 @@ Widget avatarWidget(Map m, {double size = 40}) {
   final name = m['name']?.toString() ?? '?';
   final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
   final c = avatarColor(m['id']);
-  final isGravatar = url.contains('gravatar.com');
-  if (url.isNotEmpty && !isGravatar) {
+  // اگر آواتار واقعی (نه گراواتار پیش‌فرض خالی) باشد نشان بده
+  final isDefaultGravatar = url.contains('d=mm') || url.contains('d=mp') || url.contains('d=blank');
+  if (url.isNotEmpty && url.startsWith('http') && !isDefaultGravatar) {
     return ClipOval(
       child: Image.network(
         url,
@@ -48,8 +61,6 @@ Widget avatarWidget(Map m, {double size = 40}) {
   }
   return letterAvatar(letter, c, size);
 }
-
-
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
