@@ -409,7 +409,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         ),
                       ),
                       Text(
-                        formatAnyDate(m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']),
+                        formatAnyDate(m['date_display'] ?? m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']),
                         style: const TextStyle(color: AppColors.textMute, fontSize: 11),
                       ),
                     ]),

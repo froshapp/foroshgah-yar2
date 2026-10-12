@@ -766,8 +766,8 @@ class ProfilePage extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(children: [
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 88,
+                    height: 88,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
@@ -776,12 +776,21 @@ class ProfilePage extends StatelessWidget {
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
-                        BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 18),
+                        BoxShadow(color: AppColors.purple.withOpacity(0.5), blurRadius: 20),
                       ],
                       border: Border.all(color: Colors.white24, width: 2),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(letter, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    child: ClipOval(
+                      child: Image.network(
+                        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7C5CFF&color=fff&size=128&bold=true',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Text(letter, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),

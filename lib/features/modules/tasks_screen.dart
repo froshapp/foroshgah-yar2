@@ -36,8 +36,13 @@ class _TasksScreenState extends State<TasksScreen> {
       final res = await context.read<AuthService>().api.dio.get('tasks');
       if (res.data is Map && res.data['items'] is List) {
         items = List.from(res.data['items'] as List);
+      } else {
+        items = [];
       }
-    } catch (_) {}
+    } catch (e) {
+      items = [];
+      if (mounted) showErr(context, 'خطا در بارگذاری کارها: $e');
+    }
     if (mounted) setState(() => loading = false);
   }
 
@@ -48,25 +53,19 @@ class _TasksScreenState extends State<TasksScreen> {
       return;
     }
     try {
+      final pri = (priority == 'normal') ? 'medium' : priority;
       final res = await context.read<AuthService>().api.dio.post('tasks', data: {
         'title': t,
-        'priority': priority,
+        'priority': pri,
         'done': false,
       });
+      titleCtrl.clear();
       if (res.data is Map && res.data['items'] is List) {
         items = List.from(res.data['items'] as List);
-        titleCtrl.clear();
-        if (mounted) {
-          setState(() {});
-          showOk(context, 'ثبت شد');
-        }
-      } else if (res.data is Map && res.data['success'] == true) {
-        await _load();
-        titleCtrl.clear();
-        showOk(context, 'ثبت شد');
-      } else {
-        showErr(context, 'ثبت نشد');
+        if (mounted) setState(() {});
       }
+      await _load();
+      if (mounted) showOk(context, 'ثبت شد');
     } catch (e) {
       showErr(context, e.toString());
     }
@@ -133,6 +132,8 @@ class _TasksScreenState extends State<TasksScreen> {
     switch (p) {
       case 'high': return 'فوری';
       case 'low': return 'کم';
+      case 'medium':
+      case 'normal':
       default: return 'عادی';
     }
   }

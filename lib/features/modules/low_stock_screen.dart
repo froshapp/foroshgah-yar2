@@ -35,20 +35,20 @@ class _LowStockScreenState extends State<LowStockScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    final prefs = await SharedPreferences.getInstance();
+    setState(() { loading = true; error = null; });
     final auth = context.read<AuthService>();
-    threshold = prefs.getInt('stock_threshold') ?? 5;
+    // فقط از سرور بخوان — prefs فقط پشتیبان
     try {
       final st = await auth.api.dio.get('settings/threshold');
       if (st.data is Map && st.data['threshold'] != null) {
         threshold = int.tryParse('${st.data['threshold']}') ?? threshold;
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('stock_threshold', threshold);
       }
-    } catch (_) {}
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      threshold = prefs.getInt('stock_threshold') ?? threshold;
+    }
     thCtrl.text = '$threshold';
     try {
       final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
@@ -57,6 +57,14 @@ class _LowStockScreenState extends State<LowStockScreen> {
         low = m['low_stock'] is List ? m['low_stock'] as List : [];
         out = m['out_of_stock'] is List ? m['out_of_stock'] as List : [];
         total = int.tryParse(m['total']?.toString() ?? '') ?? (low.length + out.length);
+        // اگر سرور آستانه برگرداند همان را بگیر
+        if (m['threshold'] != null) {
+          final st = int.tryParse('${m['threshold']}');
+          if (st != null) {
+            threshold = st;
+            thCtrl.text = '$st';
+          }
+        }
       }
     } catch (e) {
       error = e.toString();
@@ -65,23 +73,33 @@ class _LowStockScreenState extends State<LowStockScreen> {
   }
 
   Future<void> _saveThreshold() async {
-    final th = int.tryParse(thCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '')) ?? 5;
+    final raw = thCtrl.text.trim().replaceAll(RegExp(r'[^0-9۰-۹]'), '');
+    // تبدیل ارقام فارسی
+    const fa = '۰۱۲۳۴۵۶۷۸۹';
+    final buf = StringBuffer();
+    for (final ch in raw.split('')) {
+      final i = fa.indexOf(ch);
+      buf.write(i >= 0 ? '$i' : ch);
+    }
+    final th = int.tryParse(buf.toString()) ?? 5;
     setState(() => savingTh = true);
-    final prefs = await SharedPreferences.getInstance();
     try {
       final res = await context.read<AuthService>().api.dio.post(
         'settings/threshold',
         data: {'threshold': th, 'enabled': true},
-        queryParameters: {'threshold': th, 'enabled': true},
       );
       int saved = th;
       if (res.data is Map && res.data['threshold'] != null) {
         saved = int.tryParse('${res.data['threshold']}') ?? th;
       }
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('stock_threshold', saved);
       threshold = saved;
       thCtrl.text = '$saved';
-      if (mounted) showOk(context, 'آستانه $saved ذخیره شد');
+      if (mounted) {
+        setState(() {});
+        showOk(context, 'آستانه $saved ذخیره شد');
+      }
       await _load();
     } catch (e) {
       if (mounted) showErr(context, 'ذخیره نشد: $e');
@@ -102,7 +120,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
       body: Column(children: [
         GlassHeader(
           title: 'یادآوری موجودی',
-          subtitle: 'مدیریت هوشمند موجودی کالا',
+          subtitle: 'آستانه فعلی: $threshold',
           leadingIcon: Icons.inventory_2_rounded,
           leadingColor: const Color(0xFF60A5FA),
           storeOpensSettings: false,
@@ -112,14 +130,13 @@ class _LowStockScreenState extends State<LowStockScreen> {
           child: loading
               ? const Center(child: MiniLoader())
               : error != null
-                  ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
+                  ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(error!, style: const TextStyle(color: AppColors.red))))
                   : RefreshIndicator(
                       color: AppColors.purple,
                       onRefresh: _load,
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
                         children: [
-                          // تنظیم آستانه مینیمال همین صفحه
                           NeonCard(
                             borderColor: AppColors.cyan,
                             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -129,17 +146,17 @@ class _LowStockScreenState extends State<LowStockScreen> {
                               const Text('آستانه', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                               const SizedBox(width: 12),
                               SizedBox(
-                                width: 64,
+                                width: 72,
                                 child: TextField(
                                   controller: thCtrl,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                   decoration: InputDecoration(
                                     isDense: true,
                                     filled: true,
                                     fillColor: AppColors.surface,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                                   ),
                                 ),
@@ -150,14 +167,14 @@ class _LowStockScreenState extends State<LowStockScreen> {
                               TextButton(
                                 onPressed: savingTh ? null : _saveThreshold,
                                 style: TextButton.styleFrom(
-                                  backgroundColor: AppColors.purple.withOpacity(0.25),
-                                  foregroundColor: AppColors.purpleGlow,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  backgroundColor: AppColors.purple.withOpacity(0.35),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: savingTh
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.purple))
-                                    : const Text('ذخیره', style: TextStyle(fontWeight: FontWeight.w600)),
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Text('ذخیره', style: TextStyle(fontWeight: FontWeight.w700)),
                               ),
                             ]),
                           ),
@@ -197,7 +214,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                                       const SizedBox(height: 4),
                                       if ((m['sku'] ?? '').toString().isNotEmpty)
                                         Text(m['sku'].toString(), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                      Text('موجودی: ${stock ?? 0}', style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
+                                      Text('موجودی: ${stock ?? 0}  |  آستانه: $threshold', style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
                                     ]),
                                   ),
                                   Container(

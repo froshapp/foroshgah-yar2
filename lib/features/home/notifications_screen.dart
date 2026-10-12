@@ -120,24 +120,38 @@ class _NotifSheetState extends State<_NotifSheet> {
                         final c = _color(type);
                         final id = m['id']?.toString() ?? '';
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: NeonCard(
-                            borderColor: c.withOpacity(0.25),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [c.withOpacity(0.12), const Color(0xFF16183A)],
+                                begin: Alignment.centerRight,
+                                end: Alignment.centerLeft,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: c.withOpacity(0.35)),
+                              boxShadow: [BoxShadow(color: c.withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4))],
+                            ),
                             child: Row(children: [
-                              Icon(_icon(type), color: c, size: 20),
+                              Container(width: 4, height: 64, decoration: BoxDecoration(color: c, borderRadius: const BorderRadius.horizontal(right: Radius.circular(14)))),
+                              const SizedBox(width: 12),
+                              Icon(_icon(type), color: c, size: 22),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                                  if ((m['body']?.toString() ?? '').isNotEmpty)
-                                    Text(m['body'].toString(), maxLines: 2, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                ]),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                                    if ((m['body']?.toString() ?? '').isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(m['body'].toString(), maxLines: 2, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                    ],
+                                  ]),
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 16, color: AppColors.textMute),
                                 onPressed: () => _dismiss(id),
-                                tooltip: 'حذف',
                               ),
                             ]),
                           ),

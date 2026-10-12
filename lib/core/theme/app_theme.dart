@@ -49,19 +49,20 @@ class NeonCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.card.withOpacity(0.95),
-            const Color(0xFF12142E).withOpacity(0.9),
+            const Color(0xFF1E2048).withOpacity(0.98),
+            const Color(0xFF12143A).withOpacity(0.95),
           ],
         ),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: glow.withOpacity(0.45), width: 1.2),
+        border: Border.all(color: glow.withOpacity(0.55), width: 1.3),
         boxShadow: elevated
             ? [
-                BoxShadow(color: glow.withOpacity(0.18), blurRadius: 22, offset: const Offset(0, 8)),
-                BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
+                BoxShadow(color: glow.withOpacity(0.28), blurRadius: 28, offset: const Offset(0, 10)),
+                BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 14, offset: const Offset(0, 5)),
+                BoxShadow(color: glow.withOpacity(0.08), blurRadius: 2, spread: const Offset(0, 1)),
               ]
             : [
-                BoxShadow(color: glow.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 3)),
+                BoxShadow(color: glow.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)),
               ],
       ),
       child: child,

@@ -67,14 +67,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: RefreshIndicator(
         color: AppColors.purple,
         backgroundColor: AppColors.card,
-        onRefresh: () => dash.fetchStats(auth),
+        onRefresh: () async { await dash.fetchStats(auth); await _loadAnnounces(); },
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
             GlassHeader(
               title: siteName,
               subtitle: manager.isEmpty ? null : manager,
-              onRefresh: dash.loading ? null : () => dash.fetchStats(auth),
+              onRefresh: dash.loading ? null : () async { await dash.fetchStats(auth); await _loadAnnounces(); },
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
