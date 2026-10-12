@@ -128,7 +128,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: Column(children: [
           GlassHeader(
             title: 'مدیریت مشتریان',
-            subtitle: 'کل: \$totalCustomers',
+            subtitle: 'کل: $totalCustomers',
             onRefresh: _load,
           ),
           Padding(
@@ -397,6 +397,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                     ),
+                    if ((m['date_jalali'] ?? m['date_created_jalali'] ?? m['date'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text((m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']).toString(), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                    ],
                     const SizedBox(height: 6),
                     Row(children: [
                       Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),

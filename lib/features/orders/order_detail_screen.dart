@@ -275,6 +275,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if ((order['date_created_jalali'] ?? order['date_created'] ?? '').toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      color: const Color(0xFF252640),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(children: [
+                          const Icon(Icons.calendar_month_rounded, color: Color(0xFF9B7BFF), size: 18),
+                          const SizedBox(width: 10),
+                          const Text('تاریخ سفارش', style: TextStyle(color: Color(0xFF9A9AB5), fontSize: 12)),
+                          const Spacer(),
+                          Text((order['date_created_jalali'] ?? order['date_created']).toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                    ),
+                  ),
                 // status
                 Material(
                   color: const Color(0xFF252640),

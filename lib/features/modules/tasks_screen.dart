@@ -253,6 +253,10 @@ class _TasksScreenState extends State<TasksScreen> {
                                         ),
                                       ),
                                     ),
+                                    if ((m['created'] ?? m['date'] ?? '').toString().isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Flexible(child: Text((m['created'] ?? m['date']).toString(), style: const TextStyle(color: AppColors.textMute, fontSize: 10), overflow: TextOverflow.ellipsis)),
+                                    ],
                                   ]),
                                 ]),
                               ),

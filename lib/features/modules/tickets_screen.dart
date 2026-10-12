@@ -145,36 +145,50 @@ class _TicketsScreenState extends State<TicketsScreen> {
                                   onTap: () {
                                     showModalBottomSheet(
                                       context: context,
+                                      isScrollControlled: true,
                                       backgroundColor: AppColors.card,
-                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                      builder: (_) => Padding(
-                                        padding: const EdgeInsets.all(20),
-                                        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                                          Text('#$id — $title', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                          const SizedBox(height: 8),
-                                          Text(user, style: const TextStyle(color: AppColors.textDim)),
-                                          if ((m['content'] ?? m['message'] ?? '').toString().isNotEmpty) ...[
-                                            const SizedBox(height: 12),
-                                            Text((m['content'] ?? m['message']).toString(), style: const TextStyle(color: Colors.white70, height: 1.5)),
-                                          ],
-                                          const SizedBox(height: 16),
-                                          if (customerId > 0)
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: {
-                                                  'id': customerId,
-                                                  'name': user,
-                                                  'phone': m['phone'] ?? '',
-                                                  'email': m['email'] ?? '',
-                                                  'avatar': m['avatar'] ?? '',
-                                                  'billing_address': '',
-                                                })));
-                                              },
-                                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white),
-                                              child: const Text('مدیریت مشتری'),
-                                            ),
-                                        ]),
+                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+                                      builder: (ctx) => SafeArea(
+                                        child: Padding(
+                                          padding: EdgeInsets.only(
+                                            left: 20, right: 20, top: 12,
+                                            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                                          ),
+                                          child: SingleChildScrollView(
+                                            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                                              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textMute, borderRadius: BorderRadius.circular(4)))),
+                                              const SizedBox(height: 16),
+                                              Text('#$id — $title', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                              const SizedBox(height: 8),
+                                              if (user.isNotEmpty) Text(user, style: const TextStyle(color: AppColors.textDim)),
+                                              if (ago.isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(ago, style: const TextStyle(color: AppColors.textMute, fontSize: 12)),
+                                              ],
+                                              if ((m['content'] ?? m['message'] ?? '').toString().isNotEmpty) ...[
+                                                const SizedBox(height: 12),
+                                                NeonCard(child: Text((m['content'] ?? m['message']).toString(), style: const TextStyle(color: Colors.white70, height: 1.5))),
+                                              ],
+                                              const SizedBox(height: 16),
+                                              if (customerId > 0)
+                                                ElevatedButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(ctx);
+                                                    Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: {
+                                                      'id': customerId,
+                                                      'name': user,
+                                                      'phone': m['phone'] ?? '',
+                                                      'email': m['email'] ?? '',
+                                                      'avatar': m['avatar'] ?? '',
+                                                      'billing_address': '',
+                                                    })));
+                                                  },
+                                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(44)),
+                                                  child: const Text('مدیریت مشتری'),
+                                                ),
+                                            ]),
+                                          ),
+                                        ),
                                       ),
                                     );
                                   },

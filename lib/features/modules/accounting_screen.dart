@@ -131,16 +131,22 @@ class _AccountingScreenState extends State<AccountingScreen> {
                             else
                               ...recent.map((e) {
                                 final m = Map<String, dynamic>.from(e as Map);
-                                final out = m['type'] == 'out';
+                                final label = m['label']?.toString() ?? '';
+                                final st = m['status']?.toString() ?? '';
+                                final isShip = label.contains('ارسال') || label.contains('بسته');
+                                final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('failed');
+                                // فروش محصول: سبز مثبت؛ لغو: قرمز؛ هزینه ارسال: قرمز
+                                final out = isShip || isCancel;
                                 final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
                                 final detail = m['detail']?.toString() ?? '';
                                 final qty = m['qty'];
+                                final displayLabel = isCancel && !isShip ? 'لغو فروش' : label;
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Expanded(
                                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(m['label']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                                        Text(displayLabel, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                                         if (detail.isNotEmpty)
                                           Text(detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
                                         if (qty != null)
