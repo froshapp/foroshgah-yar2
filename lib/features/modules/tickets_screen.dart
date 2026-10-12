@@ -70,6 +70,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
   Widget build(BuildContext context) {
     final open = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'open').length;
     final answered = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'answered').length;
+    final closed = tickets.where((e) => _statusKey(Map<String, dynamic>.from(e as Map)) == 'closed').length;
     final list = _filtered;
 
     return Scaffold(
@@ -96,10 +97,12 @@ class _TicketsScreenState extends State<TicketsScreen> {
                         children: [
                           Row(children: [
                             Expanded(child: _chip('همه', tickets.length, 'all', AppColors.purple)),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(child: _chip('باز', open, 'open', AppColors.orange)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _chip('پاسخ‌داده‌شده', answered, 'answered', AppColors.green)),
+                            const SizedBox(width: 6),
+                            Expanded(child: _chip('پاسخ‌شده', answered, 'answered', AppColors.green)),
+                            const SizedBox(width: 6),
+                            Expanded(child: _chip('بسته', closed, 'closed', AppColors.textMute)),
                           ]),
                           const SizedBox(height: 12),
                           if (list.isEmpty)
@@ -122,22 +125,31 @@ class _TicketsScreenState extends State<TicketsScreen> {
                                   );
                                   _load();
                                 },
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Row(children: [
-                                    Text('#$id', style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.w700, fontSize: 13)),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                      decoration: BoxDecoration(color: sc.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
-                                      child: Text(sl, style: TextStyle(color: sc, fontSize: 11, fontWeight: FontWeight.w600)),
-                                    ),
-                                  ]),
-                                  const SizedBox(height: 8),
-                                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                  if (user.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(user, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                  ],
+                                padding: const EdgeInsets.all(12),
+                                child: Row(children: [
+                                  SoftIconBox(icon: Icons.confirmation_number_outlined, color: sc, size: 44),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Row(children: [
+                                      Text('#$id', style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.w700, fontSize: 13)),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: sc.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: sc.withOpacity(0.35)),
+                                        ),
+                                        child: Text(sl, style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 6),
+                                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                    if (user.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(user, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                    ],
+                                  ])),
                                 ]),
                               ),
                             );

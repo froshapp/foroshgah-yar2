@@ -188,7 +188,7 @@ class _MoreTab extends StatelessWidget {
             showSettingsGear: true,
           ),
           const SizedBox(height: 12),
-          _item(context, Icons.people_alt_rounded, 'مشتریان', 'مدیریت مشتریان فروشگاه', AppColors.purple, const CustomersScreen()),
+          _item(context, Icons.people_alt_rounded, 'سوابق مشتریان', 'اطلاعات و تاریخچه خرید', AppColors.purple, const CustomersScreen()),
           _item(context, Icons.phone_in_talk_rounded, 'تماس‌ها', 'تماس سریع با مشتریان', AppColors.cyan, const ContactsScreen()),
           _item(context, Icons.settings_outlined, 'تنظیمات', 'پروفایل، فاکتور، اطلاعیه', AppColors.blue, null, openSettings: true),
         ],

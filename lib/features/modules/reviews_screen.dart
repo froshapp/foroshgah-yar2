@@ -70,7 +70,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   String _statusLabel(String s) {
     if (s == 'approve' || s == 'approved') return 'پاسخ داده شده';
     if (s == 'spam') return 'اسپم';
-    return 'در انتظار پاسخ';
+    return 'در حال بررسی';
   }
 
   Color _statusColor(String s) {
@@ -181,8 +181,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(showSettingsGear: false, 
-          title: 'پرسش و پاسخ مشتریان',
-          subtitle: 'مدیریت سوالات و نظرات کاربران',
+          title: 'پرسش‌وپاسخ نظرات مشتریان',
+          subtitle: 'مدیریت سوالات و نظرات',
           leadingIcon: Icons.chat_bubble_rounded,
           leadingColor: const Color(0xFF2DD4BF),
           storeOpensSettings: false,

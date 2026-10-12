@@ -21,7 +21,10 @@ class _AccountingScreenState extends State<AccountingScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final res = await context.read<AuthService>().api.dio.get('accounting');
       if (res.data is Map) data = Map<String, dynamic>.from(res.data as Map);
@@ -32,7 +35,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
   }
 
   String _fmt(dynamic v) {
-    if (v == null) return '۰';
+    if (v == null) return '0';
     final n = double.tryParse(v.toString().replaceAll(',', '')) ?? 0;
     final s = n.round().toString();
     final buf = StringBuffer();
@@ -43,48 +46,25 @@ class _AccountingScreenState extends State<AccountingScreen> {
     return buf.toString();
   }
 
-  List<Map<String, dynamic>> get _grouped {
-    final recent = data['recent'] is List ? data['recent'] as List : [];
-    final map = <String, Map<String, dynamic>>{};
-    for (final e in recent) {
-      final m = Map<String, dynamic>.from(e as Map);
-      final key = '${m['order_number'] ?? m['id'] ?? ''}';
-      if (key.isEmpty) continue;
-      final st = m['status']?.toString() ?? '';
-      final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('failed');
-      final label = m['label']?.toString() ?? '';
-      final isShip = label.contains('ارسال') || label.contains('بسته');
-      final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
-      map.putIfAbsent(key, () => {
-            'order_number': key,
-            'detail': '',
-            'qty': 0,
-            'sale': 0.0,
-            'ship': 0.0,
-            'cancelled': isCancel,
-            'status': st,
-          });
-      final g = map[key]!;
-      if (isShip) {
-        g['ship'] = (g['ship'] as double) + total;
-      } else {
-        g['sale'] = (g['sale'] as double) + total;
-        g['detail'] = m['detail']?.toString() ?? g['detail'];
-        g['qty'] = m['qty'] ?? g['qty'];
-        g['cancelled'] = isCancel;
-      }
-    }
-    return map.values.toList();
+  List get _recent {
+    if (data['recent'] is List) return data['recent'] as List;
+    if (data['transactions'] is List) return data['transactions'] as List;
+    return [];
   }
 
   @override
   Widget build(BuildContext context) {
     final daily = data['daily_sales'] is List ? data['daily_sales'] as List : [];
-    final groups = _grouped;
-    final maxY = daily.fold<double>(1, (m, e) {
+    final income = data['total_income'] ?? data['income'] ?? data['total_sales'] ?? 0;
+    final expense = data['total_expense'] ?? data['expense'] ?? data['costs'] ?? 0;
+    final net = data['net'] ?? ((double.tryParse('$income') ?? 0) - (double.tryParse('$expense') ?? 0));
+    final recent = _recent;
+
+    double maxY = 1;
+    for (final e in daily) {
       final t = double.tryParse('${(e as Map)['total'] ?? 0}') ?? 0;
-      return t > m ? t : m;
-    });
+      if (t > maxY) maxY = t;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -93,7 +73,14 @@ class _AccountingScreenState extends State<AccountingScreen> {
           : error != null
               ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
               : Column(children: [
-                  GlassHeader(showSettingsGear: false, title: 'حسابداری فروشگاه', subtitle: 'گزارش مالی', onRefresh: _load),
+                  GlassHeader(
+                    showSettingsGear: false,
+                    title: 'حسابداری فروشگاه',
+                    subtitle: 'گزارش مالی و تراکنش‌ها',
+                    leadingIcon: Icons.account_balance_wallet_rounded,
+                    leadingColor: AppColors.purple,
+                    onRefresh: _load,
+                  ),
                   Expanded(
                     child: RefreshIndicator(
                       color: AppColors.purple,
@@ -101,22 +88,27 @@ class _AccountingScreenState extends State<AccountingScreen> {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
                         children: [
+                          // سه KPI مثل موکاپ
                           Row(children: [
-                            Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),
+                            Expanded(child: _kpi('درآمد کل', _fmt(income), AppColors.blue)),
                             const SizedBox(width: 8),
-                            Expanded(child: _kpi('خالص', _fmt(data['net']), AppColors.cyan)),
+                            Expanded(child: _kpi('خالص', _fmt(net), AppColors.cyan)),
                             const SizedBox(width: 8),
-                            Expanded(child: _kpi('هزینه‌ها', _fmt(data['shipping_cost']), AppColors.pink)),
+                            Expanded(child: _kpi('هزینه‌ها', _fmt(expense), AppColors.pink)),
                           ]),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
+                          // نمودار
                           NeonCard(
-                            borderColor: AppColors.purple,
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Row(children: [
-                                Text('نمودار فروش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                Spacer(),
-                                Text('۷ روز اخیر', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                              ]),
+                              const Row(
+                                children: [
+                                  Expanded(
+                                    child: Text('نمودار فروش',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                                  ),
+                                  Text('۷ روز اخیر', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                ],
+                              ),
                               const SizedBox(height: 16),
                               SizedBox(
                                 height: 120,
@@ -131,19 +123,22 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                           return Expanded(
                                             child: Padding(
                                               padding: const EdgeInsets.symmetric(horizontal: 3),
-                                              child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                                Container(
-                                                  height: h.clamp(4, 100),
-                                                  decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    gradient: const LinearGradient(
-                                                      begin: Alignment.bottomCenter,
-                                                      end: Alignment.topCenter,
-                                                      colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.end,
+                                                children: [
+                                                  Container(
+                                                    height: h.clamp(4, 100),
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      gradient: const LinearGradient(
+                                                        begin: Alignment.bottomCenter,
+                                                        end: Alignment.topCenter,
+                                                        colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              ]),
+                                                ],
+                                              ),
                                             ),
                                           );
                                         }).toList(),
@@ -151,7 +146,73 @@ class _AccountingScreenState extends State<AccountingScreen> {
                               ),
                             ]),
                           ),
-                          
+                          const SizedBox(height: 16),
+                          // آخرین تراکنش‌ها مثل موکاپ
+                          const Text('آخرین تراکنش‌ها',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                          const SizedBox(height: 10),
+                          if (recent.isEmpty)
+                            const NeonCard(
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim)),
+                                ),
+                              ),
+                            )
+                          else
+                            ...recent.take(12).map((e) {
+                              final m = Map<String, dynamic>.from(e as Map);
+                              final label = m['label']?.toString() ?? m['detail']?.toString() ?? m['title']?.toString() ?? 'تراکنش';
+                              final total = _fmt(m['total'] ?? m['amount']);
+                              final st = (m['status']?.toString() ?? '').toLowerCase();
+                              final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('fail');
+                              final isShip = label.contains('ارسال') || label.contains('بسته') || label.contains('حمل');
+                              final color = isCancel
+                                  ? AppColors.red
+                                  : (isShip ? AppColors.orange : AppColors.green);
+                              final icon = isCancel
+                                  ? Icons.close_rounded
+                                  : (isShip ? Icons.local_shipping_outlined : Icons.add_rounded);
+                              final orderNo = m['order_number'] ?? m['id'] ?? '';
+                              final date = m['date']?.toString() ?? m['created']?.toString() ?? '';
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: NeonCard(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  child: Row(children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: color.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(icon, color: color, size: 18),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(label,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                        if (orderNo.toString().isNotEmpty || date.isNotEmpty)
+                                          Text(
+                                            [if (orderNo.toString().isNotEmpty) 'سفارش $orderNo', if (date.isNotEmpty) date].join(' · '),
+                                            style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                                          ),
+                                      ]),
+                                    ),
+                                    Text(
+                                      '${isCancel || isShip ? '' : '+'}$total',
+                                      style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13),
+                                    ),
+                                  ]),
+                                ),
+                              );
+                            }),
                         ],
                       ),
                     ),
@@ -161,12 +222,13 @@ class _AccountingScreenState extends State<AccountingScreen> {
   }
 
   Widget _kpi(String t, String v, Color c) => NeonCard(
-        borderColor: c,
+        borderColor: c.withOpacity(0.35),
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
           const SizedBox(height: 6),
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 2),
           const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
         ]),
       );

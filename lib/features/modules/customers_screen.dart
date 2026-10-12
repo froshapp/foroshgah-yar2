@@ -127,8 +127,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
-          title: 'مشتریان',
-          subtitle: 'مدیریت مشتریان فروشگاه',
+          title: 'سوابق مشتریان',
+          subtitle: 'اطلاعات و تاریخچه خرید',
           leadingIcon: Icons.people_alt_rounded,
           leadingColor: AppColors.blue,
           onRefresh: _load,
