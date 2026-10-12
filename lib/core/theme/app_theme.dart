@@ -92,7 +92,7 @@ class MiniLoader extends StatelessWidget {
   }
 }
 
-/// هدر شیشه‌ای با موج بنفش — الگوی ثابت: آیکون ماژول چپ | عنوان | رفرش + زنگوله راست
+/// هدر شیشه‌ای — زنگوله چپ | عنوان وسط | فروشگاه راست (مثل مرجع)
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -122,10 +122,57 @@ class GlassHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     final color = leadingColor ?? AppColors.purple;
+
+    Widget storeBtn() {
+      return GestureDetector(
+        onTap: () {
+          if (onStoreTap != null) {
+            onStoreTap!();
+            return;
+          }
+          if (storeOpensSettings) AppNav.openSettingsDrawer();
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 12)],
+            border: Border.all(color: Colors.white.withOpacity(0.15)),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 22),
+              if (storeOpensSettings && leadingIcon == null)
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1040),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: Colors.white24, width: 0.5),
+                    ),
+                    child: const Icon(Icons.settings, color: Colors.white, size: 9),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 6 : 10, 12, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF4A2BB8), Color(0xFF2A1570), Color(0xFF140A3A)],
@@ -139,63 +186,37 @@ class GlassHeader extends StatelessWidget {
             BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
+        // LTR: چپ = اول، راست = آخر
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Row(
             children: [
-              if (showStoreIcon)
-                GestureDetector(
-                  onTap: () {
-                    if (onStoreTap != null) {
-                      onStoreTap!();
-                      return;
-                    }
-                    if (storeOpensSettings) AppNav.openSettingsDrawer();
-                  },
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color, color.withOpacity(0.7)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 12)],
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 22),
-                        if (storeOpensSettings && leadingIcon == null)
-                          Positioned(
-                            right: 2,
-                            bottom: 2,
-                            child: Container(
-                              padding: const EdgeInsets.all(1.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1A1040),
-                                borderRadius: BorderRadius.circular(5),
-                                border: Border.all(color: Colors.white24, width: 0.5),
-                              ),
-                              child: const Icon(Icons.settings, color: Colors.white, size: 9),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+              // === چپ: زنگوله + رفرش ===
+              if (showBell)
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
+                  onPressed: () => openNotificationsPanel(context),
                 ),
-              if (showStoreIcon) const SizedBox(width: 10),
+              if (onRefresh != null)
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                  onPressed: onRefresh,
+                ),
+              if (actions != null) ...actions!,
+              // === وسط: عنوان RTL ===
               Expanded(
                 child: Directionality(
                   textDirection: TextDirection.rtl,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         title,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.2),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -203,6 +224,7 @@ class GlassHeader extends StatelessWidget {
                       if (subtitle != null && subtitle!.isNotEmpty)
                         Text(
                           subtitle!,
+                          textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -211,21 +233,8 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              if (actions != null) ...actions!,
-              if (onRefresh != null)
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                  onPressed: onRefresh,
-                ),
-              if (showBell)
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
-                  onPressed: () => openNotificationsPanel(context),
-                ),
+              // === راست: فروشگاه ===
+              if (showStoreIcon) storeBtn(),
             ],
           ),
         ),

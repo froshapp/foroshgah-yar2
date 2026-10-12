@@ -95,7 +95,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
       body: Column(children: [
         GlassHeader(
           title: 'تیکت و پشتیبانی',
-          subtitle: providerLabel.isNotEmpty ? providerLabel : 'پاسخگویی به درخواست‌های مشتریان',
+          subtitle: 'پاسخگویی به درخواست‌های مشتریان',
           leadingIcon: Icons.headset_mic_rounded,
           leadingColor: const Color(0xFFA78BFA),
           storeOpensSettings: false,

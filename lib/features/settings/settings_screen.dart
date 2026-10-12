@@ -495,12 +495,15 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     );
     if (ok == true) {
       try {
+        final startVal = start.text.trim().isEmpty
+            ? _normJalali(formatJalali(Jalali.now()))
+            : _normJalali(start.text);
         final res = await context.read<AuthService>().api.dio.post('announcements', data: {
           'title': title.text.trim(),
           'body': body.text.trim(),
-          'places': ['app', 'profile', 'site'],
+          'places': ['app', 'profile', 'site', 'all'],
           'active': true,
-          'start': _normJalali(start.text),
+          'start': startVal,
           'end': end.text.trim().isEmpty ? '' : _normJalali(end.text),
         });
         if (res.data is Map && res.data['success'] == true) {

@@ -253,7 +253,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     for (final s in statusList) {
       if (s['key']?.toString() == status) { stMatch = s; break; }
     }
-    final statusLabel = stMatch?['label']?.toString() ?? order['status_label']?.toString() ?? status;
+    final rawStatus = status.toLowerCase();
+    String statusLabel = stMatch?['label']?.toString() ?? order['status_label']?.toString() ?? status;
+    // اگر انگلیسی بود فارسی کن
+    final faMap = {
+      'completed': 'تکمیل شده', 'processing': 'در حال انجام', 'pending': 'در انتظار پرداخت',
+      'on-hold': 'در انتظار بررسی', 'cancelled': 'لغو شده', 'refunded': 'مسترد شده', 'failed': 'ناموفق',
+    };
+    if (faMap.containsKey(rawStatus)) statusLabel = faMap[rawStatus]!;
+    else {
+      statusLabel = statusLabel
+          .replaceAll(RegExp(r'basalam', caseSensitive: false), 'باسلام')
+          .replaceAll(RegExp(r'torob', caseSensitive: false), 'ترب')
+          .replaceAll(RegExp(r'pending', caseSensitive: false), 'در انتظار')
+          .replaceAll(RegExp(r'processing', caseSensitive: false), 'در حال انجام')
+          .replaceAll(RegExp(r'completed', caseSensitive: false), 'تکمیل شده');
+    }
     final statusColor = _statusColor(status, stMatch?['group']?.toString() ?? '');
     final shipTitle = order['shipping_method_title']?.toString() ?? '';
     final payTitle = order['payment_method_title']?.toString() ?? order['payment_method']?.toString() ?? '';

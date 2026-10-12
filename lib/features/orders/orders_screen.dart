@@ -52,24 +52,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   String _statusLabel(String? status) {
-    switch (status?.replaceFirst('wc-', '')) {
-      case 'completed':
-        return 'تکمیل شده';
-      case 'processing':
-        return 'در حال انجام';
-      case 'pending':
-        return 'در انتظار پرداخت';
-      case 'on-hold':
-        return 'در انتظار بررسی';
-      case 'cancelled':
-        return 'لغو شده';
-      case 'refunded':
-        return 'مسترد شده';
-      case 'failed':
-        return 'ناموفق';
-      default:
-        return status ?? '—';
-    }
+    final raw = (status ?? '').replaceFirst('wc-', '').toLowerCase();
+    const map = {
+      'completed': 'تکمیل شده',
+      'processing': 'در حال انجام',
+      'pending': 'در انتظار پرداخت',
+      'on-hold': 'در انتظار بررسی',
+      'cancelled': 'لغو شده',
+      'refunded': 'مسترد شده',
+      'failed': 'ناموفق',
+      'checkout-draft': 'پیش‌نویس',
+      'basalam-pending': 'باسلام — در انتظار',
+      'basalam-processing': 'باسلام — در حال پردازش',
+      'basalam-completed': 'باسلام — تکمیل',
+      'basalam-cancelled': 'باسلام — لغو',
+      'torob-pending': 'ترب — در انتظار',
+      'torob-processing': 'ترب — در حال پردازش',
+    };
+    if (map.containsKey(raw)) return map[raw]!;
+    // ترجمه تقریبی کلمات انگلیسی رایج
+    var s = status ?? '—';
+    s = s.replaceAll('wc-', '');
+    s = s.replaceAll(RegExp(r'basalam', caseSensitive: false), 'باسلام');
+    s = s.replaceAll(RegExp(r'torob', caseSensitive: false), 'ترب');
+    s = s.replaceAll(RegExp(r'pending', caseSensitive: false), 'در انتظار');
+    s = s.replaceAll(RegExp(r'processing', caseSensitive: false), 'در حال انجام');
+    s = s.replaceAll(RegExp(r'completed', caseSensitive: false), 'تکمیل شده');
+    s = s.replaceAll(RegExp(r'cancelled|canceled', caseSensitive: false), 'لغو شده');
+    s = s.replaceAll('-', ' ');
+    return s;
   }
 
   String _customerName(Map<String, dynamic> o) {

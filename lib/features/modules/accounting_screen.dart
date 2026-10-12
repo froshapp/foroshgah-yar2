@@ -151,57 +151,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                               ),
                             ]),
                           ),
-                          const SizedBox(height: 12),
-                          NeonCard(
-                            borderColor: AppColors.cyan,
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Text('آخرین تراکنش‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 4),
-                              const Text('هر سفارش یک ردیف', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                              const SizedBox(height: 12),
-                              if (groups.isEmpty)
-                                const Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim))
-                              else
-                                ...groups.map((g) {
-                                  final cancelled = g['cancelled'] == true;
-                                  final sale = g['sale'] as double;
-                                  final ship = g['ship'] as double;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface.withOpacity(0.7),
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: (cancelled ? AppColors.red : AppColors.green).withOpacity(0.3)),
-                                      ),
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Row(children: [
-                                          Text('سفارش #${g['order_number']}', style: const TextStyle(color: AppColors.purpleGlow, fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const Spacer(),
-                                          Text(cancelled ? 'لغو' : 'فروش', style: TextStyle(color: cancelled ? AppColors.red : AppColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
-                                        ]),
-                                        if ((g['detail'] ?? '').toString().isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(g['detail'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                        ],
-                                        if (g['qty'] != null && g['qty'] != 0)
-                                          Text('تعداد: ${g['qty']}', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                        const SizedBox(height: 8),
-                                        Row(children: [
-                                          Text('${cancelled ? '-' : '+'}${_fmt(sale)}', style: TextStyle(color: cancelled ? AppColors.red : AppColors.green, fontWeight: FontWeight.bold, fontSize: 15)),
-                                          const Text(' تومان', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                          if (ship > 0) ...[
-                                            const Spacer(),
-                                            Text('ارسال ${_fmt(ship)}-', style: const TextStyle(color: AppColors.red, fontSize: 12)),
-                                          ],
-                                        ]),
-                                      ]),
-                                    ),
-                                  );
-                                }),
-                            ]),
-                          ),
+                          
                         ],
                       ),
                     ),

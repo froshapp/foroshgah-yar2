@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/nav.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -18,6 +19,7 @@ class MainShell extends StatefulWidget {
 class MainShellState extends State<MainShell> {
   int index = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  DateTime? _lastBack;
 
   void goTo(int i) => setState(() => index = i);
 
@@ -53,7 +55,39 @@ class MainShellState extends State<MainShell> {
       const ModulesScreen(),
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // اول مسیرهای push شده (جزئیات سفارش، مشتری، ...) را ببند
+        final nav = Navigator.of(context);
+        if (nav.canPop()) {
+          nav.pop();
+          return;
+        }
+        if (_scaffoldKey.currentState?.isDrawerOpen == true) {
+          nav.pop();
+          return;
+        }
+        if (index != 0) {
+          setState(() => index = 0);
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBack == null || now.difference(_lastBack!) > const Duration(seconds: 2)) {
+          _lastBack = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('برای خروج دوباره دکمه بازگشت را بزنید'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Color(0xFF2A2A4A),
+            ),
+          );
+          return;
+        }
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.bg,
       drawer: Drawer(
@@ -83,6 +117,7 @@ class MainShellState extends State<MainShell> {
           ),
         ),
       ),
+    ),
     );
   }
 

@@ -392,15 +392,26 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                     ),
-                    if ((m['date_jalali'] ?? m['date_created_jalali'] ?? m['date'] ?? '').toString().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(formatAnyDate(m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']), style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                    ],
                     const SizedBox(height: 6),
                     Row(children: [
-                      Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),
-                      const Spacer(),
-                      Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                      Expanded(
+                        child: Text(
+                          () {
+                            final raw = m['status_label']?.toString() ?? m['status']?.toString() ?? '';
+                            return raw
+                                .replaceAll(RegExp(r'basalam', caseSensitive: false), 'باسلام')
+                                .replaceAll(RegExp(r'torob', caseSensitive: false), 'ترب')
+                                .replaceAll(RegExp(r'pending', caseSensitive: false), 'در انتظار')
+                                .replaceAll(RegExp(r'processing', caseSensitive: false), 'در حال انجام')
+                                .replaceAll(RegExp(r'completed', caseSensitive: false), 'تکمیل شده');
+                          }(),
+                          style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11),
+                        ),
+                      ),
+                      Text(
+                        formatAnyDate(m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']),
+                        style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                      ),
                     ]),
                   ]),
                 ),

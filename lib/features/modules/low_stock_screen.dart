@@ -65,20 +65,26 @@ class _LowStockScreenState extends State<LowStockScreen> {
   }
 
   Future<void> _saveThreshold() async {
-    final th = int.tryParse(thCtrl.text.trim()) ?? 5;
+    final th = int.tryParse(thCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '')) ?? 5;
     setState(() => savingTh = true);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('stock_threshold', th);
     try {
-      await context.read<AuthService>().api.dio.post('settings/threshold', data: {
-        'threshold': th,
-        'enabled': true,
-      });
-      threshold = th;
-      showOk(context, 'آستانه ذخیره شد');
+      final res = await context.read<AuthService>().api.dio.post(
+        'settings/threshold',
+        data: {'threshold': th, 'enabled': true},
+        queryParameters: {'threshold': th, 'enabled': true},
+      );
+      int saved = th;
+      if (res.data is Map && res.data['threshold'] != null) {
+        saved = int.tryParse('${res.data['threshold']}') ?? th;
+      }
+      await prefs.setInt('stock_threshold', saved);
+      threshold = saved;
+      thCtrl.text = '$saved';
+      if (mounted) showOk(context, 'آستانه $saved ذخیره شد');
       await _load();
     } catch (e) {
-      showErr(context, e.toString());
+      if (mounted) showErr(context, 'ذخیره نشد: $e');
     }
     if (mounted) setState(() => savingTh = false);
   }
