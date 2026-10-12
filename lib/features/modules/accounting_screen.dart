@@ -93,7 +93,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
           : error != null
               ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
               : Column(children: [
-                  GlassHeader(title: 'حسابداری فروشگاه', subtitle: 'گزارش مالی', onRefresh: _load),
+                  GlassHeader(showSettingsGear: false, title: 'حسابداری فروشگاه', subtitle: 'گزارش مالی', onRefresh: _load),
                   Expanded(
                     child: RefreshIndicator(
                       color: AppColors.purple,

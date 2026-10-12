@@ -132,14 +132,7 @@ class MainShellState extends State<MainShell> {
     final active = index == i;
     return Expanded(
       child: InkWell(
-        onTap: () {
-          if (i == 4) {
-            // بیشتر = باز کردن دراور تنظیمات
-            _scaffoldKey.currentState?.openDrawer();
-            return;
-          }
-          setState(() => index = i);
-        },
+        onTap: () => setState(() => index = i),
         borderRadius: BorderRadius.circular(18),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
@@ -190,24 +183,25 @@ class _MoreTab extends StatelessWidget {
           const GlassHeader(
             title: 'بیشتر',
             subtitle: 'میانبرها و تنظیمات',
-            leadingIcon: Icons.apps_rounded,
+            leadingIcon: Icons.more_horiz_rounded,
             leadingColor: AppColors.blue,
+            showSettingsGear: true,
           ),
           const SizedBox(height: 12),
-          _item(context, Icons.people_alt_rounded, 'مشتریان', 'مدیریت مشتریان', AppColors.purple, const CustomersScreen()),
-          _item(context, Icons.phone_in_talk_rounded, 'تماس‌ها', 'تماس سریع', AppColors.cyan, const ContactsScreen()),
-          _item(context, Icons.settings_outlined, 'تنظیمات', 'پروفایل و تنظیمات فروشگاه', AppColors.blue, null, openDrawer: true),
+          _item(context, Icons.people_alt_rounded, 'مشتریان', 'مدیریت مشتریان فروشگاه', AppColors.purple, const CustomersScreen()),
+          _item(context, Icons.phone_in_talk_rounded, 'تماس‌ها', 'تماس سریع با مشتریان', AppColors.cyan, const ContactsScreen()),
+          _item(context, Icons.settings_outlined, 'تنظیمات', 'پروفایل، فاکتور، اطلاعیه', AppColors.blue, null, openSettings: true),
         ],
       ),
     );
   }
 
-  Widget _item(BuildContext context, IconData icon, String title, String sub, Color c, Widget? page, {bool openDrawer = false}) {
+  Widget _item(BuildContext context, IconData icon, String title, String sub, Color c, Widget? page, {bool openSettings = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: NeonCard(
         onTap: () {
-          if (openDrawer) {
+          if (openSettings) {
             AppNav.openSettingsDrawer();
             return;
           }
@@ -216,12 +210,12 @@ class _MoreTab extends StatelessWidget {
           }
         },
         child: Row(children: [
-          SoftIconBox(icon: icon, color: c, size: 44),
+          SoftIconBox(icon: icon, color: c, size: 48),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
             ]),
           ),

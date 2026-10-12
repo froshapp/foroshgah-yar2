@@ -158,7 +158,7 @@ class _TasksScreenState extends State<TasksScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
-        GlassHeader(
+        GlassHeader(showSettingsGear: false, 
           title: 'کارهای من',
           subtitle: '$_doneCount از ${items.length} انجام‌شده',
           leadingIcon: Icons.checklist_rtl_rounded,

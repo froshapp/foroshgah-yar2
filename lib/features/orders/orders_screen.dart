@@ -100,9 +100,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   String _date(Map o) {
     final j = o['date_jalali']?.toString();
-    if (j != null && j.isNotEmpty) return j;
-    final d = o['date_created']?.toString() ?? o['date']?.toString() ?? '';
-    if (d.length >= 10) return d.substring(0, 16).replaceAll('T', ' ');
+    if (j != null && j.isNotEmpty && !j.contains('-10-') && !j.startsWith('202')) return j;
+    // اگر میلادی بود فقط تاریخ را کوتاه نشان بده
+    final d = o['date_created_gmt']?.toString() ?? o['date_created']?.toString() ?? o['date']?.toString() ?? '';
+    if (d.length >= 10) {
+      // YYYY-MM-DD HH:mm
+      final clean = d.replaceAll('T', ' ').substring(0, d.length >= 16 ? 16 : 10);
+      return clean;
+    }
     return d;
   }
 
@@ -245,35 +250,34 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 child: NeonCard(
                                   onTap: () => _openOrder(o),
                                   padding: const EdgeInsets.all(14),
-                                  child: Row(children: [
-                                    SoftIconBox(icon: Icons.inventory_2_outlined, color: AppColors.blue, size: 48),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Row(children: [
-                                          Text('#$id', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                                          const Spacer(),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: sc.withOpacity(0.15),
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(color: sc.withOpacity(0.35)),
-                                            ),
-                                            child: Text(sl, style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w600)),
-                                          ),
-                                        ]),
-                                        const SizedBox(height: 6),
-                                        Text(name, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                        const SizedBox(height: 4),
-                                        Row(children: [
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // در RTL اولی سمت راست می‌آید = آیکون
+                                      SoftIconBox(icon: Icons.inventory_2_outlined, color: AppColors.blue, size: 48),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Text('#$id', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                                          const SizedBox(height: 4),
+                                          Text(name, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                          const SizedBox(height: 6),
                                           Text(date, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                          const Spacer(),
-                                          Text('$total تومان', style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 13)),
+                                          const SizedBox(height: 4),
+                                          Text('$total تومان', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                                         ]),
-                                      ]),
-                                    ),
-                                  ]),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: sc.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: sc.withOpacity(0.4)),
+                                        ),
+                                        child: Text(sl, style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },

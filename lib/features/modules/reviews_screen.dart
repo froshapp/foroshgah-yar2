@@ -180,7 +180,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
-        GlassHeader(
+        GlassHeader(showSettingsGear: false, 
           title: 'پرسش و پاسخ مشتریان',
           subtitle: 'مدیریت سوالات و نظرات کاربران',
           leadingIcon: Icons.chat_bubble_rounded,

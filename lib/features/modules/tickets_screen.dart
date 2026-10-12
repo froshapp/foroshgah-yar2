@@ -75,7 +75,7 @@ class _TicketsScreenState extends State<TicketsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
-        GlassHeader(
+        GlassHeader(showSettingsGear: false, 
           title: 'تیکت و پشتیبانی',
           subtitle: 'پاسخگویی به درخواست‌های مشتریان',
           leadingIcon: Icons.headset_mic_rounded,
@@ -250,7 +250,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
-        GlassHeader(
+        GlassHeader(showSettingsGear: false, 
           title: '#${widget.ticketId}',
           subtitle: title,
           leadingIcon: Icons.confirmation_number_outlined,

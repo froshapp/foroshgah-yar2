@@ -8,6 +8,7 @@ class DashboardService extends ChangeNotifier {
     'today_orders': 0,
     'total_orders': 0,
     'total_products': 0,
+    'total_customers': 0,
   };
   bool _loading = false;
   String? _error;
@@ -44,6 +45,7 @@ class DashboardService extends ChangeNotifier {
           'today_orders': _toInt(raw['today_orders'] ?? nested['today_orders'] ?? nested['orders_count']),
           'total_orders': _toInt(raw['total_orders'] ?? nested['total_orders']),
           'total_products': _toInt(raw['total_products'] ?? nested['total_products']),
+          'total_customers': _toInt(raw['total_customers'] ?? nested['total_customers'] ?? nested['customers']),
         };
       }
     } on DioException catch (e) {

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/nav.dart';
+import '../modules/customers_screen.dart';
 import '../../core/utils/snack.dart';
 import 'plugins_screen.dart';
 
@@ -19,20 +21,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    return SafeArea(
-      child: ListView(
+    final siteName = auth.site?['name']?.toString() ?? 'فروشگاه';
+    final email = auth.user?['email']?.toString() ?? auth.user?['display_name']?.toString() ?? '';
+
+    if (widget.asDrawer) {
+      return SafeArea(
+        child: Column(
+          children: [
+            // هدر سایدبار مثل موکاپ
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(children: [
+                SoftIconBox(icon: Icons.storefront_rounded, color: AppColors.purple, size: 48),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(siteName, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(email, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                  ]),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textMute),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ]),
+            ),
+            const Divider(color: Color(0xFF1E2A55), height: 1),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                children: [
+                  _navItem(Icons.home_rounded, 'پیشخوان', () { Navigator.pop(context); AppNav.goToTab?.call(0); }),
+                  _navItem(Icons.shopping_cart_outlined, 'سفارشات', () { Navigator.pop(context); AppNav.goToTab?.call(1); }),
+                  _navItem(Icons.inventory_2_outlined, 'محصولات', () { Navigator.pop(context); AppNav.goToTab?.call(2); }),
+                  _navItem(Icons.people_alt_outlined, 'مشتریان', () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen()));
+                  }),
+                  _navItem(Icons.grid_view_rounded, 'ماژول‌ها', () { Navigator.pop(context); AppNav.goToTab?.call(3); }, selected: true),
+                  const SizedBox(height: 8),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
+                    child: Text('تنظیمات', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                  ),
+                  _navItem(Icons.person_outline, 'پروفایل', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                  }),
+                  _navItem(Icons.palette_outlined, 'رنگ وضعیت', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
+                  }),
+                  _navItem(Icons.receipt_long_outlined, 'فاکتور', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
+                  }),
+                  _navItem(Icons.campaign_outlined, 'اطلاعیه‌ها', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
+                  }),
+                  _navItem(Icons.notifications_outlined, 'اعلان‌ها', () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
+                  }),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextButton.icon(
+                onPressed: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.card,
+                      title: const Text('خروج', style: TextStyle(color: Colors.white)),
+                      content: const Text('از حساب خارج می‌شوید؟', style: TextStyle(color: AppColors.textDim)),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: AppColors.red))),
+                      ],
+                    ),
+                  );
+                  if (ok == true && context.mounted) {
+                    Navigator.pop(context);
+                    await context.read<AuthService>().logout(clearToken: false);
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded, color: AppColors.red),
+                label: const Text('خروج', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // حالت صفحه تنظیمات کامل
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           GlassHeader(
             title: 'تنظیمات',
-            subtitle: (auth.site?['name']?.toString().isNotEmpty == true)
-                ? auth.site!['name'].toString()
-                : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
-            showBell: !widget.asDrawer,
-            storeOpensSettings: false,
-            actions: widget.asDrawer
-                ? [IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context))]
-                : null,
+            subtitle: siteName,
+            showBell: false,
+            showSettingsGear: false,
+            leadingIcon: Icons.settings_rounded,
+            leadingColor: AppColors.blue,
           ),
           const SizedBox(height: 12),
           _item(Icons.person_outline_rounded, 'پروفایل کاربری', 'نام مدیر، ایمیل، نقش و فروشگاه', AppColors.purpleGlow, () {
@@ -50,18 +145,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _item(Icons.notifications_active_outlined, 'اعلان‌های اپ', 'زنگ و هشدار داخل اپ', AppColors.blue, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
           }),
-          _item(Icons.info_outline, 'درباره فروشگاه‌یار', 'نسخه ۱.۵', AppColors.textDim, () {
+          _item(Icons.info_outline, 'درباره فروشگاه‌یار', 'نسخه ۱.۷', AppColors.textDim, () {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: AppColors.card,
                 title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-                content: const Text('نسخه ۱.۵\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
+                content: const Text('نسخه ۱.۷\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
                 actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
               ),
             );
           }),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ElevatedButton(
@@ -92,6 +187,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String title, VoidCallback onTap, {bool selected = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: selected ? AppColors.purple.withOpacity(0.25) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(children: [
+              Icon(icon, color: selected ? AppColors.purpleGlow : AppColors.textDim, size: 22),
+              const SizedBox(width: 12),
+              Text(title, style: TextStyle(
+                color: selected ? Colors.white : AppColors.textDim,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 14,
+              )),
+            ]),
+          ),
+        ),
       ),
     );
   }

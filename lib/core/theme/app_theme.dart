@@ -2,7 +2,6 @@ import '../nav.dart';
 import 'package:flutter/material.dart';
 import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
-/// پالت دقیق مطابق مرجع
 class AppColors {
   static const bg = Color(0xFF070B20);
   static const surface = Color(0xFF0B1230);
@@ -22,7 +21,6 @@ class AppColors {
   static const textMute = Color(0xFF6B7A9E);
 }
 
-/// کارت مرجع — سطح برجسته، حاشیه ظریف، بدون نئون
 class NeonCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -56,13 +54,7 @@ class NeonCard extends StatelessWidget {
           width: 1,
         ),
         boxShadow: elevated
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ]
+            ? [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 6))]
             : null,
       ),
       child: child,
@@ -88,7 +80,6 @@ class MiniLoader extends StatelessWidget {
   }
 }
 
-/// باکس آیکون ۳بعدی نرم — مثل مرجع
 class SoftIconBox extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -104,36 +95,37 @@ class SoftIconBox extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color, color.withOpacity(0.7)],
+          colors: [color, color.withOpacity(0.72)],
         ),
-        boxShadow: [
-          BoxShadow(color: color.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
+        boxShadow: [BoxShadow(color: color.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Icon(icon, color: Colors.white, size: size * 0.46),
     );
   }
 }
 
-/// هدر منحنی لایه‌ای — دقیقاً سبک مرجع
+/// هدر مرجع: فقط چرخ‌دنده منو باز می‌کند — آیکون فروشگاه تزئینی است
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final List<Widget>? actions;
   final bool showStoreIcon;
-  final bool storeOpensSettings;
+  final bool showSettingsGear;
+  final bool storeOpensSettings; // سازگاری — نادیده گرفته می‌شود
   final VoidCallback? onStoreTap;
   final VoidCallback? onRefresh;
   final bool showBell;
   final IconData? leadingIcon;
   final Color? leadingColor;
+
   const GlassHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.actions,
     this.showStoreIcon = true,
-    this.storeOpensSettings = true,
+    this.showSettingsGear = true,
+    this.storeOpensSettings = false,
     this.onStoreTap,
     this.onRefresh,
     this.showBell = true,
@@ -161,7 +153,6 @@ class GlassHeader extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              // موج بنفش چپ
               Positioned(
                 left: -20,
                 top: -30,
@@ -177,9 +168,8 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              // موج آبی راست
               Positioned(
-                right: 60,
+                right: 50,
                 bottom: -40,
                 child: Container(
                   width: 100,
@@ -193,29 +183,25 @@ class GlassHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              // لایه شیشه‌ای نرم
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withOpacity(0.06),
-                        Colors.transparent,
-                      ],
+                      colors: [Colors.white.withOpacity(0.06), Colors.transparent],
                     ),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Directionality(
                   textDirection: TextDirection.ltr,
                   child: Row(
                     children: [
-                      // چپ: تنظیمات + زنگوله
-                      if (storeOpensSettings)
+                      // چپ: فقط چرخ‌دنده = منو | زنگوله | رفرش
+                      if (showSettingsGear)
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -237,13 +223,12 @@ class GlassHeader extends StatelessWidget {
                           onPressed: onRefresh,
                         ),
                       if (actions != null) ...actions!,
-                      // وسط: عنوان RTL
+                      // وسط عنوان
                       Expanded(
                         child: Directionality(
                           textDirection: TextDirection.rtl,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
                                 title,
@@ -264,21 +249,12 @@ class GlassHeader extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // راست: آیکون فروشگاه
+                      // راست: آیکون صفحه — تزئینی (منو باز نمی‌کند)
                       if (showStoreIcon)
-                        GestureDetector(
-                          onTap: () {
-                            if (onStoreTap != null) {
-                              onStoreTap!();
-                              return;
-                            }
-                            if (storeOpensSettings) AppNav.openSettingsDrawer();
-                          },
-                          child: SoftIconBox(
-                            icon: leadingIcon ?? Icons.storefront_rounded,
-                            color: color,
-                            size: 46,
-                          ),
+                        SoftIconBox(
+                          icon: leadingIcon ?? Icons.storefront_rounded,
+                          color: color,
+                          size: 46,
                         ),
                     ],
                   ),
