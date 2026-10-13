@@ -15,6 +15,7 @@ import '../contacts/contacts_screen.dart';
 import '../modules/customers_screen.dart';
 import '../modules/accounting_screen.dart';
 import '../orders/manual_order_screen.dart';
+import '../modules/site_status_screen.dart';
 import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -229,6 +230,7 @@ class _MoreTab extends StatelessWidget {
           _item(context, Icons.extension_rounded, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.purple, const PluginsScreen()),
           _item(context, Icons.account_balance_wallet_rounded, 'حسابداری', 'گزارش مالی و تراکنش‌ها', AppColors.cyan, const AccountingScreen()),
           _item(context, Icons.add_shopping_cart_rounded, 'سفارش دستی', 'ثبت سفارش جدید به‌صورت دستی', AppColors.blue, null, manualOrder: true),
+          _item(context, Icons.monitor_heart_outlined, 'وضعیت سایت', 'سلامت وردپرس، PHP، SSL و ...', AppColors.green, const SiteStatusScreen()),
         ],
       ),
     );

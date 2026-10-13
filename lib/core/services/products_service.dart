@@ -57,7 +57,7 @@ class ProductsService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final params = <String, dynamic>{'page': _page, 'per_page': 20, 'status': 'any'};
+      final params = <String, dynamic>{'page': _page, 'per_page': 50, 'status': 'any'};
       if (_search.isNotEmpty) params['search'] = _search;
       if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
 

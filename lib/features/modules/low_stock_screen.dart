@@ -17,6 +17,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
   int threshold = 5;
   int checked = 0;
   List items = [];
+  List lowItems = [];
+  List outItems = [];
+  String tab = 'low'; // low | out | all
   String? error;
   final thCtrl = TextEditingController();
 
@@ -75,15 +78,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
         items = [];
       } else if (res.data is Map) {
         final m = res.data as Map;
-        final low = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
-        final out = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
-        if (m['items'] is List && (m['items'] as List).isNotEmpty) {
-          items = List.from(m['items'] as List);
-        } else if (m['products'] is List && (m['products'] as List).isNotEmpty) {
-          items = List.from(m['products'] as List);
-        } else {
-          items = [...low, ...out];
-        }
+        lowItems = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
+        outItems = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
+        // فقط کمبود (موجودی > 0 و <= آستانه) — ناموجود جدا
+        items = [...lowItems];
         // threshold از پاسخ low-stock عمداً نادیده گرفته می‌شود
         checked = int.tryParse('${m['checked'] ?? m['total'] ?? 0}') ?? 0;
       } else {
@@ -139,13 +137,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
       final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
       if (res.data is Map) {
         final m = res.data as Map;
-        final low = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
-        final out = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
-        if (m['items'] is List && (m['items'] as List).isNotEmpty) {
-          items = List.from(m['items'] as List);
-        } else {
-          items = [...low, ...out];
-        }
+        lowItems = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
+        outItems = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
+        items = tab == 'out' ? [...outItems] : (tab == 'all' ? [...lowItems, ...outItems] : [...lowItems]);
         checked = int.tryParse('${m['checked'] ?? m['total'] ?? 0}') ?? 0;
       }
     } catch (_) {}
@@ -154,13 +148,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lowCount = items.where((e) {
-      final m = Map<String, dynamic>.from(e as Map);
-      final st = m['stock_status']?.toString() ?? '';
-      final q = m['stock'];
-      return st != 'outofstock' && q != null && (int.tryParse('$q') ?? 0) > 0;
-    }).length;
-    final outCount = items.length - lowCount;
+    final lowCount = lowItems.length;
+    final outCount = outItems.length;
+    // نمایش بر اساس تب
+    final display = tab == 'out' ? outItems : (tab == 'all' ? [...lowItems, ...outItems] : lowItems);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -193,9 +184,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
                                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                             const SizedBox(height: 4),
                             Text(
-                              items.isEmpty
-                                  ? 'محصولی در آستانه نیست'
-                                  : '$lowCount کمبود · $outCount ناموجود',
+                              (lowCount == 0 && outCount == 0)
+                                  ? 'محصولی در آستانه یا ناموجود نیست'
+                                  : '$lowCount در آستانه · $outCount ناموجود',
                               style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                             ),
                             if (checked > 0)
@@ -255,6 +246,17 @@ class _LowStockScreenState extends State<LowStockScreen> {
               ),
             ),
           ),
+          // تب کمبود / ناموجود
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: Row(children: [
+              _tabChip('در آستانه', 'low', lowCount, AppColors.orange),
+              const SizedBox(width: 8),
+              _tabChip('ناموجود', 'out', outCount, AppColors.red),
+              const SizedBox(width: 8),
+              _tabChip('همه', 'all', lowCount + outCount, AppColors.purple),
+            ]),
+          ),
           Expanded(
             child: loading
                 ? const Center(child: MiniLoader())
@@ -269,7 +271,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                           ]),
                         ),
                       )
-                    : items.isEmpty
+                    : display.isEmpty
                         ? Center(
                             child: Text(
                               'محصولی با موجودی ≤ $threshold یافت نشد',
@@ -281,9 +283,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
                             onRefresh: _load,
                             child: ListView.builder(
                               padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-                              itemCount: items.length,
+                              itemCount: display.length,
                               itemBuilder: (ctx, i) {
-                                final m = Map<String, dynamic>.from(items[i] as Map);
+                                final m = Map<String, dynamic>.from(display[i] as Map);
                                 final name = m['name']?.toString() ?? '—';
                                 final stock = m['stock'];
                                 final st = m['stock_status']?.toString() ?? '';

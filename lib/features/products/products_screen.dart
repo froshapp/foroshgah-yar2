@@ -69,8 +69,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
         bool ok = false;
         if (cats is List) {
           for (final c in cats) {
-            final id = c is Map ? c['id'] : c;
-            if (int.tryParse('$id') == catFilter) ok = true;
+            int? id;
+            if (c is Map) {
+              id = int.tryParse('${c['id'] ?? c['term_id'] ?? ''}');
+            } else {
+              id = int.tryParse('$c');
+            }
+            if (id == catFilter) ok = true;
+          }
+        } else if (cats is Map) {
+          ok = int.tryParse('${cats['id']}') == catFilter;
+        }
+        // category_ids alternate field
+        if (!ok && p['category_ids'] is List) {
+          for (final c in p['category_ids'] as List) {
+            if (int.tryParse('$c') == catFilter) ok = true;
           }
         }
         if (!ok) return false;
@@ -185,32 +198,46 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (ok == true && mounted) {
       final auth = context.read<AuthService>();
       final svc = context.read<ProductsService>();
-      if (newImage != null) {
-        try {
-          final form = FormData.fromMap({'file': await MultipartFile.fromFile(newImage!.path, filename: newImage!.name)});
-          final media = await auth.api.dio.post('products/upload', data: form, options: Options(contentType: 'multipart/form-data'));
-          final imageId = media.data is Map ? media.data['id'] : null;
-          if (imageId != null) {
-            await auth.api.dio.put('products/$id', data: {'image_id': imageId});
-          }
-        } catch (_) {}
-      }
-      await svc.updateProduct(
-        auth,
-        id,
-        price: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
-        regularPrice: priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim(),
-        stock: manageStock ? int.tryParse(stockCtrl.text.trim()) : null,
-        status: status,
-      );
-      if (saleCtrl.text.trim().isNotEmpty) {
-        try {
-          await auth.api.dio.put('products/$id', data: {'sale_price': saleCtrl.text.trim(), 'regular_price': priceCtrl.text.trim()});
-        } catch (_) {}
+      bool saved = false;
+      try {
+        if (newImage != null) {
+          try {
+            final form = FormData.fromMap({'file': await MultipartFile.fromFile(newImage!.path, filename: newImage!.name)});
+            final media = await auth.api.dio.post('products/upload', data: form, options: Options(contentType: 'multipart/form-data'));
+            final imageId = media.data is Map ? (media.data['id'] ?? media.data['attachment_id']) : null;
+            if (imageId != null) {
+              await auth.api.dio.put('products/$id', data: {'image_id': imageId});
+            }
+          } catch (_) {}
+        }
+        final body = <String, dynamic>{
+          'regular_price': priceCtrl.text.trim(),
+          'price': priceCtrl.text.trim(),
+          'status': status,
+        };
+        if (saleCtrl.text.trim().isNotEmpty) {
+          body['sale_price'] = saleCtrl.text.trim();
+        } else {
+          body['sale_price'] = '';
+        }
+        final stockVal = int.tryParse(stockCtrl.text.trim());
+        if (stockVal != null) {
+          body['stock_quantity'] = stockVal;
+          body['manage_stock'] = true;
+        }
+        final res = await auth.api.dio.put('products/$id', data: body);
+        saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: const Color(0xFF7F1D1D)));
+        }
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ذخیره شد'), backgroundColor: Color(0xFF152048)));
-        svc.fetchProducts(auth, refresh: true);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(saved ? 'تغییرات ذخیره شد' : 'ذخیره نشد — دوباره تلاش کنید'),
+          backgroundColor: saved ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
+        ));
+        await svc.fetchProducts(auth, refresh: true);
       }
     }
     priceCtrl.dispose();
@@ -432,6 +459,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     value: catFilter,
                     isExpanded: true,
                     dropdownColor: AppColors.card,
+                    menuMaxHeight: 220,
                     hint: const Text('دسته‌بندی', style: TextStyle(color: AppColors.textMute, fontSize: 13)),
                     icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute),
                     items: [
@@ -447,6 +475,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ],
                     onChanged: (v) {
                       setState(() => catFilter = v);
+                      // فیلتر سمت کلاینت + درخواست سرور
                       svc.fetchProducts(auth, refresh: true, categoryId: v ?? 0);
                     },
                   ),

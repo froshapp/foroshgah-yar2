@@ -43,12 +43,14 @@ Widget letterAvatar(String letter, Color c, double size) {
 
 Widget avatarWidget(Map m, {double size = 40}) {
   final url = m['avatar']?.toString() ?? '';
-  final name = m['name']?.toString() ?? '?';
-  final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
-  final c = avatarColor(m['id']);
-  // اگر آواتار واقعی (نه گراواتار پیش‌فرض خالی) باشد نشان بده
-  final isDefaultGravatar = url.contains('d=mm') || url.contains('d=mp') || url.contains('d=blank');
-  if (url.isNotEmpty && url.startsWith('http') && !isDefaultGravatar) {
+  final name = (m['name'] ?? m['display_name'] ?? m['billing_name'] ?? '?').toString();
+  final letter = name.trim().isNotEmpty ? name.trim().substring(0, 1) : '?';
+  final c = avatarColor(m['id'] ?? m['customer_id'] ?? name.hashCode);
+  // گراواتار پیش‌فرض یا لینک خراب → حرف رنگی
+  final lower = url.toLowerCase();
+  final isDefaultGravatar = lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank') ||
+      lower.contains('d=retro') || lower.contains('d=identicon') || lower.contains('gravatar.com/avatar/') && !lower.contains('&d=');
+  if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://')) && !isDefaultGravatar) {
     return ClipOval(
       child: Image.network(
         url,
@@ -56,6 +58,10 @@ Widget avatarWidget(Map m, {double size = 40}) {
         height: size,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
+        loadingBuilder: (ctx, child, prog) {
+          if (prog == null) return child;
+          return letterAvatar(letter, c, size);
+        },
       ),
     );
   }

@@ -66,37 +66,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _navItem(Icons.campaign_outlined, 'اطلاعیه‌ها', () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
                   }),
-                  _navItem(Icons.notifications_outlined, 'اعلان‌ها', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
-                  }),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextButton.icon(
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: AppColors.card,
-                      title: const Text('خروج', style: TextStyle(color: Colors.white)),
-                      content: const Text('از حساب خارج می‌شوید؟', style: TextStyle(color: AppColors.textDim)),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: AppColors.red))),
-                      ],
-                    ),
-                  );
-                  if (ok == true && context.mounted) {
-                    Navigator.pop(context);
-                    await context.read<AuthService>().logout(clearToken: false);
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded, color: AppColors.red),
-                label: const Text('خروج', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700)),
-              ),
-            ),
+
           ],
         ),
       );
@@ -878,6 +851,63 @@ class _InvoiceSettingsPageState extends State<InvoiceSettingsPage> {
 }
 
 
+
+Future<void> _editProfile(BuildContext context) async {
+  final auth = context.read<AuthService>();
+  final user = auth.user ?? {};
+  final nameCtrl = TextEditingController(text: user['display_name']?.toString() ?? '');
+  final emailCtrl = TextEditingController(text: user['email']?.toString() ?? '');
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.card,
+      title: const Text('ویرایش پروفایل', style: TextStyle(color: Colors.white)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: nameCtrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            labelText: 'نام نمایشی',
+            labelStyle: TextStyle(color: AppColors.textDim),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1E2A55))),
+          ),
+        ),
+        TextField(
+          controller: emailCtrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            labelText: 'ایمیل',
+            labelStyle: TextStyle(color: AppColors.textDim),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1E2A55))),
+          ),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  try {
+    final res = await auth.api.dio.post('profile', data: {
+      'display_name': nameCtrl.text.trim(),
+      'email': emailCtrl.text.trim(),
+    });
+    if (res.data is Map && res.data['success'] == true) {
+      final u = res.data['user'];
+      if (u is Map) {
+        await auth.updateUserLocal(Map<String, dynamic>.from(u));
+      }
+      if (context.mounted) showOk(context, 'پروفایل ذخیره شد');
+    } else {
+      if (context.mounted) showErr(context, 'ذخیره نشد — از پنل وردپرس هم می‌توانید ویرایش کنید');
+    }
+  } catch (e) {
+    if (context.mounted) showErr(context, 'خطا: $e');
+  }
+}
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -919,23 +949,32 @@ class ProfilePage extends StatelessWidget {
                 borderColor: AppColors.purple,
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
                 child: Column(children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7047F5), Color(0xFF2868FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  Builder(builder: (_) {
+                    final avatar = user['avatar']?.toString() ?? '';
+                    final isDefault = avatar.contains('d=mm') || avatar.contains('d=mp') || avatar.contains('d=blank') || avatar.contains('gravatar.com/avatar') && avatar.contains('d=');
+                    final showImg = avatar.startsWith('http') && avatar.isNotEmpty && !isDefault;
+                    return Container(
+                      width: 88,
+                      height: 88,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7047F5), Color(0xFF2868FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6)),
-                      ],
-                    ),
-                    child: Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
-                  ),
+                      clipBehavior: Clip.antiAlias,
+                      child: showImg
+                          ? Image.network(avatar, width: 88, height: 88, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)))
+                          : Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+                    );
+                  }),
                   const SizedBox(height: 14),
                   Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
@@ -953,7 +992,7 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _menu(context, Icons.person_outline_rounded, 'ویرایش پروفایل', AppColors.purple, () {
-                showOk(context, 'از پنل وردپرس ویرایش کنید');
+                _editProfile(context);
               }),
               _menu(context, Icons.lock_outline_rounded, 'تغییر رمز عبور', AppColors.blue, () {
                 showOk(context, 'از پنل وردپرس رمز را تغییر دهید');

@@ -56,10 +56,12 @@ class AuthService extends ChangeNotifier {
       // بازگردانی اطلاعات ذخیره‌شده
       final savedName = prefs.getString('fy_user_name') ?? 'مدیر';
       final savedEmail = prefs.getString('fy_user_email') ?? '';
+      final savedAvatar = prefs.getString('fy_user_avatar') ?? '';
       final savedSiteName = prefs.getString('fy_site_name') ?? '';
       _user = {
         'display_name': savedName,
         'email': savedEmail,
+        'avatar': savedAvatar,
       };
       if (savedSiteName.isNotEmpty) {
         _site = {
@@ -96,6 +98,9 @@ class AuthService extends ChangeNotifier {
           }
           if (_user?['email'] != null) {
             await prefs.setString('fy_user_email', _user!['email'].toString());
+          }
+          if (_user?['avatar'] != null) {
+            await prefs.setString('fy_user_avatar', _user!['avatar'].toString());
           }
         } else if (res.statusCode == 401) {
           // فقط در صورت ۴۰۱ واقعی خارج شو
@@ -160,6 +165,9 @@ class AuthService extends ChangeNotifier {
         if (_user?['email'] != null) {
           await prefs.setString('fy_user_email', _user!['email'].toString());
         }
+        if (_user?['avatar'] != null) {
+          await prefs.setString('fy_user_avatar', _user!['avatar'].toString());
+        }
         if (_site?['name'] != null) {
           await prefs.setString('fy_site_name', _site!['name'].toString());
         }
@@ -184,6 +192,33 @@ class AuthService extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return false;
+  }
+
+  Future<void> updateLocalUser(Map<String, dynamic> u) async {
+    _user = {...?_user, ...u};
+    final prefs = await SharedPreferences.getInstance();
+    if (_user?['display_name'] != null) {
+      await prefs.setString('fy_user_name', _user!['display_name'].toString());
+    }
+    if (_user?['email'] != null) {
+      await prefs.setString('fy_user_email', _user!['email'].toString());
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateUserLocal(Map<String, dynamic> u) async {
+    _user = {...?_user, ...u};
+    final prefs = await SharedPreferences.getInstance();
+    if (_user?['display_name'] != null) {
+      await prefs.setString('fy_user_name', _user!['display_name'].toString());
+    }
+    if (_user?['email'] != null) {
+      await prefs.setString('fy_user_email', _user!['email'].toString());
+    }
+    if (_user?['avatar'] != null) {
+      await prefs.setString('fy_user_avatar', _user!['avatar'].toString());
+    }
+    notifyListeners();
   }
 
   Future<void> logout({bool clearToken = true}) async {

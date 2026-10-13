@@ -58,35 +58,6 @@ class _AccountingScreenState extends State<AccountingScreen> {
     final income = data['total_income'] ?? data['income'] ?? data['total_sales'] ?? 0;
     final expense = data['total_expense'] ?? data['expense'] ?? data['costs'] ?? 0;
     final net = data['net'] ?? ((double.tryParse('$income') ?? 0) - (double.tryParse('$expense') ?? 0));
-    final rawRecent = _recent;
-    // گروه‌بندی بر اساس شماره سفارش
-    final Map<String, Map<String, dynamic>> grouped = {};
-    for (final e in rawRecent) {
-      final m = Map<String, dynamic>.from(e as Map);
-      final key = '${m['order_number'] ?? m['id'] ?? ''}';
-      if (key.isEmpty) continue;
-      final total = double.tryParse('${m['total'] ?? m['amount'] ?? 0}') ?? 0;
-      final st = (m['status']?.toString() ?? '').toLowerCase();
-      final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('fail');
-      if (!grouped.containsKey(key)) {
-        grouped[key] = {
-          'order_number': key,
-          'total': 0.0,
-          'label': m['label']?.toString() ?? m['detail']?.toString() ?? 'سفارش',
-          'date': m['date']?.toString() ?? m['created']?.toString() ?? '',
-          'cancelled': isCancel,
-          'status': st,
-        };
-      }
-      grouped[key]!['total'] = (grouped[key]!['total'] as double) + total;
-      if (isCancel) grouped[key]!['cancelled'] = true;
-    }
-    final recent = grouped.values.toList();
-    double sumRecent = 0;
-    for (final m in recent) {
-      sumRecent += (m['total'] as double?) ?? 0;
-    }
-
     double maxY = 1;
     for (final e in daily) {
       final t = double.tryParse('${(e as Map)['total'] ?? 0}') ?? 0;
@@ -173,73 +144,6 @@ class _AccountingScreenState extends State<AccountingScreen> {
                               ),
                             ]),
                           ),
-                          const SizedBox(height: 16),
-                          // آخرین تراکنش‌ها مثل موکاپ
-                          Row(children: [
-                            const Expanded(
-                              child: Text('آخرین تراکنش‌ها',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                            ),
-                            Text('جمع: ${_fmt(sumRecent)}',
-                                style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w700, fontSize: 13)),
-                          ]),
-                          const SizedBox(height: 10),
-                          if (recent.isEmpty)
-                            const NeonCard(
-                              child: Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim)),
-                                ),
-                              ),
-                            )
-                          else
-                            ...recent.take(12).map((e) {
-                              final m = Map<String, dynamic>.from(e);
-                              final label = 'سفارش #${m['order_number'] ?? ''}';
-                              final total = _fmt(m['total']);
-                              final isCancel = m['cancelled'] == true;
-                              final color = isCancel ? AppColors.red : AppColors.green;
-                              final icon = isCancel ? Icons.close_rounded : Icons.shopping_bag_outlined;
-                              final orderNo = m['order_number'] ?? '';
-                              final date = m['date']?.toString() ?? '';
-
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: NeonCard(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  child: Row(children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: color.withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(icon, color: color, size: 18),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(label,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                        if (orderNo.toString().isNotEmpty || date.isNotEmpty)
-                                          Text(
-                                            [if (orderNo.toString().isNotEmpty) 'سفارش $orderNo', if (date.isNotEmpty) date].join(' · '),
-                                            style: const TextStyle(color: AppColors.textMute, fontSize: 11),
-                                          ),
-                                      ]),
-                                    ),
-                                    Text(
-                                      '${isCancel ? '' : '+'}$total',
-                                      style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13),
-                                    ),
-                                  ]),
-                                ),
-                              );
-                            }),
                         ],
                       ),
                     ),
