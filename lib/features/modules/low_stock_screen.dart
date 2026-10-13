@@ -15,7 +15,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
   bool loading = true;
   bool savingTh = false;
   int threshold = 5;
+  int checked = 0;
   List items = [];
+  String? error;
   final thCtrl = TextEditingController();
 
   @override
@@ -31,9 +33,14 @@ class _LowStockScreenState extends State<LowStockScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+      error = null;
+    });
     final auth = context.read<AuthService>();
     final prefs = await SharedPreferences.getInstance();
+
+    // ۱) آستانه از سرور
     try {
       final st = await auth.api.dio.get('settings/threshold');
       if (st.data is Map && st.data['threshold'] != null) {
@@ -44,26 +51,51 @@ class _LowStockScreenState extends State<LowStockScreen> {
       threshold = prefs.getInt('stock_threshold') ?? threshold;
     }
     thCtrl.text = '$threshold';
+
+    // ۲) لیست کمبود/ناموجود
     try {
-      final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
-      if (res.data is Map) {
+      final res = await auth.api.dio.get('low-stock', queryParameters: {
+        'threshold': threshold,
+      });
+      if (res.statusCode == 401) {
+        error = 'نشست منقضی شده — دوباره وارد شوید';
+        items = [];
+      } else if (res.data is Map) {
         final m = res.data as Map;
-        items = m['items'] is List
-            ? m['items'] as List
-            : (m['products'] is List ? m['products'] as List : []);
+        final low = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
+        final out = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
+        if (m['items'] is List && (m['items'] as List).isNotEmpty) {
+          items = List.from(m['items'] as List);
+        } else if (m['products'] is List && (m['products'] as List).isNotEmpty) {
+          items = List.from(m['products'] as List);
+        } else {
+          items = [...low, ...out];
+        }
         if (m['threshold'] != null) {
           final st = int.tryParse('${m['threshold']}');
-          if (st != null) threshold = st;
+          if (st != null) {
+            threshold = st;
+            thCtrl.text = '$st';
+          }
         }
+        checked = int.tryParse('${m['checked'] ?? m['total'] ?? 0}') ?? 0;
+      } else {
+        error = 'پاسخ نامعتبر از سرور';
+        items = [];
       }
-    } catch (_) {
+    } catch (e) {
+      error = e.toString();
       items = [];
     }
     if (mounted) setState(() => loading = false);
   }
 
   Future<void> _saveThreshold() async {
-    final th = int.tryParse(thCtrl.text.trim()) ?? threshold;
+    final th = int.tryParse(thCtrl.text.trim());
+    if (th == null || th < 0) {
+      showErr(context, 'عدد معتبر وارد کنید');
+      return;
+    }
     setState(() => savingTh = true);
     try {
       final res = await context.read<AuthService>().api.dio.post(
@@ -72,7 +104,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
       );
       final code = res.statusCode ?? 0;
       if (code >= 400) {
-        if (mounted) showErr(context, 'ذخیره نشد');
+        if (mounted) showErr(context, 'ذخیره نشد ($code)');
         if (mounted) setState(() => savingTh = false);
         return;
       }
@@ -84,7 +116,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
       await prefs.setInt('stock_threshold', saved);
       threshold = saved;
       thCtrl.text = '$saved';
-      if (mounted) showOk(context, 'ذخیره شد');
+      if (mounted) showOk(context, 'آستانه $saved ذخیره شد');
       await _load();
     } catch (e) {
       if (mounted) showErr(context, '$e');
@@ -94,6 +126,14 @@ class _LowStockScreenState extends State<LowStockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lowCount = items.where((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      final st = m['stock_status']?.toString() ?? '';
+      final q = m['stock'];
+      return st != 'outofstock' && q != null && (int.tryParse('$q') ?? 0) > 0;
+    }).length;
+    final outCount = items.length - lowCount;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(
@@ -106,7 +146,6 @@ class _LowStockScreenState extends State<LowStockScreen> {
             leadingColor: AppColors.blue,
             onRefresh: _load,
           ),
-          // کارت وضعیت / آستانه
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
             child: NeonCard(
@@ -126,16 +165,21 @@ class _LowStockScreenState extends State<LowStockScreen> {
                                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                             const SizedBox(height: 4),
                             Text(
-                              '${items.length} محصول در آستانه موجودی',
+                              items.isEmpty
+                                  ? 'محصولی در آستانه نیست'
+                                  : '$lowCount کمبود · $outCount ناموجود',
                               style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                             ),
+                            if (checked > 0)
+                              Text('بررسی‌شده: $checked محصول',
+                                  style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  const Text('آستانه هشدار', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                  const Text('آستانه هشدار (موجودی ≤ این عدد)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -171,7 +215,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: savingTh
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Text('ذخیره'),
                       ),
                     ],
@@ -183,68 +230,93 @@ class _LowStockScreenState extends State<LowStockScreen> {
           Expanded(
             child: loading
                 ? const Center(child: MiniLoader())
-                : items.isEmpty
-                    ? const Center(child: Text('محصولی در آستانه نیست', style: TextStyle(color: AppColors.textDim)))
-                    : RefreshIndicator(
-                        color: AppColors.purple,
-                        onRefresh: _load,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-                          itemCount: items.length,
-                          itemBuilder: (ctx, i) {
-                            final m = Map<String, dynamic>.from(items[i] as Map);
-                            final name = m['name']?.toString() ?? '—';
-                            final stock = m['stock'] ?? m['stock_quantity'] ?? 0;
-                            final img = m['image']?.toString() ?? '';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: NeonCard(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: img.isNotEmpty
-                                          ? Image.network(img, width: 56, height: 56, fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => _ph())
-                                          : _ph(),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(name,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const SizedBox(height: 6),
-                                          Text('موجودی: $stock عدد',
-                                              style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
-                                          const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.red.withOpacity(0.15),
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(color: AppColors.red.withOpacity(0.35)),
-                                            ),
-                                            child: const Text('در آستانه',
-                                                style: TextStyle(
-                                                    color: AppColors.red, fontSize: 10, fontWeight: FontWeight.w700)),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const Icon(Icons.chevron_left, color: AppColors.textMute),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                : error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.red)),
+                            const SizedBox(height: 12),
+                            ElevatedButton(onPressed: _load, child: const Text('تلاش مجدد')),
+                          ]),
                         ),
-                      ),
+                      )
+                    : items.isEmpty
+                        ? Center(
+                            child: Text(
+                              'محصولی با موجودی ≤ $threshold یافت نشد',
+                              style: const TextStyle(color: AppColors.textDim),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: AppColors.purple,
+                            onRefresh: _load,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                              itemCount: items.length,
+                              itemBuilder: (ctx, i) {
+                                final m = Map<String, dynamic>.from(items[i] as Map);
+                                final name = m['name']?.toString() ?? '—';
+                                final stock = m['stock'];
+                                final st = m['stock_status']?.toString() ?? '';
+                                final isOut = st == 'outofstock' || (stock != null && (int.tryParse('$stock') ?? 1) <= 0);
+                                final img = m['image']?.toString() ?? '';
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: NeonCard(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: img.isNotEmpty
+                                              ? Image.network(img, width: 56, height: 56, fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => _ph())
+                                              : _ph(),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                      color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                stock == null ? 'موجودی: نامشخص' : 'موجودی: $stock عدد',
+                                                style: const TextStyle(color: AppColors.textDim, fontSize: 12),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                      color: (isOut ? AppColors.red : AppColors.orange).withOpacity(0.35)),
+                                                ),
+                                                child: Text(
+                                                  isOut ? 'ناموجود' : 'در آستانه',
+                                                  style: TextStyle(
+                                                    color: isOut ? AppColors.red : AppColors.orange,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
           ),
         ],
       ),

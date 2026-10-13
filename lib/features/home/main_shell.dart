@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/services/dashboard_service.dart';
+import 'package:provider/provider.dart';
 import '../../core/nav.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../orders/orders_screen.dart';
@@ -17,7 +20,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => MainShellState();
 }
 
-class MainShellState extends State<MainShell> {
+class MainShellState extends State<MainShell> with WidgetsBindingObserver {
   /// 0 پیشخوان | 1 سفارشات | 2 محصولات | 3 ماژول‌ها | 4 بیشتر
   int index = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -28,15 +31,37 @@ class MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AppNav.goToTab = goTo;
     AppNav.scaffoldKey = _scaffoldKey;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (AppNav.goToTab == goTo) AppNav.goToTab = null;
     if (AppNav.scaffoldKey == _scaffoldKey) AppNav.scaffoldKey = null;
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // بازگشت به اپ: همیشه پیشخوان + رفرش نشست و آمار
+      if (mounted) {
+        setState(() => index = 0);
+        // بستن صفحات رویی (جزئیات و ...)
+        final nav = Navigator.of(context);
+        while (nav.canPop()) {
+          nav.pop();
+        }
+        try {
+          final auth = context.read<AuthService>();
+          auth.revalidateSession();
+          context.read<DashboardService>().fetchStats(auth);
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> openAddProduct() async {

@@ -717,7 +717,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                               final active = m['active'] != false;
                               final title = m['title']?.toString() ?? '';
                               final body = m['body']?.toString() ?? '';
-                              final start = m['start']?.toString() ?? m['created']?.toString() ?? '';
+                              final startRaw = m['start']?.toString() ?? m['created']?.toString() ?? '';
+                              final start = startRaw.isEmpty ? '' : formatAnyDate(startRaw);
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
@@ -924,12 +925,12 @@ class ProfilePage extends StatelessWidget {
         ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+            padding: const EdgeInsets.fromLTRB(14, 20, 14, 24),
             children: [
               // کارت پروفایل مثل موکاپ
               NeonCard(
                 borderColor: AppColors.purple,
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
                 child: Column(children: [
                   Container(
                     width: 88,
