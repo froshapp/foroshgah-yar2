@@ -1,12 +1,10 @@
-import '../../core/utils/shamsi_picker.dart'; // formatJalali, pickShamsiDate, formatAnyDate
+import '../../core/utils/shamsi_picker.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/nav.dart';
-import '../modules/customers_screen.dart';
 import '../../core/utils/snack.dart';
 import 'plugins_screen.dart';
 
@@ -21,80 +19,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    final siteName = auth.site?['name']?.toString() ?? 'فروشگاه';
-    final email = auth.user?['email']?.toString() ?? auth.user?['display_name']?.toString() ?? '';
-
-    if (widget.asDrawer) {
-      return SafeArea(
-        child: Column(
-          children: [
-            // هدر سایدبار مثل موکاپ
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(children: [
-                SoftIconBox(icon: Icons.storefront_rounded, color: AppColors.purple, size: 48),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(siteName, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(email, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                  ]),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textMute),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ]),
-            ),
-            const Divider(color: Color(0xFF1E2A55), height: 1),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                children: [
-                  _navItem(Icons.person_outline, 'پروفایل', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-                  }),
-                  _navItem(Icons.palette_outlined, 'رنگ وضعیت', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
-                  }),
-                  _navItem(Icons.receipt_long_outlined, 'فاکتور', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
-                  }),
-                  _navItem(Icons.campaign_outlined, 'اطلاعیه‌ها', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
-                  }),
-                ],
-              ),
-            ),
-
-          ],
-        ),
-      );
-    }
-
-    // حالت صفحه تنظیمات کامل
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: ListView(
+    return SafeArea(
+      child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           GlassHeader(
             title: 'تنظیمات',
-            subtitle: siteName,
-            showBell: false,
-            showSettingsGear: false,
-            leadingIcon: Icons.settings_rounded,
-            leadingColor: AppColors.blue,
+            subtitle: (auth.site?['name']?.toString().isNotEmpty == true)
+                ? auth.site!['name'].toString()
+                : (auth.user?['display_name']?.toString() ?? 'فروشگاه‌یار'),
+            showBell: !widget.asDrawer,
+            storeOpensSettings: false,
+            actions: widget.asDrawer
+                ? [IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context))]
+                : null,
           ),
           const SizedBox(height: 12),
-          _item(Icons.person_outline_rounded, 'پروفایل کاربری', 'نام مدیر، ایمیل، نقش و فروشگاه', AppColors.purpleGlow, () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-          }),
           _item(Icons.palette_outlined, 'رنگ وضعیت سفارشات', 'شخصی‌سازی رنگ‌ها', AppColors.orange, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
+          }),
+          _item(Icons.inventory_2_outlined, 'آستانه موجودی کم', 'اعلان وقتی موجودی به این عدد برسد', AppColors.cyan, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const StockThresholdPage()));
           }),
           _item(Icons.receipt_long_outlined, 'تنظیمات فاکتور', 'آدرس، تماس، اینستاگرام، واتساپ، لوگو', AppColors.cyan, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
@@ -105,18 +50,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _item(Icons.notifications_active_outlined, 'اعلان‌های اپ', 'زنگ و هشدار داخل اپ', AppColors.blue, () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
           }),
-          _item(Icons.info_outline, 'درباره فروشگاه‌یار', 'نسخه ۱.۷', AppColors.textDim, () {
+          _item(Icons.info_outline, 'درباره فروشگاه‌یار', 'نسخه ۱.۵', AppColors.textDim, () {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: AppColors.card,
                 title: const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white)),
-                content: const Text('نسخه ۱.۷\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
+                content: const Text('نسخه ۱.۵\ninfo@apadanasleep.ir', style: TextStyle(color: AppColors.textDim)),
                 actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
               ),
             );
           }),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ElevatedButton(
@@ -147,32 +92,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String title, VoidCallback onTap, {bool selected = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: selected ? AppColors.purple.withOpacity(0.25) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(children: [
-              Icon(icon, color: selected ? AppColors.purpleGlow : AppColors.textDim, size: 22),
-              const SizedBox(width: 12),
-              Text(title, style: TextStyle(
-                color: selected ? Colors.white : AppColors.textDim,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 14,
-              )),
-            ]),
-          ),
-        ),
       ),
     );
   }
@@ -301,8 +220,6 @@ class StockThresholdPage extends StatefulWidget {
 class _StockThresholdPageState extends State<StockThresholdPage> {
   final c = TextEditingController(text: '5');
   bool notify = true;
-  bool loading = true;
-  bool saving = false;
 
   @override
   void initState() {
@@ -310,118 +227,75 @@ class _StockThresholdPageState extends State<StockThresholdPage> {
     _load();
   }
 
-  @override
-  void dispose() {
-    c.dispose();
-    super.dispose();
-  }
-
   Future<void> _load() async {
-    setState(() => loading = true);
-    final prefs = await SharedPreferences.getInstance();
-    var th = prefs.getInt('stock_threshold') ?? 5;
-    notify = prefs.getBool('stock_notify') ?? true;
-    try {
-      final res = await context.read<AuthService>().api.dio.get('settings/threshold');
-      if (res.data is Map) {
-        final v = int.tryParse('${res.data['threshold'] ?? th}');
-        if (v != null) th = v;
-        if (res.data['enabled'] != null) notify = res.data['enabled'] == true;
-      }
-    } catch (_) {}
-    c.text = '$th';
-    if (mounted) setState(() => loading = false);
+    final p = await SharedPreferences.getInstance();
+    c.text = (p.getInt('stock_threshold') ?? 5).toString();
+    notify = p.getBool('stock_notify') ?? true;
+    setState(() {});
   }
 
   Future<void> _save() async {
-    setState(() => saving = true);
-    final th = int.tryParse(c.text.trim()) ?? 5;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('stock_threshold', th);
-    await prefs.setBool('stock_notify', notify);
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('stock_threshold', int.tryParse(c.text) ?? 5);
     try {
       await context.read<AuthService>().api.dio.post('settings/threshold', data: {
-        'threshold': th,
-        'enabled': notify,
+        'threshold': int.tryParse(c.text) ?? 5,
+        'enabled': true,
       });
-      if (mounted) {
-        showOk(context, 'ذخیره شد');
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) showErr(context, e.toString());
+    } catch (_) {}
+    await p.setBool('stock_notify', notify);
+    if (mounted) {
+      showOk(context, 'ذخیره شد');
+      Navigator.pop(context);
     }
-    if (mounted) setState(() => saving = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Column(children: [
-        GlassHeader(
-          title: 'آستانه موجودی کم',
-          subtitle: 'تنظیم اعلان کمبود موجودی',
-          leadingIcon: Icons.inventory_2_rounded,
-          leadingColor: AppColors.cyan,
-          storeOpensSettings: false,
-          showBell: false,
-        ),
-        Expanded(
-          child: loading
-              ? const Center(child: MiniLoader())
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  children: [
-                    NeonCard(
-                      borderColor: AppColors.cyan.withOpacity(0.35),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text(
-                          'اگر موجودی محصول به این عدد یا کمتر برسد، در یادآوری و اعلان‌های اپ نمایش داده می‌شود.',
-                          style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.45),
-                        ),
-                        const SizedBox(height: 14),
-                        const Text('تعداد آستانه', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: c,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                          decoration: InputDecoration(
-                            hintText: 'مثلاً 5',
-                            hintStyle: const TextStyle(color: AppColors.textMute),
-                            filled: true,
-                            fillColor: AppColors.surface,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('فعال بودن اعلان کمبود', style: TextStyle(color: Colors.white, fontSize: 13)),
-                          subtitle: const Text('در زنگوله و صفحه یادآوری', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                          value: notify,
-                          activeColor: AppColors.purple,
-                          onChanged: (v) => setState(() => notify = v),
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: saving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.purple,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(52),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: saving ? const MiniLoader(size: 22) : const Text('ذخیره آستانه', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ],
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('آستانه موجودی کم', style: TextStyle(fontSize: 16))),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          NeonCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('اگر موجودی محصول به این عدد یا کمتر برسد، در بخش یادآوری نمایش داده می‌شود.', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: c,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'تعداد آستانه',
+                  labelStyle: const TextStyle(color: AppColors.textDim),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
-        ),
-      ]),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('نمایش هشدار در اپ', style: TextStyle(color: Colors.white, fontSize: 13)),
+                value: notify,
+                activeColor: AppColors.purple,
+                onChanged: (v) => setState(() => notify = v),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.purple,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Text('ذخیره'),
+          ),
+        ]),
+      ),
     );
   }
 }
@@ -456,40 +330,29 @@ class _AppNotifyPageState extends State<AppNotifyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Column(children: [
-        const GlassHeader(
-          showSettingsGear: false,
-          showBell: false,
-          title: 'تنظیمات اعلان‌ها',
-          subtitle: 'زنگ و هشدار داخل اپ',
-          leadingIcon: Icons.notifications_active_rounded,
-          leadingColor: AppColors.blue,
+      appBar: AppBar(backgroundColor: AppColors.bg, title: const Text('اعلان‌های اپ', style: TextStyle(fontSize: 16))),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: NeonCard(
+          child: Column(children: [
+            SwitchListTile(
+              title: const Text('اعلان سفارش جدید', style: TextStyle(color: Colors.white, fontSize: 13)),
+              value: orderN,
+              activeColor: AppColors.purple,
+              onChanged: (v) { setState(() => orderN = v); _set('notify_orders', v); },
+            ),
+            SwitchListTile(
+              title: const Text('اعلان موجودی کم', style: TextStyle(color: Colors.white, fontSize: 13)),
+              value: stockN,
+              activeColor: AppColors.purple,
+              onChanged: (v) { setState(() => stockN = v); _set('notify_stock', v); },
+            ),
+          ]),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: NeonCard(
-            child: Column(children: [
-              SwitchListTile(
-                title: const Text('اعلان سفارش جدید', style: TextStyle(color: Colors.white, fontSize: 13)),
-                value: orderN,
-                activeColor: AppColors.purple,
-                onChanged: (v) { setState(() => orderN = v); _set('notify_orders', v); },
-              ),
-              const Divider(color: Color(0xFF1E2A55), height: 1),
-              SwitchListTile(
-                title: const Text('اعلان موجودی کم', style: TextStyle(color: Colors.white, fontSize: 13)),
-                value: stockN,
-                activeColor: AppColors.purple,
-                onChanged: (v) { setState(() => stockN = v); _set('notify_stock', v); },
-              ),
-            ]),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 }
-
 
 class AnnouncementsPage extends StatefulWidget {
   const AnnouncementsPage({super.key});
@@ -539,14 +402,10 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Future<void> _create() async {
     final title = TextEditingController();
     final body = TextEditingController();
-    final startC = TextEditingController();
-    final endC = TextEditingController();
-    String place = 'app';
-    final ok = await showModalBottomSheet<bool>(
+    final start = TextEditingController();
+    final end = TextEditingController();
+    final ok = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
@@ -557,117 +416,90 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 setLocal(() {});
               }
             }
-            InputDecoration dec(String h, {Widget? suffix}) => InputDecoration(
-              hintText: h,
-              hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
-              filled: true,
-              fillColor: const Color(0xFF0B1230),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              suffixIcon: suffix,
-            );
-            return Padding(
-              padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
-              child: SingleChildScrollView(
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textMute, borderRadius: BorderRadius.circular(4)))),
-                  const SizedBox(height: 14),
-                  const Text('اطلاعیه جدید', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: dec('عنوان اطلاعیه')),
-                  const SizedBox(height: 10),
-                  TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 4, decoration: dec('متن پیام')),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: TextField(controller: startC, readOnly: true, onTap: () => pick(startC), style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: dec('شروع', suffix: const Icon(Icons.event, color: AppColors.textMute, size: 18)))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: endC, readOnly: true, onTap: () => pick(endC), style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: dec('پایان', suffix: const Icon(Icons.event, color: AppColors.textMute, size: 18)))),
-                  ]),
-                  const SizedBox(height: 12),
-                  const Text('محل نمایش', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    ChoiceChip(label: const Text('اپ'), selected: place == 'app', onSelected: (_) => setLocal(() => place = 'app'),
-                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'app' ? Colors.white : AppColors.textDim)),
-                    const SizedBox(width: 8),
-                    ChoiceChip(label: const Text('سایت'), selected: place == 'site', onSelected: (_) => setLocal(() => place = 'site'),
-                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'site' ? Colors.white : AppColors.textDim)),
-                    const SizedBox(width: 8),
-                    ChoiceChip(label: const Text('هر دو'), selected: place == 'both', onSelected: (_) => setLocal(() => place = 'both'),
-                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'both' ? Colors.white : AppColors.textDim)),
-                  ]),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purple, foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text('ثبت اطلاعیه'),
+            return AlertDialog(
+              backgroundColor: AppColors.card,
+              title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
+              content: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
+                  TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('تاریخ شروع (شمسی)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                    subtitle: Text(start.text.isEmpty ? 'انتخاب' : start.text, style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.calendar_month, color: AppColors.purpleGlow),
+                    onTap: () => pick(start),
                   ),
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف', style: TextStyle(color: AppColors.textMute))),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('تاریخ پایان (شمسی، اختیاری)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                    subtitle: Text(end.text.isEmpty ? 'نامحدود' : end.text, style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.calendar_month, color: AppColors.purpleGlow),
+                    onTap: () => pick(end),
+                  ),
                 ]),
               ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره')),
+              ],
             );
           },
         );
       },
     );
-    if (ok == true && title.text.trim().isNotEmpty) {
+    if (ok == true) {
       try {
-        await context.read<AuthService>().api.dio.post('announcements', data: {
+        final res = await context.read<AuthService>().api.dio.post('announcements', data: {
           'title': title.text.trim(),
           'body': body.text.trim(),
-          'start': startC.text.trim().isEmpty ? null : _normJalali(startC.text.trim()),
-          'end': endC.text.trim().isEmpty ? null : _normJalali(endC.text.trim()),
-          'place': place,
+          'places': ['app', 'profile', 'site'],
           'active': true,
+          'start': _normJalali(start.text),
+          'end': end.text.trim().isEmpty ? '' : _normJalali(end.text),
         });
-        if (mounted) showOk(context, 'ثبت شد');
-        await _load();
+        if (res.data is Map && res.data['success'] == true) {
+          if (mounted) showOk(context, 'ذخیره شد');
+          await _load();
+        }
       } catch (e) {
-        if (mounted) showErr(context, '$e');
+        if (mounted) showErr(context, e.toString());
       }
     }
-    title.dispose(); body.dispose(); startC.dispose(); endC.dispose();
   }
 
   Future<void> _toggle(Map m) async {
     final id = m['id'];
-    final active = m['active'] != false;
+    // optimistic
+    setState(() {
+      items = items.map((e) {
+        final mm = Map<String, dynamic>.from(e as Map);
+        if (mm['id'] == id) mm['active'] = !(mm['active'] == true);
+        return mm;
+      }).toList();
+    });
     try {
-      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {
-        'action': active ? 'deactivate' : 'activate',
-        'id': id,
-      });
+      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'toggle', 'id': id});
       if (res.data is Map && res.data['items'] is List) {
         setState(() => items = res.data['items'] as List);
-      } else {
-        await _load();
       }
-    } catch (_) {
+    } catch (e) {
       await _load();
+      if (mounted) showErr(context, 'خطا در تغییر وضعیت');
     }
   }
 
   Future<void> _delete(Map m) async {
-    final id = m['id'];
     try {
-      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {
-        'action': 'delete',
-        'id': id,
-      });
+      final res = await context.read<AuthService>().api.dio.post('announcements/action', data: {'action': 'delete', 'id': m['id']});
       if (res.data is Map && res.data['items'] is List) {
         setState(() => items = res.data['items'] as List);
       } else {
         await _load();
       }
       if (mounted) showOk(context, 'حذف شد');
-    } catch (_) {
-      await _load();
+    } catch (e) {
+      if (mounted) showErr(context, 'خطا');
     }
   }
 
@@ -677,18 +509,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
-          showSettingsGear: false,
           title: 'اطلاعیه‌ها',
-          subtitle: 'اعلان‌های مهم فروشگاه',
-          leadingIcon: Icons.campaign_rounded,
-          leadingColor: AppColors.purple,
-          onRefresh: _load,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-              onPressed: _create,
-            ),
-          ],
+          subtitle: 'نمایش در اپ و پروفایل',
+          actions: [IconButton(icon: const Icon(Icons.add, color: Colors.white70), onPressed: _create)],
         ),
         Expanded(
           child: loading
@@ -696,84 +519,41 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
               : error != null
                   ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
                   : items.isEmpty
-                      ? Center(
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            const Text('اطلاعیه‌ای نیست', style: TextStyle(color: AppColors.textDim)),
-                            const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              onPressed: _create,
-                              icon: const Icon(Icons.add),
-                              label: const Text('افزودن اطلاعیه'),
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white),
-                            ),
-                          ]),
-                        )
-                      : RefreshIndicator(
-                          color: AppColors.purple,
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-                            itemCount: items.length,
-                            itemBuilder: (ctx, i) {
-                              final m = Map<String, dynamic>.from(items[i] as Map);
-                              final active = m['active'] != false;
-                              final title = m['title']?.toString() ?? '';
-                              final body = m['body']?.toString() ?? '';
-                              final startRaw = m['start']?.toString() ?? m['created']?.toString() ?? '';
-                              final start = startRaw.isEmpty ? '' : formatAnyDate(startRaw);
-
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: NeonCard(
-                                  borderColor: active ? AppColors.purple : null,
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(children: [
-                                    SoftIconBox(
-                                      icon: Icons.campaign_rounded,
-                                      color: active ? AppColors.purple : AppColors.textMute,
-                                      size: 44,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(title, style: TextStyle(
-                                          color: active ? Colors.white : AppColors.textMute,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        )),
-                                        if (body.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(body, maxLines: 2, overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                        ],
-                                        if (start.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(start, style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
-                                        ],
-                                      ]),
-                                    ),
-                                    Column(children: [
-                                      Switch(
-                                        value: active,
-                                        activeColor: AppColors.purple,
-                                        onChanged: (_) => _toggle(m),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20),
-                                        onPressed: () => _delete(m),
-                                      ),
-                                    ]),
+                      ? const Center(child: Text('اطلاعیه‌ای نیست — با + اضافه کنید', style: TextStyle(color: AppColors.textDim)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: items.length,
+                          itemBuilder: (_, i) {
+                            final m = Map<String, dynamic>.from(items[i] as Map);
+                            final active = m['active'] == true;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: NeonCard(
+                                borderColor: active ? const Color(0xFF6EE7B7).withOpacity(0.35) : null,
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(children: [
+                                    Expanded(child: Text(m['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                                    Switch(value: active, activeColor: const Color(0xFF6EE7B7), onChanged: (_) => _toggle(m)),
+                                    IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20), onPressed: () => _delete(m)),
                                   ]),
-                                ),
-                              );
-                            },
-                          ),
+                                  if ((m['body']?.toString() ?? '').isNotEmpty)
+                                    Text(m['body'].toString(), style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'از ${m['start']?.toString().isNotEmpty == true ? m['start'] : 'همیشه'} تا ${m['end']?.toString().isNotEmpty == true ? m['end'] : 'نامحدود'}',
+                                    style: const TextStyle(color: AppColors.textMute, fontSize: 10),
+                                  ),
+                                ]),
+                              ),
+                            );
+                          },
                         ),
         ),
       ]),
     );
   }
 }
+
 
 class InvoiceSettingsPage extends StatefulWidget {
   const InvoiceSettingsPage({super.key});
@@ -887,256 +667,6 @@ class _InvoiceSettingsPageState extends State<InvoiceSettingsPage> {
             border: InputBorder.none,
           ),
         ),
-      ),
-    );
-  }
-}
-
-
-
-Future<void> _editProfile(BuildContext context) async {
-  final auth = context.read<AuthService>();
-  final user = auth.user ?? {};
-  final nameCtrl = TextEditingController(text: user['display_name']?.toString() ?? '');
-  final emailCtrl = TextEditingController(text: user['email']?.toString() ?? '');
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: AppColors.card,
-      title: const Text('ویرایش پروفایل', style: TextStyle(color: Colors.white)),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(
-          controller: nameCtrl,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            labelText: 'نام نمایشی',
-            labelStyle: TextStyle(color: AppColors.textDim),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1E2A55))),
-          ),
-        ),
-        TextField(
-          controller: emailCtrl,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            labelText: 'ایمیل',
-            labelStyle: TextStyle(color: AppColors.textDim),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1E2A55))),
-          ),
-        ),
-      ]),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
-      ],
-    ),
-  );
-  if (ok != true || !context.mounted) return;
-  try {
-    final res = await auth.api.dio.post('profile', data: {
-      'display_name': nameCtrl.text.trim(),
-      'email': emailCtrl.text.trim(),
-    });
-    if (res.data is Map && res.data['success'] == true) {
-      final u = res.data['user'];
-      if (u is Map) {
-        await auth.updateUserLocal(Map<String, dynamic>.from(u));
-      }
-      if (context.mounted) showOk(context, 'پروفایل ذخیره شد');
-    } else {
-      if (context.mounted) showErr(context, 'ذخیره نشد — از پنل وردپرس هم می‌توانید ویرایش کنید');
-    }
-  } catch (e) {
-    if (context.mounted) showErr(context, 'خطا: $e');
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
-    final user = auth.user ?? {};
-    final site = auth.site ?? {};
-    final name = user['display_name']?.toString() ?? 'مدیر';
-    final email = user['email']?.toString() ?? '—';
-    final roles = user['roles'];
-    String roleStr = 'مدیر اصلی';
-    if (roles is List && roles.isNotEmpty) {
-      final r = roles.first.toString().toLowerCase();
-      if (r.contains('admin')) roleStr = 'مدیر اصلی';
-      else roleStr = roles.map((e) => e.toString()).join('، ');
-    }
-    final siteName = site['name']?.toString() ?? '';
-    final siteUrl = site['url']?.toString() ?? '';
-    final letter = name.isNotEmpty ? name.substring(0, 1) : 'م';
-
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Column(children: [
-        const GlassHeader(
-          title: 'پروفایل',
-          subtitle: 'اطلاعات حساب کاربری شما',
-          leadingIcon: Icons.storefront_rounded,
-          leadingColor: AppColors.purple,
-          showSettingsGear: false,
-          showBell: false,
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 20, 14, 24),
-            children: [
-              // کارت پروفایل مثل موکاپ
-              NeonCard(
-                borderColor: AppColors.purple,
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
-                child: Column(children: [
-                  Builder(builder: (_) {
-                    final avatar = user['avatar']?.toString() ?? '';
-                    final isDefault = avatar.contains('d=mm') || avatar.contains('d=mp') || avatar.contains('d=blank') || avatar.contains('gravatar.com/avatar') && avatar.contains('d=');
-                    final showImg = avatar.startsWith('http') && avatar.isNotEmpty && !isDefault;
-                    return Container(
-                      width: 88,
-                      height: 88,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF7047F5), Color(0xFF2868FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6)),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: showImg
-                          ? Image.network(avatar, width: 88, height: 88, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)))
-                          : Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
-                    );
-                  }),
-                  const SizedBox(height: 14),
-                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(email, style: const TextStyle(color: AppColors.textDim, fontSize: 13)),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(roleStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 14),
-              _menu(context, Icons.person_outline_rounded, 'ویرایش پروفایل', AppColors.purple, () {
-                _editProfile(context);
-              }),
-              _menu(context, Icons.lock_outline_rounded, 'تغییر رمز عبور', AppColors.blue, () async {
-                final cur = TextEditingController();
-                final neu = TextEditingController();
-                final neu2 = TextEditingController();
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: AppColors.card,
-                    title: const Text('تغییر رمز عبور', style: TextStyle(color: Colors.white)),
-                    content: Column(mainAxisSize: MainAxisSize.min, children: [
-                      TextField(controller: cur, obscureText: true, style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'رمز فعلی', labelStyle: TextStyle(color: AppColors.textDim))),
-                      TextField(controller: neu, obscureText: true, style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'رمز جدید', labelStyle: TextStyle(color: AppColors.textDim))),
-                      TextField(controller: neu2, obscureText: true, style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(labelText: 'تکرار رمز جدید', labelStyle: TextStyle(color: AppColors.textDim))),
-                    ]),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
-                    ],
-                  ),
-                );
-                if (ok != true || !context.mounted) return;
-                if (neu.text != neu2.text) {
-                  showErr(context, 'رمز جدید و تکرار یکسان نیست');
-                  return;
-                }
-                if (neu.text.length < 6) {
-                  showErr(context, 'رمز حداقل ۶ کاراکتر');
-                  return;
-                }
-                try {
-                  final res = await context.read<AuthService>().api.dio.post('profile/password', data: {
-                    'current_password': cur.text,
-                    'new_password': neu.text,
-                  });
-                  if (res.data is Map && res.data['success'] == true) {
-                    showOk(context, 'رمز تغییر کرد');
-                  } else {
-                    showErr(context, res.data is Map ? (res.data['message']?.toString() ?? 'خطا') : 'خطا');
-                  }
-                } catch (e) {
-                  showErr(context, 'خطا: $e');
-                }
-              }),
-              _menu(context, Icons.storefront_outlined, 'اطلاعات فروشگاه', AppColors.cyan, () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: AppColors.card,
-                    title: const Text('اطلاعات فروشگاه', style: TextStyle(color: Colors.white)),
-                    content: Text('$siteName\n$siteUrl', style: const TextStyle(color: AppColors.textDim)),
-                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('باشه'))],
-                  ),
-                );
-              }),
-              _menu(context, Icons.notifications_none_rounded, 'تنظیمات اعلان‌ها', AppColors.orange, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
-              }),
-              const SizedBox(height: 8),
-              _menu(context, Icons.logout_rounded, 'خروج از حساب', AppColors.red, () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: AppColors.card,
-                    title: const Text('خروج', style: TextStyle(color: Colors.white)),
-                    content: const Text('از حساب خارج می‌شوید؟', style: TextStyle(color: AppColors.textDim)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: AppColors.red))),
-                    ],
-                  ),
-                );
-                if (ok == true && context.mounted) {
-                  await context.read<AuthService>().logout(clearToken: false);
-                }
-              }),
-            ],
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _menu(BuildContext context, IconData icon, String title, Color c, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: NeonCard(
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(children: [
-          Container(
-            width: 42, height: 42,
-            decoration: BoxDecoration(color: c.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: c, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
-          const Icon(Icons.chevron_left, color: AppColors.textMute),
-        ]),
       ),
     );
   }

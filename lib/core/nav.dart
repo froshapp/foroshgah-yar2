@@ -21,4 +21,7 @@ class AppNav {
   static void closeDrawer() {
     scaffoldKey?.currentState?.closeDrawer();
   }
+
+  static Future<void> Function(BuildContext)? openNotifications;
 }
+

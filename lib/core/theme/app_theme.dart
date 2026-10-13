@@ -1,24 +1,22 @@
 import '../nav.dart';
 import 'package:flutter/material.dart';
-import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
 class AppColors {
-  static const bg = Color(0xFF070B20);
-  static const surface = Color(0xFF0B1230);
-  static const card = Color(0xFF101B3C);
-  static const cardBorder = Color(0xFF1E2A55);
-  static const indigo = Color(0xFF18265A);
-  static const purple = Color(0xFF7047F5);
-  static const purpleGlow = Color(0xFF8B6CFF);
-  static const blue = Color(0xFF2868FF);
-  static const cyan = Color(0xFF39C6D9);
-  static const pink = Color(0xFFE879A9);
-  static const orange = Color(0xFFF5A524);
-  static const red = Color(0xFFE11D48);
+  static const bg = Color(0xFF0B0B1A);
+  static const surface = Color(0xFF141428);
+  static const card = Color(0xFF1A1A32);
+  static const cardBorder = Color(0xFF2A2A4A);
+  static const purple = Color(0xFF7B5CFF);
+  static const purpleGlow = Color(0xFF9B7BFF);
+  static const pink = Color(0xFFF472B6);
+  static const cyan = Color(0xFF2EE6A6);
+  static const orange = Color(0xFFFF9F43);
+  static const blue = Color(0xFF4C8DFF);
+  static const red = Color(0xFFFF4D6D);
   static const green = Color(0xFF10B981);
-  static const text = Color(0xFFF4F6FF);
-  static const textDim = Color(0xFF9AA9CC);
-  static const textMute = Color(0xFF6B7A9E);
+  static const text = Colors.white;
+  static const textDim = Color(0xFF9A9AB5);
+  static const textMute = Color(0xFF6B6B8A);
 }
 
 class NeonCard extends StatelessWidget {
@@ -26,43 +24,41 @@ class NeonCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? borderColor;
   final VoidCallback? onTap;
-  final double radius;
-  final bool elevated;
   const NeonCard({
     super.key,
     required this.child,
     this.padding,
     this.borderColor,
     this.onTap,
-    this.radius = 18,
-    this.elevated = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = borderColor ?? AppColors.cardBorder;
     final content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF152048), Color(0xFF101B3C), Color(0xFF0C1530)],
-        ),
-        border: Border.all(
-          color: borderColor?.withOpacity(0.35) ?? const Color(0xFF243056),
-          width: 1,
-        ),
-        boxShadow: elevated
-            ? [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 6))]
-            : null,
+        color: AppColors.card.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.7), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: (borderColor ?? AppColors.purple).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
     if (onTap == null) return content;
     return Material(
       color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(radius), child: content),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: content,
+      ),
     );
   }
 }
@@ -70,62 +66,38 @@ class NeonCard extends StatelessWidget {
 class MiniLoader extends StatelessWidget {
   final double size;
   const MiniLoader({super.key, this.size = 28});
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: const CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.purple),
-    );
-  }
-}
-
-class SoftIconBox extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final double size;
-  const SoftIconBox({super.key, required this.icon, required this.color, this.size = 44});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color, color.withOpacity(0.72)],
-        ),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+      child: const CircularProgressIndicator(
+        strokeWidth: 2.5,
+        color: AppColors.purple,
       ),
-      child: Icon(icon, color: Colors.white, size: size * 0.46),
     );
   }
 }
 
-/// هدر مرجع: فقط چرخ‌دنده منو باز می‌کند — آیکون فروشگاه تزئینی است
 class GlassHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final List<Widget>? actions;
   final bool showStoreIcon;
-  final bool showSettingsGear;
-  final bool storeOpensSettings; // سازگاری — نادیده گرفته می‌شود
+  final bool storeOpensSettings;
   final VoidCallback? onStoreTap;
-  final VoidCallback? onRefresh;
+  final VoidCallback? onRefresh; // نگه‌داشته شده برای سازگاری — نمایش داده نمی‌شود
   final bool showBell;
   final IconData? leadingIcon;
   final Color? leadingColor;
-
   const GlassHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.actions,
     this.showStoreIcon = true,
-    this.showSettingsGear = true,
-    this.storeOpensSettings = false,
+    this.storeOpensSettings = true,
     this.onStoreTap,
     this.onRefresh,
     this.showBell = true,
@@ -137,133 +109,85 @@ class GlassHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     final color = leadingColor ?? AppColors.purple;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(14, topPad > 0 ? topPad + 2 : 6, 14, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          height: 78,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [Color(0xFF3B1FA8), Color(0xFF1E3A8A), Color(0xFF0F1B4D)],
+      padding: EdgeInsets.fromLTRB(12, topPad > 0 ? topPad + 4 : 8, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4C2BC9), Color(0xFF2A1780), Color(0xFF150B3A)],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.purple.withOpacity(0.28)),
+          boxShadow: [
+            BoxShadow(color: AppColors.purple.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            // سمت راست در RTL: آیکون فروشگاه / ماژول
+            if (showStoreIcon)
+              GestureDetector(
+                onTap: () {
+                  if (onStoreTap != null) {
+                    onStoreTap!();
+                    return;
+                  }
+                  if (storeOpensSettings) AppNav.openSettingsDrawer();
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: color.withOpacity(0.35), blurRadius: 10)],
+                  ),
+                  child: Icon(leadingIcon ?? Icons.storefront_rounded, color: Colors.white, size: 22),
+                ),
+              ),
+            if (showStoreIcon) const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                  if (subtitle != null && subtitle!.isNotEmpty)
+                    Text(subtitle!, style: const TextStyle(color: Color(0xFFB8C0E0), fontSize: 11)),
+                ],
+              ),
             ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: -20,
-                top: -30,
-                child: Container(
-                  width: 130,
-                  height: 130,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      const Color(0xFF7047F5).withOpacity(0.55),
-                      Colors.transparent,
-                    ]),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 50,
-                bottom: -40,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      const Color(0xFF2868FF).withOpacity(0.4),
-                      Colors.transparent,
-                    ]),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.white.withOpacity(0.06), Colors.transparent],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      // چپ: فقط چرخ‌دنده = منو | زنگوله | رفرش
-                      if (showSettingsGear)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
-                          onPressed: () => AppNav.openSettingsDrawer(),
-                        ),
-                      if (showBell)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
-                          onPressed: () => openNotificationsPanel(context),
-                        ),
-                      if (onRefresh != null)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          icon: const Icon(Icons.refresh_rounded, color: Colors.white60, size: 18),
-                          onPressed: onRefresh,
-                        ),
-                      if (actions != null) ...actions!,
-                      // وسط عنوان
-                      Expanded(
-                        child: Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                title,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (subtitle != null && subtitle!.isNotEmpty)
-                                Text(
-                                  subtitle!,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // راست: آیکون صفحه — تزئینی (منو باز نمی‌کند)
-                      if (showStoreIcon)
-                        SoftIconBox(
-                          icon: leadingIcon ?? Icons.storefront_rounded,
-                          color: color,
-                          size: 46,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            if (actions != null) ...actions!,
+            if (showBell)
+              _hIcon(Icons.notifications_none_rounded, () {
+                AppNav.openNotifications?.call(context);
+              }),
+            if (showBell) const SizedBox(width: 6),
+            if (storeOpensSettings)
+              _hIcon(Icons.settings_outlined, () => AppNav.openSettingsDrawer()),
+          ],
         ),
       ),
     );
   }
+
+  Widget _hIcon(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.12)),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
 }
+
+

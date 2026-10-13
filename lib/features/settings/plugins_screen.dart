@@ -36,10 +36,7 @@ class _PluginsScreenState extends State<PluginsScreen> {
       final res = await context.read<AuthService>().api.dio.get('plugins', options: Options(receiveTimeout: const Duration(seconds: 90)));
       if (res.data is Map) {
         plugins = res.data['plugins'] is List ? res.data['plugins'] as List : [];
-        activeCount = int.tryParse('${res.data['active_count'] ?? res.data['active'] ?? 0}') ?? 0;
-        if (activeCount == 0 && plugins.isNotEmpty) {
-          activeCount = plugins.where((e) => e is Map && e['active'] == true).length;
-        }
+        activeCount = int.tryParse('${res.data['active'] ?? 0}') ?? 0;
       }
     } catch (e) {
       error = e.toString();
@@ -83,7 +80,9 @@ class _PluginsScreenState extends State<PluginsScreen> {
       backgroundColor: AppColors.bg,
       
       body: Column(children: [
-          GlassHeader(title: 'افزونه‌های سایت', onRefresh: _load),
+          GlassHeader(title: 'افزونه‌های سایت',
+                        onRefresh: _load, actions: [
+            ]),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: NeonCard(
@@ -94,7 +93,22 @@ class _PluginsScreenState extends State<PluginsScreen> {
             ]),
           ),
         ),
-        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          child: TextField(
+            controller: search,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'جستجوی افزونه...',
+              hintStyle: const TextStyle(color: AppColors.textMute),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
+              filled: true,
+              fillColor: AppColors.card,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
         Expanded(
           child: loading
               ? const Center(child: MiniLoader())
