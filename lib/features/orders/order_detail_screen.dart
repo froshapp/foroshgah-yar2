@@ -1,3 +1,4 @@
+import '../../core/utils/shamsi_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -69,34 +70,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       });
     } else if (mounted) {
       setState(() => loading = false);
-    }
-  }
-
-  Future<void> _deleteOrder() async {
-    final id = int.tryParse(order['id']?.toString() ?? '') ?? 0;
-    if (id == 0) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF252640),
-        title: const Text('حذف سفارش', style: TextStyle(color: Colors.white)),
-        content: const Text('سفارش به سطل زباله منتقل شود؟', style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف', style: TextStyle(color: Color(0xFFEF4444)))),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    try {
-      final auth = context.read<AuthService>();
-      final res = await auth.api.dio.delete('orders/$id');
-      if (res.statusCode == 200 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سفارش حذف شد')));
-        Navigator.pop(context, true);
-      }
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('خطا در حذف')));
     }
   }
 
@@ -280,7 +253,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     for (final s in statusList) {
       if (s['key']?.toString() == status) { stMatch = s; break; }
     }
-    final statusLabel = stMatch?['label']?.toString() ?? order['status_label']?.toString() ?? status;
+    final rawStatus = status.toLowerCase();
+    String statusLabel = stMatch?['label']?.toString() ?? order['status_label']?.toString() ?? status;
+    // اگر انگلیسی بود فارسی کن
+    final faMap = {
+      'completed': 'تکمیل شده', 'processing': 'در حال انجام', 'pending': 'در انتظار پرداخت',
+      'on-hold': 'در انتظار بررسی', 'cancelled': 'لغو شده', 'refunded': 'مسترد شده', 'failed': 'ناموفق',
+    };
+    if (faMap.containsKey(rawStatus)) statusLabel = faMap[rawStatus]!;
+    else {
+      statusLabel = statusLabel
+          .replaceAll(RegExp(r'basalam', caseSensitive: false), 'باسلام')
+          .replaceAll(RegExp(r'torob', caseSensitive: false), 'ترب')
+          .replaceAll(RegExp(r'pending', caseSensitive: false), 'در انتظار')
+          .replaceAll(RegExp(r'processing', caseSensitive: false), 'در حال انجام')
+          .replaceAll(RegExp(r'completed', caseSensitive: false), 'تکمیل شده');
+    }
     final statusColor = _statusColor(status, stMatch?['group']?.toString() ?? '');
     final shipTitle = order['shipping_method_title']?.toString() ?? '';
     final payTitle = order['payment_method_title']?.toString() ?? order['payment_method']?.toString() ?? '';
@@ -294,11 +282,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             tooltip: 'فاکتور',
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InvoiceScreen(order: order))),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-            tooltip: 'حذف سفارش',
-            onPressed: _deleteOrder,
-          ),
         ],
         backgroundColor: const Color(0xFF1A1B2E),
         title: Text('سفارش #${order['number'] ?? order['id'] ?? ''}', style: const TextStyle(fontSize: 16)),
@@ -308,6 +291,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if ((order['date_created_jalali'] ?? order['date_created'] ?? '').toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      color: const Color(0xFF252640),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(children: [
+                          const Icon(Icons.calendar_month_rounded, color: Color(0xFF9B7BFF), size: 18),
+                          const SizedBox(width: 10),
+                          const Text('تاریخ سفارش', style: TextStyle(color: Color(0xFF9A9AB5), fontSize: 12)),
+                          const Spacer(),
+                          Text(formatAnyDate(order['date_created_jalali'] ?? order['date_created']),
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                    ),
+                  ),
                 // status
                 Material(
                   color: const Color(0xFF252640),

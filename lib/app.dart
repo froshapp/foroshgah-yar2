@@ -16,7 +16,7 @@ class ForoshgahYarApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         primaryColor: const Color(0xFF6C63FF),
-        scaffoldBackgroundColor: const Color(0xFF1A1B2E),
+        scaffoldBackgroundColor: const Color(0xFF070B20),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF6C63FF),
           surface: Color(0xFF252640),
@@ -24,7 +24,7 @@ class ForoshgahYarApp extends StatelessWidget {
         ),
         fontFamily: 'Roboto',
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1A1B2E),
+          backgroundColor: Color(0xFF070B20),
           elevation: 0,
           centerTitle: true,
         ),
@@ -37,7 +37,7 @@ class ForoshgahYarApp extends StatelessWidget {
         builder: (context, auth, _) {
           if (auth.isLoading && !auth.isAuthenticated) {
             return const Scaffold(
-              backgroundColor: Color(0xFF1A1B2E),
+              backgroundColor: Color(0xFF070B20),
               body: Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
             );
           }

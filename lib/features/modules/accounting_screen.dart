@@ -21,7 +21,10 @@ class _AccountingScreenState extends State<AccountingScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final res = await context.read<AuthService>().api.dio.get('accounting');
       if (res.data is Map) data = Map<String, dynamic>.from(res.data as Map);
@@ -32,7 +35,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
   }
 
   String _fmt(dynamic v) {
-    if (v == null) return '۰';
+    if (v == null) return '0';
     final n = double.tryParse(v.toString().replaceAll(',', '')) ?? 0;
     final s = n.round().toString();
     final buf = StringBuffer();
@@ -43,14 +46,23 @@ class _AccountingScreenState extends State<AccountingScreen> {
     return buf.toString();
   }
 
+  List get _recent {
+    if (data['recent'] is List) return data['recent'] as List;
+    if (data['transactions'] is List) return data['transactions'] as List;
+    return [];
+  }
+
   @override
   Widget build(BuildContext context) {
     final daily = data['daily_sales'] is List ? data['daily_sales'] as List : [];
-    final recent = data['recent'] is List ? data['recent'] as List : [];
-    final maxY = daily.fold<double>(1, (m, e) {
+    final income = data['total_income'] ?? data['income'] ?? data['total_sales'] ?? 0;
+    final expense = data['total_expense'] ?? data['expense'] ?? data['costs'] ?? 0;
+    final net = data['net'] ?? ((double.tryParse('$income') ?? 0) - (double.tryParse('$expense') ?? 0));
+    double maxY = 1;
+    for (final e in daily) {
       final t = double.tryParse('${(e as Map)['total'] ?? 0}') ?? 0;
-      return t > m ? t : m;
-    });
+      if (t > maxY) maxY = t;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -60,123 +72,106 @@ class _AccountingScreenState extends State<AccountingScreen> {
               ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
               : Column(children: [
                   GlassHeader(
+                    showSettingsGear: false,
                     title: 'حسابداری فروشگاه',
-                    subtitle: 'گزارش مالی',
-                                        onRefresh: _load,
+                    subtitle: 'گزارش مالی و تراکنش‌ها',
+                    leadingIcon: Icons.account_balance_wallet_rounded,
+                    leadingColor: AppColors.purple,
+                    onRefresh: _load,
                   ),
                   Expanded(
                     child: RefreshIndicator(
-                    color: AppColors.purple,
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        const SizedBox(height: 12),
-                        Row(children: [
-                          Expanded(child: _kpi('درآمد کل', _fmt(data['total_income']), AppColors.blue)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _kpi('خالص', _fmt(data['net']), AppColors.cyan)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _kpi('هزینه‌ها', _fmt(data['shipping_cost']), AppColors.pink)),
-                        ]),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Row(children: [
-                              Text('نمودار فروش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                              Spacer(),
-                              Text('۷ روز اخیر', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                            ]),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              height: 120,
-                              child: daily.isEmpty
-                                  ? const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute)))
-                                  : Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: daily.map((e) {
-                                        final m = Map<String, dynamic>.from(e as Map);
-                                        final t = double.tryParse('${m['total'] ?? 0}') ?? 0;
-                                        final h = (t / maxY) * 100;
-                                        return Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                                            child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                                              Container(
-                                                height: h.clamp(4, 100),
-                                                decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  gradient: LinearGradient(
-                                                    begin: Alignment.bottomCenter,
-                                                    end: Alignment.topCenter,
-                                                    colors: [AppColors.purple.withOpacity(0.3), AppColors.purpleGlow],
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                        children: [
+                          // سه KPI مثل موکاپ
+                          Row(children: [
+                            Expanded(child: _kpi('درآمد کل', _fmt(income), AppColors.blue)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpi('خالص', _fmt(net), AppColors.cyan)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpi('هزینه‌ها', _fmt(expense), AppColors.pink)),
+                          ]),
+                          const SizedBox(height: 14),
+                          // نمودار
+                          NeonCard(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              const Row(
+                                children: [
+                                  Expanded(
+                                    child: Text('نمودار فروش',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                                  ),
+                                  Text('۷ روز اخیر', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 120,
+                                child: daily.isEmpty
+                                    ? const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute)))
+                                    : Row(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: daily.map((e) {
+                                          final m = Map<String, dynamic>.from(e as Map);
+                                          final t = double.tryParse('${m['total'] ?? 0}') ?? 0;
+                                          final h = (t / maxY) * 100;
+                                          return Expanded(
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 3),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.end,
+                                                children: [
+                                                  Container(
+                                                    height: h.clamp(4, 100),
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      gradient: const LinearGradient(
+                                                        begin: Alignment.bottomCenter,
+                                                        end: Alignment.topCenter,
+                                                        colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
+                                                ],
                                               ),
-                                            ]),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                            ),
-                          ]),
-                        ),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Text('آخرین تراکنش‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 10),
-                            if (recent.isEmpty)
-                              const Text('تراکنشی نیست', style: TextStyle(color: AppColors.textDim))
-                            else
-                              ...recent.map((e) {
-                                final m = Map<String, dynamic>.from(e as Map);
-                                final out = m['type'] == 'out';
-                                final total = double.tryParse('${m['total'] ?? 0}') ?? 0;
-                                final detail = m['detail']?.toString() ?? '';
-                                final qty = m['qty'];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Expanded(
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(m['label']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                                        if (detail.isNotEmpty)
-                                          Text(detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                        if (qty != null)
-                                          Text('تعداد: $qty', style: const TextStyle(color: AppColors.textMute, fontSize: 10)),
-                                      ]),
-                                    ),
-                                    Text(
-                                      '${out ? '-' : '+'}${_fmt(total)}',
-                                      style: TextStyle(color: out ? AppColors.red : AppColors.green, fontWeight: FontWeight.w600),
-                                    ),
-                                  ]),
-                                );
-                              }),
-                          ]),
-                        ),
-                        const SizedBox(height: 12),
-                        NeonCard(
-                          child: Text('تعداد سفارشات محاسبه‌شده: ${data['order_count'] ?? 0}',
-                              style: const TextStyle(color: Colors.white70)),
-                        ),
-                      ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                              ),
+                            ]),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ]),
     );
   }
 
-  Widget _kpi(String t, String v, Color c) => NeonCard(
-        borderColor: c.withOpacity(0.35),
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-          const SizedBox(height: 6),
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 14)),
-          const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
-        ]),
+  Widget _kpi(String t, String v, Color c) => SizedBox(
+        height: 92,
+        child: NeonCard(
+          borderColor: c.withOpacity(0.35),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(v, style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 16)),
+              ),
+              const SizedBox(height: 2),
+              const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
+            ],
+          ),
+        ),
       );
 }

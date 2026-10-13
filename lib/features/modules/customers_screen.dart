@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/shamsi_picker.dart';
 
 Color avatarColor(dynamic id) {
-  const colors = [
-    Color(0xFF7B5CFF), Color(0xFF2EE6A6), Color(0xFFF472B6),
-    Color(0xFFFF9F43), Color(0xFF4C8DFF), Color(0xFF06B6D4),
-    Color(0xFFA78BFA), Color(0xFFEF4444),
+  final colors = [
+    const Color(0xFF7C6CFF),
+    const Color(0xFF5B8DEF),
+    const Color(0xFF2DD4BF),
+    const Color(0xFFFBBF24),
+    const Color(0xFFE879A9),
+    const Color(0xFF34D399),
+    const Color(0xFFF43F5E),
+    const Color(0xFF60A5FA),
   ];
-  final i = (int.tryParse('$id') ?? 0).abs() % colors.length;
-  return colors[i];
+  final n = int.tryParse('${id ?? 0}') ?? 0;
+  return colors[n.abs() % colors.length];
 }
 
 Widget letterAvatar(String letter, Color c, double size) {
@@ -21,44 +26,46 @@ Widget letterAvatar(String letter, Color c, double size) {
     height: size,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: c.withOpacity(0.35),
       shape: BoxShape.circle,
-      border: Border.all(color: c.withOpacity(0.6)),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [c, c.withOpacity(0.65)],
+      ),
+      boxShadow: [BoxShadow(color: c.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
     ),
-    child: Text(letter, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: size * 0.4)),
+    child: Text(
+      letter.toUpperCase(),
+      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: size * 0.4),
+    ),
   );
 }
 
 Widget avatarWidget(Map m, {double size = 40}) {
   final url = m['avatar']?.toString() ?? '';
-  final name = m['name']?.toString() ?? '?';
-  final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
-  final c = avatarColor(m['id']);
-  if (url.isEmpty) return letterAvatar(letter, c, size);
-  final isSvg = url.toLowerCase().contains('.svg');
-  if (isSvg) {
+  final name = (m['name'] ?? m['display_name'] ?? m['billing_name'] ?? '?').toString();
+  final letter = name.trim().isNotEmpty ? name.trim().substring(0, 1) : '?';
+  final c = avatarColor(m['id'] ?? m['customer_id'] ?? name.hashCode);
+  // گراواتار پیش‌فرض یا لینک خراب → حرف رنگی
+  final lower = url.toLowerCase();
+  final isDefaultGravatar = lower.contains('gravatar.com') || lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank') || lower.contains('d=identicon') || lower.contains('d=retro');
+  if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://')) && !isDefaultGravatar) {
     return ClipOval(
-      child: SvgPicture.network(
+      child: Image.network(
         url,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholderBuilder: (_) => letterAvatar(letter, c, size),
+        errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
+        loadingBuilder: (ctx, child, prog) {
+          if (prog == null) return child;
+          return letterAvatar(letter, c, size);
+        },
       ),
     );
   }
-  return ClipOval(
-    child: Image.network(
-      url,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
-    ),
-  );
+  return letterAvatar(letter, c, size);
 }
-
-
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -68,11 +75,10 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   bool loading = true;
-  String? error;
-  List customers = [];
-  int totalCustomers = 0;
-  final search = TextEditingController();
+  List items = [];
   String filter = 'all';
+  final search = TextEditingController();
+  int total = 0;
 
   @override
   void initState() {
@@ -86,181 +92,151 @@ class _CustomersScreenState extends State<CustomersScreen> {
     super.dispose();
   }
 
-  Future<void> _load({String? q}) async {
-    setState(() { loading = true; error = null; });
+  Future<void> _load() async {
+    setState(() => loading = true);
     try {
-      final res = await context.read<AuthService>().api.dio.get('customers', queryParameters: {
-        'per_page': 80,
-        if (q != null && q.isNotEmpty) 'search': q,
-      });
-      if (res.data is Map && res.data['customers'] is List) {
-        customers = res.data['customers'] as List;
-        totalCustomers = int.tryParse('${res.data['total'] ?? customers.length}') ?? customers.length;
+      final res = await context.read<AuthService>().api.dio.get('customers', queryParameters: {'per_page': 100});
+      if (res.data is Map) {
+        items = res.data['customers'] is List ? res.data['customers'] as List : (res.data['items'] is List ? res.data['items'] as List : []);
+        total = int.tryParse('${res.data['total'] ?? items.length}') ?? items.length;
       }
-    } catch (e) {
-      error = e.toString();
+    } catch (_) {
+      items = [];
     }
     if (mounted) setState(() => loading = false);
   }
 
-  List get filtered {
+  List get _filtered {
     final q = search.text.trim();
-    Iterable list = customers;
-    if (filter == 'active') {
-      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0);
-    } else if (filter == 'inactive') {
-      list = list.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) == 0);
-    }
-    if (q.isNotEmpty) {
-      list = list.where((c) {
-        if (c is! Map) return false;
-        final blob = '${c['name'] ?? ''} ${c['phone'] ?? ''} ${c['email'] ?? ''}';
-        return blob.contains(q);
-      });
-    }
-    return list.toList();
+    return items.where((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      final orders = int.tryParse('${m['orders_count'] ?? m['order_count'] ?? 0}') ?? 0;
+      if (filter == 'active' && orders <= 0) return false;
+      if (filter == 'inactive' && orders > 0) return false;
+      if (q.isEmpty) return true;
+      final name = m['name']?.toString() ?? '';
+      final email = m['email']?.toString() ?? '';
+      return name.contains(q) || email.contains(q);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final list = filtered;
-    final total = customers.length;
-    final active = customers.where((c) => c is Map && (int.tryParse('${c['order_count'] ?? 0}') ?? 0) > 0).length;
-    final neu = customers.where((c) {
-      if (c is! Map) return false;
-      final r = c['registered_jalali']?.toString() ?? '';
-      // تقریبی: اگر تاریخ عضویت اخیر در لیست باشد به‌عنوان جدید
-      return (int.tryParse('${c['order_count'] ?? 0}') ?? 0) <= 1;
+    final list = _filtered;
+    final active = items.where((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      return (int.tryParse('${m['orders_count'] ?? m['order_count'] ?? 0}') ?? 0) > 0;
     }).length;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          GlassHeader(
-            title: 'مدیریت مشتریان',
-            subtitle: 'کل: \$totalCustomers',
-            onRefresh: _load,
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(children: [
-              Expanded(child: _stat('کل مشتریان', '$total', AppColors.blue)),
-              const SizedBox(width: 8),
-              Expanded(child: _stat('دارای سفارش', '$active', AppColors.cyan)),
-              const SizedBox(width: 8),
-              Expanded(child: _stat('مشتریان جدید', '$neu', AppColors.purpleGlow)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: TextField(
-              controller: search,
-              style: const TextStyle(color: Colors.white),
-              textAlign: TextAlign.right,
-              decoration: InputDecoration(
-                hintText: 'جستجوی مشتری...',
-                hintStyle: const TextStyle(color: AppColors.textMute),
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
-                filled: true,
-                fillColor: AppColors.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (v) => _load(q: v),
+      body: Column(children: [
+        GlassHeader(
+          title: 'سوابق مشتریان',
+          subtitle: 'اطلاعات و تاریخچه خرید',
+          leadingIcon: Icons.people_alt_rounded,
+          leadingColor: AppColors.blue,
+          onRefresh: _load,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B1230),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF1E2A55)),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Row(children: [
-              _chip('همه', 'all'),
-              _chip('دارای سفارش', 'active'),
-              _chip('بدون سفارش', 'inactive'),
+              const SizedBox(width: 12),
+              const Icon(Icons.search, color: AppColors.textMute, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: search,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'جستجو در مشتریان...',
+                    hintStyle: TextStyle(color: AppColors.textMute, fontSize: 13),
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                ),
+              ),
             ]),
           ),
-          Expanded(
-            child: loading
-                ? const Center(child: MiniLoader())
-                : error != null
-                    ? Center(child: Text(error!, style: const TextStyle(color: AppColors.red)))
-                    : RefreshIndicator(
-                        color: AppColors.purple,
-                        onRefresh: _load,
-                        child: list.isEmpty
-                            ? ListView(children: [SizedBox(height: 120), Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))])
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                                itemCount: list.length,
-                                itemBuilder: (_, i) {
-                                  final m = Map<String, dynamic>.from(list[i] as Map);
-                                  final activeC = (int.tryParse('${m['order_count'] ?? 0}') ?? 0) > 0;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: NeonCard(
-                                      onTap: () => Navigator.push(context, MaterialPageRoute(
-                                        builder: (_) => CustomerDetailPage(customer: m),
-                                      )).then((_) => _load()),
-                                      child: Row(children: [
-                                        Container(
-                                          width: 44, height: 44,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(colors: [AppColors.purple.withOpacity(0.5), AppColors.blue.withOpacity(0.4)]),
-                                          ),
-                                          child: avatarWidget(m, size: 40),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            Text(m['name']?.toString() ?? '—', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                            const SizedBox(height: 3),
-                                            Text(m['phone']?.toString().isNotEmpty == true ? m['phone'].toString() : (m['email']?.toString() ?? ''),
-                                                style: const TextStyle(color: AppColors.textDim, fontSize: 12), textDirection: TextDirection.ltr),
-                                          ]),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: (activeC ? AppColors.green : AppColors.textMute).withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(activeC ? 'دارای سفارش' : 'بدون سفارش',
-                                              style: TextStyle(color: activeC ? const Color(0xFF6EE7B7) : AppColors.textMute, fontSize: 11)),
-                                        ),
-                                      ]),
-                                    ),
-                                  );
-                                },
-                              ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Row(children: [
+            Expanded(child: NeonCard(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(children: [
+                SoftIconBox(icon: Icons.people_outline, color: AppColors.blue, size: 36),
+                const SizedBox(height: 8),
+                Text('$total', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 2),
+                const Text('مشتریان کل', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ]),
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: NeonCard(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Column(children: [
+                SoftIconBox(icon: Icons.person_add_alt_1_rounded, color: AppColors.purple, size: 36),
+                const SizedBox(height: 8),
+                Text('$active', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 2),
+                const Text('دارای سفارش', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ]),
+            )),
+          ]),
+        ),
+        Expanded(
+          child: loading
+              ? const Center(child: MiniLoader())
+              : list.isEmpty
+                  ? const Center(child: Text('مشتری‌ای یافت نشد', style: TextStyle(color: AppColors.textDim)))
+                  : RefreshIndicator(
+                      color: AppColors.purple,
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
+                        itemCount: list.length,
+                        itemBuilder: (ctx, i) {
+                          final m = Map<String, dynamic>.from(list[i] as Map);
+                          final name = m['name']?.toString() ?? '—';
+                          final email = m['email']?.toString() ?? '';
+                          final orders = m['orders_count'] ?? m['order_count'] ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: NeonCard(
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: m))).then((_) => _load()),
+                              padding: const EdgeInsets.all(12),
+                              child: Row(children: [
+                                avatarWidget(m, size: 48),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                                    if (email.isNotEmpty) ...[
+                                      const SizedBox(height: 3),
+                                      Text(email, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    Text('$orders سفارش', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                  ]),
+                                ),
+                                const Icon(Icons.chevron_left, color: AppColors.textMute),
+                              ]),
+                            ),
+                          );
+                        },
                       ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _stat(String t, String v, Color c) => NeonCard(
-        borderColor: c.withOpacity(0.35),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Column(children: [
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 4),
-          Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 10)),
-        ]),
-      );
-
-  Widget _chip(String label, String val) {
-    final sel = filter == val;
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: ChoiceChip(
-        label: Text(label, style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontSize: 12)),
-        selected: sel,
-        selectedColor: AppColors.purple.withOpacity(0.45),
-        backgroundColor: AppColors.card,
-        onSelected: (_) => setState(() => filter = val),
-      ),
+                    ),
+        ),
+      ]),
     );
   }
 }
@@ -410,9 +386,24 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                     const SizedBox(height: 6),
                     Row(children: [
-                      Text(m['status_label']?.toString() ?? '', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11)),
-                      const Spacer(),
-                      Text(m['date_jalali']?.toString() ?? m['date']?.toString() ?? '', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                      Expanded(
+                        child: Text(
+                          () {
+                            final raw = m['status_label']?.toString() ?? m['status']?.toString() ?? '';
+                            return raw
+                                .replaceAll(RegExp(r'basalam', caseSensitive: false), 'باسلام')
+                                .replaceAll(RegExp(r'torob', caseSensitive: false), 'ترب')
+                                .replaceAll(RegExp(r'pending', caseSensitive: false), 'در انتظار')
+                                .replaceAll(RegExp(r'processing', caseSensitive: false), 'در حال انجام')
+                                .replaceAll(RegExp(r'completed', caseSensitive: false), 'تکمیل شده');
+                          }(),
+                          style: const TextStyle(color: AppColors.purpleGlow, fontSize: 11),
+                        ),
+                      ),
+                      Text(
+                        formatAnyDate(m['date_display'] ?? m['date_jalali'] ?? m['date_created_jalali'] ?? m['date']),
+                        style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                      ),
                     ]),
                   ]),
                 ),

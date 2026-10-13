@@ -57,7 +57,7 @@ class ProductsService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final params = <String, dynamic>{'page': _page, 'per_page': 20, 'status': 'any'};
+      final params = <String, dynamic>{'page': _page, 'per_page': 50, 'status': 'any'};
       if (_search.isNotEmpty) params['search'] = _search;
       if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
 
@@ -134,18 +134,10 @@ class ProductsService extends ChangeNotifier {
   }
 
   Future<int> bulkUpdatePrice(AuthService auth, List<int> ids, {required String price}) async {
-    // اعمال موازی برای سرعت
-    final results = await Future.wait(ids.map((id) => updateProduct(auth, id, price: price, regularPrice: price)));
-    return results.where((e) => e).length;
-  }
-
-  /// به‌روزرسانی خوش‌بینانه قیمت محلی (قبل از پاسخ سرور)
-  void optimisticPrice(int id, String price) {
-    final idx = _products.indexWhere((p) => p['id'].toString() == id.toString());
-    if (idx >= 0) {
-      _products[idx]['price'] = price;
-      _products[idx]['regular_price'] = price;
-      notifyListeners();
+    int ok = 0;
+    for (final id in ids) {
+      if (await updateProduct(auth, id, price: price, regularPrice: price)) ok++;
     }
+    return ok;
   }
 }

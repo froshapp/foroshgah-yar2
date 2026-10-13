@@ -73,13 +73,11 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       }
     } catch (_) {}
     try {
-      final params = <String, dynamic>{
+      final res = await auth.api.dio.get('products', queryParameters: {
         'per_page': 100,
         'page': 1,
         'status': 'publish',
-      };
-      if (catFilter != null && catFilter! > 0) params['category'] = catFilter;
-      final res = await auth.api.dio.get('products', queryParameters: params);
+      });
       if (res.data is Map) {
         if (res.data['products'] is List) {
           products = List.from(res.data['products'] as List);
@@ -99,9 +97,19 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
 
   List get _filtered {
     final q = searchCtrl.text.trim();
-    // فیلتر دسته سمت سرور انجام می‌شود؛ اینجا فقط جستجو
     return products.where((e) {
       final m = Map<String, dynamic>.from(e as Map);
+      if (catFilter != null) {
+        final cats = m['categories'] ?? m['category_ids'];
+        bool ok = false;
+        if (cats is List) {
+          for (final c in cats) {
+            final id = c is Map ? c['id'] : c;
+            if (int.tryParse('$id') == catFilter) ok = true;
+          }
+        }
+        if (!ok) return false;
+      }
       if (q.isEmpty) return true;
       return (m['name']?.toString() ?? '').contains(q) || (m['id']?.toString() ?? '').contains(q);
     }).toList();
@@ -182,7 +190,7 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
-          storeOpensSettings: false,
+          showSettingsGear: false,
           title: step == 0 ? 'ثبت سفارش' : 'اطلاعات ثبت سفارش',
           subtitle: step == 0 ? 'انتخاب محصولات' : 'اطلاعات صورت حساب',
           leadingIcon: Icons.add_shopping_cart_rounded,
@@ -372,7 +380,7 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       child: ChoiceChip(
         label: Text(label, style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontSize: 12)),
         selected: sel,
-        onSelected: (_) { setState(() => catFilter = id); _load(); },
+        onSelected: (_) => setState(() => catFilter = id),
         selectedColor: AppColors.purple,
         backgroundColor: const Color(0xFF0B1230),
         side: BorderSide(color: sel ? AppColors.purple : const Color(0xFF1E2A55)),
