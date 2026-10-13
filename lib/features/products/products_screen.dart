@@ -214,6 +214,141 @@ class _ProductsScreenState extends State<ProductsScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       );
 
+
+  Future<void> _openBulkPrice(AuthService auth, ProductsService svc) async {
+    final mode = ValueNotifier<String>('percent');
+    final valueCtrl = TextEditingController();
+    final catId = ValueNotifier<int?>(null);
+    final cats = svc.categories;
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 16, left: 16, right: 16, top: 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('تغییر قیمت گروهی', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            ValueListenableBuilder<String>(
+              valueListenable: mode,
+              builder: (_, m, __) => Row(children: [
+                Expanded(child: ChoiceChip(
+                  label: const Text('درصدی'),
+                  selected: m == 'percent',
+                  onSelected: (_) => mode.value = 'percent',
+                  selectedColor: AppColors.purple,
+                  labelStyle: TextStyle(color: m == 'percent' ? Colors.white : AppColors.textDim),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: ChoiceChip(
+                  label: const Text('مبلغ ثابت'),
+                  selected: m == 'fixed',
+                  onSelected: (_) => mode.value = 'fixed',
+                  selectedColor: AppColors.purple,
+                  labelStyle: TextStyle(color: m == 'fixed' ? Colors.white : AppColors.textDim),
+                )),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: valueCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'مقدار (درصد یا تومان)',
+                hintStyle: TextStyle(color: AppColors.textMute),
+                filled: true,
+                fillColor: Color(0xFF0B1230),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide.none),
+              ),
+            ),
+            if (cats.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ValueListenableBuilder<int?>(
+                valueListenable: catId,
+                builder: (_, cid, __) => DropdownButtonFormField<int?>(
+                  value: cid,
+                  dropdownColor: AppColors.card,
+                  decoration: const InputDecoration(
+                    filled: true,
+                    fillColor: Color(0xFF0B1230),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide.none),
+                  ),
+                  hint: const Text('همه دسته‌ها', style: TextStyle(color: AppColors.textMute)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white))),
+                    ...cats.map((c) {
+                      final m = Map<String, dynamic>.from(c as Map);
+                      return DropdownMenuItem<int?>(
+                        value: int.tryParse('${m['id']}'),
+                        child: Text(m['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) => catId.value = v,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.purple,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('اعمال روی محصولات'),
+            ),
+            const SizedBox(height: 8),
+          ]),
+        );
+      },
+    );
+
+    if (ok != true || !mounted) return;
+    final raw = valueCtrl.text.trim().replaceAll(',', '');
+    final val = double.tryParse(raw);
+    if (val == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مقدار معتبر وارد کنید')));
+      return;
+    }
+
+    final list = _filtered(svc.products);
+    int done = 0;
+    for (final p in list) {
+      if (catId.value != null) {
+        final pcats = p['categories'];
+        bool okCat = false;
+        if (pcats is List) {
+          for (final c in pcats) {
+            final id = c is Map ? c['id'] : c;
+            if (int.tryParse('$id') == catId.value) okCat = true;
+          }
+        }
+        if (!okCat) continue;
+      }
+      final price = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
+      double newPrice = mode.value == 'percent' ? price * (1 + val / 100) : price + val;
+      if (newPrice < 0) newPrice = 0;
+      final id = p['id'];
+      try {
+        await auth.api.dio.put('products/$id', data: {
+          'regular_price': newPrice.round().toString(),
+          'price': newPrice.round().toString(),
+        });
+        done++;
+      } catch (_) {}
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$done محصول به‌روز شد')));
+      await svc.fetchProducts(auth, refresh: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -259,8 +394,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.tune_rounded, color: AppColors.textMute, size: 20),
-                onPressed: () {},
+                icon: const Icon(Icons.tune_rounded, color: AppColors.purpleGlow, size: 22),
+                tooltip: 'تغییر قیمت گروهی',
+                onPressed: () => _openBulkPrice(auth, svc),
               ),
             ]),
           ),

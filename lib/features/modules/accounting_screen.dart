@@ -59,6 +59,11 @@ class _AccountingScreenState extends State<AccountingScreen> {
     final expense = data['total_expense'] ?? data['expense'] ?? data['costs'] ?? 0;
     final net = data['net'] ?? ((double.tryParse('$income') ?? 0) - (double.tryParse('$expense') ?? 0));
     final recent = _recent;
+    double sumRecent = 0;
+    for (final e in recent) {
+      final m = Map<String, dynamic>.from(e as Map);
+      sumRecent += double.tryParse('${m['total'] ?? m['amount'] ?? 0}') ?? 0;
+    }
 
     double maxY = 1;
     for (final e in daily) {
@@ -148,8 +153,14 @@ class _AccountingScreenState extends State<AccountingScreen> {
                           ),
                           const SizedBox(height: 16),
                           // آخرین تراکنش‌ها مثل موکاپ
-                          const Text('آخرین تراکنش‌ها',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                          Row(children: [
+                            const Expanded(
+                              child: Text('آخرین تراکنش‌ها',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                            ),
+                            Text('جمع: ${_fmt(sumRecent)}',
+                                style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w700, fontSize: 13)),
+                          ]),
                           const SizedBox(height: 10),
                           if (recent.isEmpty)
                             const NeonCard(

@@ -253,19 +253,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // —— آخرین سفارشات ——
+            // —— درآمد ۷ روز گذشته ——
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => widget.onNavigate?.call(1),
-                    child: const Text('همه', style: TextStyle(color: AppColors.purpleGlow, fontSize: 12)),
+                  const Expanded(
+                    child: Text('درآمد ۷ روز گذشته',
+                        style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 14)),
                   ),
-                  const Spacer(),
-                  const Text('آخرین سفارشات',
-                      style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 14)),
-                  const SizedBox(width: 8),
                   Container(
                     width: 28,
                     height: 28,
@@ -273,51 +269,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: AppColors.purple.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.history_rounded, color: AppColors.purpleGlow, size: 15),
+                    child: const Icon(Icons.show_chart_rounded, color: AppColors.purpleGlow, size: 15),
                   ),
                 ],
               ),
             ),
-            if (_recentOrders.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: Text('سفارشی نیست', style: TextStyle(color: AppColors.textDim))),
-              )
-            else
-              ..._recentOrders.take(5).map((o) {
-                final m = Map<String, dynamic>.from(o as Map);
-                final num = m['number'] ?? m['id'];
-                final total = _fmt(m['total']);
-                final status = _statusFa(m);
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: NeonCard(
-                    onTap: () => widget.onNavigate?.call(1),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: NeonCard(
+                child: Builder(builder: (context) {
+                  final daily = context.watch<DashboardService>().dailySales;
+                  double maxY = 1;
+                  for (final e in daily) {
+                    final m = Map<String, dynamic>.from(e as Map);
+                    final tot = double.tryParse('${m['total'] ?? 0}') ?? 0;
+                    if (tot > maxY) maxY = tot;
+                  }
+                  if (daily.isEmpty) {
+                    return const SizedBox(
+                      height: 120,
+                      child: Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute))),
+                    );
+                  }
+                  return SizedBox(
+                    height: 140,
                     child: Row(
-                      children: [
-                        SoftIconBox(icon: Icons.inventory_2_outlined, color: AppColors.blue, size: 42),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('#$num',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                              const SizedBox(height: 3),
-                              Text(status, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                            ],
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: daily.map((e) {
+                        final m = Map<String, dynamic>.from(e as Map);
+                        final tot = double.tryParse('${m['total'] ?? 0}') ?? 0;
+                        final h = (tot / maxY) * 110;
+                        final label = (m['date_jalali'] ?? m['date'] ?? '').toString();
+                        final short = label.length >= 5 ? label.substring(label.length - 5) : label;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (tot > 0)
+                                  Text(_fmt(tot), style: const TextStyle(color: AppColors.textMute, fontSize: 8), maxLines: 1),
+                                const SizedBox(height: 4),
+                                Container(
+                                  height: h.clamp(4, 110),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(short, style: const TextStyle(color: AppColors.textMute, fontSize: 9)),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text('$total',
-                            style: const TextStyle(
-                                color: AppColors.green, fontWeight: FontWeight.w700, fontSize: 13)),
-                      ],
+                        );
+                      }).toList(),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
+            ),
 
             if (dash.loading && stats.values.every((v) => v == 0 || v == null))
               const Padding(padding: EdgeInsets.all(40), child: Center(child: MiniLoader())),

@@ -40,17 +40,20 @@ class _LowStockScreenState extends State<LowStockScreen> {
     final auth = context.read<AuthService>();
     final prefs = await SharedPreferences.getInstance();
 
-    // ۱) آستانه از سرور
+    // ۱) اول کش محلی، بعد تأیید از سرور
+    threshold = prefs.getInt('stock_threshold') ?? threshold;
+    thCtrl.text = '$threshold';
     try {
       final st = await auth.api.dio.get('settings/threshold');
       if (st.data is Map && st.data['threshold'] != null) {
-        threshold = int.tryParse('${st.data['threshold']}') ?? threshold;
-        await prefs.setInt('stock_threshold', threshold);
+        final serverTh = int.tryParse('${st.data['threshold']}');
+        if (serverTh != null) {
+          threshold = serverTh;
+          thCtrl.text = '$serverTh';
+          await prefs.setInt('stock_threshold', serverTh);
+        }
       }
-    } catch (_) {
-      threshold = prefs.getInt('stock_threshold') ?? threshold;
-    }
-    thCtrl.text = '$threshold';
+    } catch (_) {}
 
     // ۲) لیست کمبود/ناموجود
     try {

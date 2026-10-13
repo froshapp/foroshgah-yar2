@@ -13,6 +13,8 @@ import '../settings/settings_screen.dart';
 import '../products/add_product_screen.dart';
 import '../contacts/contacts_screen.dart';
 import '../modules/customers_screen.dart';
+import '../modules/accounting_screen.dart';
+import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -44,23 +46,33 @@ class MainShellState extends State<MainShell> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  DateTime? _pausedAt;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _pausedAt = DateTime.now();
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
-      // بازگشت به اپ: همیشه پیشخوان + رفرش نشست و آمار
-      if (mounted) {
-        setState(() => index = 0);
-        // بستن صفحات رویی (جزئیات و ...)
-        final nav = Navigator.of(context);
-        while (nav.canPop()) {
-          nav.pop();
+      final away = _pausedAt == null ? Duration.zero : DateTime.now().difference(_pausedAt!);
+      // فقط اگر بیش از ۱۵ دقیقه خارج بوده به پیشخوان برگرد
+      if (away >= const Duration(minutes: 15)) {
+        if (mounted) {
+          setState(() => index = 0);
+          final nav = Navigator.of(context);
+          while (nav.canPop()) {
+            nav.pop();
+          }
         }
-        try {
-          final auth = context.read<AuthService>();
-          auth.revalidateSession();
-          context.read<DashboardService>().fetchStats(auth);
-        } catch (_) {}
       }
+      // همیشه نشست و آمار را نرم رفرش کن (بدون جابه‌جایی صفحه)
+      try {
+        final auth = context.read<AuthService>();
+        auth.revalidateSession();
+        context.read<DashboardService>().fetchStats(auth);
+      } catch (_) {}
+      _pausedAt = null;
     }
   }
 
@@ -213,21 +225,27 @@ class _MoreTab extends StatelessWidget {
             showSettingsGear: true,
           ),
           const SizedBox(height: 12),
-          _item(context, Icons.people_alt_rounded, 'سوابق مشتریان', 'اطلاعات و تاریخچه خرید', AppColors.purple, const CustomersScreen()),
-          _item(context, Icons.phone_in_talk_rounded, 'تماس‌ها', 'تماس سریع با مشتریان', AppColors.cyan, const ContactsScreen()),
-          _item(context, Icons.settings_outlined, 'تنظیمات', 'پروفایل، فاکتور، اطلاعیه', AppColors.blue, null, openSettings: true),
+          _item(context, Icons.extension_rounded, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.purple, const PluginsScreen()),
+          _item(context, Icons.account_balance_wallet_rounded, 'حسابداری', 'گزارش مالی و تراکنش‌ها', AppColors.cyan, const AccountingScreen()),
+          _item(context, Icons.add_shopping_cart_rounded, 'سفارش دستی', 'ثبت سفارش جدید به‌صورت دستی', AppColors.blue, null, manualOrder: true),
         ],
       ),
     );
   }
 
-  Widget _item(BuildContext context, IconData icon, String title, String sub, Color c, Widget? page, {bool openSettings = false}) {
+  Widget _item(BuildContext context, IconData icon, String title, String sub, Color c, Widget? page, {bool openSettings = false, bool manualOrder = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: NeonCard(
         onTap: () {
           if (openSettings) {
             AppNav.openSettingsDrawer();
+            return;
+          }
+          if (manualOrder) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('سفارش دستی به‌زودی فعال می‌شود'), backgroundColor: Color(0xFF152048)),
+            );
             return;
           }
           if (page != null) {

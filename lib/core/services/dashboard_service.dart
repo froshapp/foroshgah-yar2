@@ -10,6 +10,8 @@ class DashboardService extends ChangeNotifier {
     'total_products': 0,
     'total_customers': 0,
   };
+  List _daily = [];
+  List get dailySales => _daily;
   bool _loading = false;
   String? _error;
 
@@ -47,6 +49,8 @@ class DashboardService extends ChangeNotifier {
           'total_products': _toInt(raw['total_products'] ?? nested['total_products']),
           'total_customers': _toInt(raw['total_customers'] ?? nested['total_customers'] ?? nested['customers']),
         };
+        final ds = raw['daily_sales'] ?? nested['daily_sales'];
+        _daily = ds is List ? List.from(ds) : [];
       }
     } on DioException catch (e) {
       _error = e.response?.data?['message']?.toString() ?? e.message;
