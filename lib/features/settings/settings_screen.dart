@@ -994,8 +994,51 @@ class ProfilePage extends StatelessWidget {
               _menu(context, Icons.person_outline_rounded, 'ویرایش پروفایل', AppColors.purple, () {
                 _editProfile(context);
               }),
-              _menu(context, Icons.lock_outline_rounded, 'تغییر رمز عبور', AppColors.blue, () {
-                showOk(context, 'از پنل وردپرس رمز را تغییر دهید');
+              _menu(context, Icons.lock_outline_rounded, 'تغییر رمز عبور', AppColors.blue, () async {
+                final cur = TextEditingController();
+                final neu = TextEditingController();
+                final neu2 = TextEditingController();
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: AppColors.card,
+                    title: const Text('تغییر رمز عبور', style: TextStyle(color: Colors.white)),
+                    content: Column(mainAxisSize: MainAxisSize.min, children: [
+                      TextField(controller: cur, obscureText: true, style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'رمز فعلی', labelStyle: TextStyle(color: AppColors.textDim))),
+                      TextField(controller: neu, obscureText: true, style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'رمز جدید', labelStyle: TextStyle(color: AppColors.textDim))),
+                      TextField(controller: neu2, obscureText: true, style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(labelText: 'تکرار رمز جدید', labelStyle: TextStyle(color: AppColors.textDim))),
+                    ]),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ذخیره', style: TextStyle(color: AppColors.purpleGlow))),
+                    ],
+                  ),
+                );
+                if (ok != true || !context.mounted) return;
+                if (neu.text != neu2.text) {
+                  showErr(context, 'رمز جدید و تکرار یکسان نیست');
+                  return;
+                }
+                if (neu.text.length < 6) {
+                  showErr(context, 'رمز حداقل ۶ کاراکتر');
+                  return;
+                }
+                try {
+                  final res = await context.read<AuthService>().api.dio.post('profile/password', data: {
+                    'current_password': cur.text,
+                    'new_password': neu.text,
+                  });
+                  if (res.data is Map && res.data['success'] == true) {
+                    showOk(context, 'رمز تغییر کرد');
+                  } else {
+                    showErr(context, res.data is Map ? (res.data['message']?.toString() ?? 'خطا') : 'خطا');
+                  }
+                } catch (e) {
+                  showErr(context, 'خطا: $e');
+                }
               }),
               _menu(context, Icons.storefront_outlined, 'اطلاعات فروشگاه', AppColors.cyan, () {
                 showDialog(

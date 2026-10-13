@@ -258,9 +258,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Text('#$id', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                                          Text(name.isNotEmpty ? name : 'مشتری', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
                                           const SizedBox(height: 4),
-                                          Text(name, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                                          Text('جزئیات در صفحه سفارش', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                                           const SizedBox(height: 6),
                                           Text(date, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                                           const SizedBox(height: 4),

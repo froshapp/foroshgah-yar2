@@ -152,15 +152,26 @@ class _AccountingScreenState extends State<AccountingScreen> {
     );
   }
 
-  Widget _kpi(String t, String v, Color c) => NeonCard(
-        borderColor: c.withOpacity(0.35),
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-          const SizedBox(height: 6),
-          Text(v, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 15)),
-          const SizedBox(height: 2),
-          const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
-        ]),
+  Widget _kpi(String t, String v, Color c) => SizedBox(
+        height: 92,
+        child: NeonCard(
+          borderColor: c.withOpacity(0.35),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(t, style: const TextStyle(color: AppColors.textDim, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(v, style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 16)),
+              ),
+              const SizedBox(height: 2),
+              const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
+            ],
+          ),
+        ),
       );
 }

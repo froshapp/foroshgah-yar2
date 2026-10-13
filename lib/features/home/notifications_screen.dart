@@ -28,14 +28,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _load() async {
     setState(() => loading = true);
+    final list = <dynamic>[];
+    final auth = context.read<AuthService>();
     try {
-      final res = await context.read<AuthService>().api.dio.get('notifications');
+      final res = await auth.api.dio.get('notifications');
       if (res.data is Map && res.data['items'] is List) {
-        items = res.data['items'] as List;
+        list.addAll(res.data['items'] as List);
       }
-    } catch (_) {
-      items = [];
-    }
+    } catch (_) {}
+    // کارهای در صف از API جداگانه (اگر در اعلان‌ها نیامده باشند)
+    try {
+      final tres = await auth.api.dio.get('tasks');
+      if (tres.data is Map && tres.data['items'] is List) {
+        final existing = list.map((e) => (e as Map)['id']?.toString()).toSet();
+        for (final raw in tres.data['items'] as List) {
+          if (raw is! Map) continue;
+          if (raw['done'] == true || raw['done'] == 1 || raw['done'] == '1') continue;
+          final id = raw['id']?.toString() ?? '';
+          if (id.isEmpty || existing.contains(id)) continue;
+          list.add({
+            'id': id,
+            'type': 'task',
+            'title': 'کار: ${raw['title'] ?? ''}',
+            'body': 'در صف انجام',
+            'created': raw['created'] ?? '',
+            'ref_id': id,
+          });
+          existing.add(id);
+        }
+      }
+    } catch (_) {}
+    items = list;
     if (mounted) setState(() => loading = false);
   }
 

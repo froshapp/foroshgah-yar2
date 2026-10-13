@@ -48,8 +48,7 @@ Widget avatarWidget(Map m, {double size = 40}) {
   final c = avatarColor(m['id'] ?? m['customer_id'] ?? name.hashCode);
   // گراواتار پیش‌فرض یا لینک خراب → حرف رنگی
   final lower = url.toLowerCase();
-  final isDefaultGravatar = lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank') ||
-      lower.contains('d=retro') || lower.contains('d=identicon') || lower.contains('gravatar.com/avatar/') && !lower.contains('&d=');
+  final isDefaultGravatar = lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank');
   if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://')) && !isDefaultGravatar) {
     return ClipOval(
       child: Image.network(

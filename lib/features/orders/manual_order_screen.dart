@@ -71,12 +71,20 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
     } catch (_) {}
     try {
       final res = await auth.api.dio.get('products', queryParameters: {
-        'per_page': 50,
+        'per_page': 100,
         'page': 1,
         'status': 'publish',
       });
-      if (res.data is Map && res.data['products'] is List) {
-        products = List.from(res.data['products'] as List);
+      if (res.data is Map) {
+        if (res.data['products'] is List) {
+          products = List.from(res.data['products'] as List);
+        } else if (res.data['items'] is List) {
+          products = List.from(res.data['items'] as List);
+        } else if (res.data['data'] is List) {
+          products = List.from(res.data['data'] as List);
+        }
+      } else if (res.data is List) {
+        products = List.from(res.data as List);
       }
     } catch (_) {
       products = [];

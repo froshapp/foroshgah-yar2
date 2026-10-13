@@ -23,8 +23,33 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
     try {
-      final res = await context.read<AuthService>().api.dio.get('site-info');
-      if (res.data is Map) data = Map.from(res.data as Map);
+      final auth = context.read<AuthService>();
+      Map merged = {};
+      try {
+        final res = await auth.api.dio.get('site-info');
+        if (res.data is Map) merged.addAll(Map.from(res.data as Map));
+      } catch (_) {}
+      try {
+        final res2 = await auth.api.dio.get('site-status');
+        if (res2.data is Map) {
+          final m = Map.from(res2.data as Map);
+          // map alternate keys
+          if (m['wordpress'] != null) merged['wp_version'] = m['wordpress'];
+          if (m['php'] != null) merged['php_version'] = m['php'];
+          if (m['woocommerce'] != null) merged['wc_version'] = m['woocommerce'];
+          if (m['theme'] != null) merged['theme'] = m['theme'];
+          if (m['active_plugins'] != null) merged['active_plugins_count'] = m['active_plugins'];
+          if (m['orders_today'] != null) merged['orders_today'] = m['orders_today'];
+          merged.addAll(m);
+        }
+      } catch (_) {}
+      // fallback از auth.site
+      final site = auth.site ?? {};
+      merged.putIfAbsent('name', () => site['name'] ?? '');
+      merged.putIfAbsent('url', () => site['url'] ?? '');
+      merged.putIfAbsent('currency', () => site['currency'] ?? 'IRT');
+      data = merged;
+      if (data.isEmpty) error = 'اطلاعاتی دریافت نشد';
     } catch (e) {
       error = '$e';
     }

@@ -375,11 +375,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
       if (newPrice < 0) newPrice = 0;
       final id = p['id'];
       try {
-        await auth.api.dio.put('products/$id', data: {
+        final res = await auth.api.dio.put('products/$id', data: {
           'regular_price': newPrice.round().toString(),
           'price': newPrice.round().toString(),
-        });
-        done++;
+        }, options: Options(contentType: 'application/json', headers: {'Content-Type': 'application/json'}));
+        if (res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true)) {
+          done++;
+        }
       } catch (_) {}
     }
     if (mounted) {
