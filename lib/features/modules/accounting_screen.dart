@@ -233,7 +233,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                       ]),
                                     ),
                                     Text(
-                                      '${isCancel || isShip ? '' : '+'}$total',
+                                      '${isCancel ? '' : '+'}$total',
                                       style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13),
                                     ),
                                   ]),

@@ -447,7 +447,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ],
                     onChanged: (v) {
                       setState(() => catFilter = v);
-                      svc.fetchProducts(auth, refresh: true, categoryId: v);
+                      svc.fetchProducts(auth, refresh: true, categoryId: v ?? 0);
                     },
                   ),
                 ),
