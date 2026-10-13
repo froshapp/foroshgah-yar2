@@ -49,17 +49,17 @@ class NeonCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF152048), Color(0xFF101B3C), Color(0xFF0C1530)],
+          colors: [Color(0xFF1A2858), Color(0xFF121E42), Color(0xFF0C1530)],
         ),
         border: Border.all(
-          color: borderColor?.withOpacity(0.35) ?? const Color(0xFF243056),
-          width: 1,
+          color: borderColor?.withOpacity(0.4) ?? const Color(0xFF2A3A6A),
+          width: 1.1,
         ),
         boxShadow: elevated
             ? [
-                BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 18, offset: const Offset(0, 8)),
-                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 2)),
-                const BoxShadow(color: Color(0x33FFFFFF), blurRadius: 0, offset: Offset(0, -0.5)),
+                BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10)),
+                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.16), blurRadius: 14, offset: const Offset(0, 4)),
+                BoxShadow(color: Colors.white.withOpacity(0.06), blurRadius: 1, offset: const Offset(0, -1)),
               ]
             : null,
       ),
@@ -101,13 +101,15 @@ class SoftIconBox extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color, color.withOpacity(0.72)],
+          colors: [Color.lerp(color, Colors.white, 0.18)!, color, color.withOpacity(0.75)],
+          stops: const [0.0, 0.45, 1.0],
         ),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.45), blurRadius: 14, offset: const Offset(0, 6)),
-          BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(color: color.withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 7)),
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.white.withOpacity(0.2), blurRadius: 1, offset: const Offset(0, -1)),
         ],
-        border: Border.all(color: Colors.white.withOpacity(0.18), width: 1),
+        border: Border.all(color: Colors.white.withOpacity(0.22), width: 1),
       ),
       child: Icon(icon, color: Colors.white, size: size * 0.46),
     );
