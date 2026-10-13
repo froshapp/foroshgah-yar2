@@ -40,14 +40,24 @@ class _LowStockScreenState extends State<LowStockScreen> {
     final auth = context.read<AuthService>();
     final prefs = await SharedPreferences.getInstance();
 
-    // ۱) اول کش محلی، بعد تأیید از سرور
-    threshold = prefs.getInt('stock_threshold') ?? threshold;
-    thCtrl.text = '$threshold';
+    // اول کش محلی — سرور فقط اگر گزینه local نباشد
+    final localTh = prefs.getInt('stock_threshold');
+    if (localTh != null) {
+      threshold = localTh;
+      thCtrl.text = '$localTh';
+    }
     try {
       final st = await auth.api.dio.get('settings/threshold');
       if (st.data is Map && st.data['threshold'] != null) {
         final serverTh = int.tryParse('${st.data['threshold']}');
-        if (serverTh != null) {
+        // اگر local داریم و با سرور فرق دارد، local را به سرور بفرست (همگام‌سازی)
+        if (serverTh != null && localTh != null && serverTh != localTh) {
+          try {
+            await auth.api.dio.post('settings/threshold', data: {'threshold': localTh, 'enabled': true});
+          } catch (_) {}
+          threshold = localTh;
+          thCtrl.text = '$localTh';
+        } else if (serverTh != null && localTh == null) {
           threshold = serverTh;
           thCtrl.text = '$serverTh';
           await prefs.setInt('stock_threshold', serverTh);
@@ -74,13 +84,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
         } else {
           items = [...low, ...out];
         }
-        if (m['threshold'] != null) {
-          final st = int.tryParse('${m['threshold']}');
-          if (st != null) {
-            threshold = st;
-            thCtrl.text = '$st';
-          }
-        }
+        // threshold از پاسخ low-stock عمداً نادیده گرفته می‌شود
         checked = int.tryParse('${m['checked'] ?? m['total'] ?? 0}') ?? 0;
       } else {
         error = 'پاسخ نامعتبر از سرور';
@@ -111,20 +115,41 @@ class _LowStockScreenState extends State<LowStockScreen> {
         if (mounted) setState(() => savingTh = false);
         return;
       }
-      int saved = th;
-      if (res.data is Map && res.data['threshold'] != null) {
-        saved = int.tryParse('${res.data['threshold']}') ?? th;
-      }
+      // همیشه همان عددی که کاربر وارد کرده را نگه دار
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('stock_threshold', saved);
-      threshold = saved;
-      thCtrl.text = '$saved';
-      if (mounted) showOk(context, 'آستانه $saved ذخیره شد');
-      await _load();
+      await prefs.setInt('stock_threshold', th);
+      threshold = th;
+      thCtrl.text = '$th';
+      if (mounted) {
+        setState(() {});
+        showOk(context, 'آستانه $th ذخیره شد');
+      }
+      // فقط لیست را با آستانه جدید بگیر — threshold را از پاسخ عوض نکن
+      await _reloadItemsOnly();
     } catch (e) {
       if (mounted) showErr(context, '$e');
     }
     if (mounted) setState(() => savingTh = false);
+  }
+
+  Future<void> _reloadItemsOnly() async {
+    setState(() => loading = true);
+    try {
+      final auth = context.read<AuthService>();
+      final res = await auth.api.dio.get('low-stock', queryParameters: {'threshold': threshold});
+      if (res.data is Map) {
+        final m = res.data as Map;
+        final low = m['low_stock'] is List ? List.from(m['low_stock'] as List) : <dynamic>[];
+        final out = m['out_of_stock'] is List ? List.from(m['out_of_stock'] as List) : <dynamic>[];
+        if (m['items'] is List && (m['items'] as List).isNotEmpty) {
+          items = List.from(m['items'] as List);
+        } else {
+          items = [...low, ...out];
+        }
+        checked = int.tryParse('${m['checked'] ?? m['total'] ?? 0}') ?? 0;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => loading = false);
   }
 
   @override

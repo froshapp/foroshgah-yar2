@@ -54,19 +54,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 children: [
-                  _navItem(Icons.home_rounded, 'پیشخوان', () { Navigator.pop(context); AppNav.goToTab?.call(0); }),
-                  _navItem(Icons.shopping_cart_outlined, 'سفارشات', () { Navigator.pop(context); AppNav.goToTab?.call(1); }),
-                  _navItem(Icons.inventory_2_outlined, 'محصولات', () { Navigator.pop(context); AppNav.goToTab?.call(2); }),
-                  _navItem(Icons.people_alt_outlined, 'مشتریان', () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen()));
-                  }),
-                  _navItem(Icons.grid_view_rounded, 'ماژول‌ها', () { Navigator.pop(context); AppNav.goToTab?.call(3); }, selected: true),
-                  const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
-                    child: Text('تنظیمات', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                  ),
                   _navItem(Icons.person_outline, 'پروفایل', () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
                   }),

@@ -4,9 +4,7 @@ import 'low_stock_screen.dart';
 import 'reviews_screen.dart';
 import 'tickets_screen.dart';
 import 'customers_screen.dart';
-import 'accounting_screen.dart';
 import 'tasks_screen.dart';
-import '../settings/plugins_screen.dart';
 
 class ModulesScreen extends StatelessWidget {
   const ModulesScreen({super.key});
@@ -19,9 +17,7 @@ class ModulesScreen extends StatelessWidget {
       _Item(Icons.chat_bubble_outline_rounded, 'پرسش‌وپاسخ نظرات مشتریان', 'مدیریت سوالات و نظرات مشتریان', const Color(0xFF7C6CFF), const ReviewsScreen()),
       _Item(Icons.headset_mic_rounded, 'تیکت و پشتیبانی', 'پشتیبانی و پاسخ به تیکت‌ها', AppColors.cyan, const TicketsScreen()),
       _Item(Icons.people_alt_rounded, 'سوابق مشتریان', 'اطلاعات، سفارشات و تاریخچه خرید', AppColors.blue, const CustomersScreen()),
-      _Item(Icons.account_balance_wallet_rounded, 'حسابداری فروشگاه', 'گزارش مالی و تراکنش‌ها', AppColors.purple, const AccountingScreen()),
       _Item(Icons.checklist_rtl_rounded, 'کارهای من', 'دفترچه یادداشت و لیست کارها', AppColors.green, const TasksScreen()),
-      _Item(Icons.extension_rounded, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.orange, const PluginsScreen()),
     ];
 
     return Scaffold(

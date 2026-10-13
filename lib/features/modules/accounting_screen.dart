@@ -58,11 +58,33 @@ class _AccountingScreenState extends State<AccountingScreen> {
     final income = data['total_income'] ?? data['income'] ?? data['total_sales'] ?? 0;
     final expense = data['total_expense'] ?? data['expense'] ?? data['costs'] ?? 0;
     final net = data['net'] ?? ((double.tryParse('$income') ?? 0) - (double.tryParse('$expense') ?? 0));
-    final recent = _recent;
-    double sumRecent = 0;
-    for (final e in recent) {
+    final rawRecent = _recent;
+    // گروه‌بندی بر اساس شماره سفارش
+    final Map<String, Map<String, dynamic>> grouped = {};
+    for (final e in rawRecent) {
       final m = Map<String, dynamic>.from(e as Map);
-      sumRecent += double.tryParse('${m['total'] ?? m['amount'] ?? 0}') ?? 0;
+      final key = '${m['order_number'] ?? m['id'] ?? ''}';
+      if (key.isEmpty) continue;
+      final total = double.tryParse('${m['total'] ?? m['amount'] ?? 0}') ?? 0;
+      final st = (m['status']?.toString() ?? '').toLowerCase();
+      final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('fail');
+      if (!grouped.containsKey(key)) {
+        grouped[key] = {
+          'order_number': key,
+          'total': 0.0,
+          'label': m['label']?.toString() ?? m['detail']?.toString() ?? 'سفارش',
+          'date': m['date']?.toString() ?? m['created']?.toString() ?? '',
+          'cancelled': isCancel,
+          'status': st,
+        };
+      }
+      grouped[key]!['total'] = (grouped[key]!['total'] as double) + total;
+      if (isCancel) grouped[key]!['cancelled'] = true;
+    }
+    final recent = grouped.values.toList();
+    double sumRecent = 0;
+    for (final m in recent) {
+      sumRecent += (m['total'] as double?) ?? 0;
     }
 
     double maxY = 1;
@@ -173,20 +195,14 @@ class _AccountingScreenState extends State<AccountingScreen> {
                             )
                           else
                             ...recent.take(12).map((e) {
-                              final m = Map<String, dynamic>.from(e as Map);
-                              final label = m['label']?.toString() ?? m['detail']?.toString() ?? m['title']?.toString() ?? 'تراکنش';
-                              final total = _fmt(m['total'] ?? m['amount']);
-                              final st = (m['status']?.toString() ?? '').toLowerCase();
-                              final isCancel = st.contains('cancel') || st.contains('refund') || st.contains('fail');
-                              final isShip = label.contains('ارسال') || label.contains('بسته') || label.contains('حمل');
-                              final color = isCancel
-                                  ? AppColors.red
-                                  : (isShip ? AppColors.orange : AppColors.green);
-                              final icon = isCancel
-                                  ? Icons.close_rounded
-                                  : (isShip ? Icons.local_shipping_outlined : Icons.add_rounded);
-                              final orderNo = m['order_number'] ?? m['id'] ?? '';
-                              final date = m['date']?.toString() ?? m['created']?.toString() ?? '';
+                              final m = Map<String, dynamic>.from(e);
+                              final label = 'سفارش #${m['order_number'] ?? ''}';
+                              final total = _fmt(m['total']);
+                              final isCancel = m['cancelled'] == true;
+                              final color = isCancel ? AppColors.red : AppColors.green;
+                              final icon = isCancel ? Icons.close_rounded : Icons.shopping_bag_outlined;
+                              final orderNo = m['order_number'] ?? '';
+                              final date = m['date']?.toString() ?? '';
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8),

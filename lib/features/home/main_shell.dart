@@ -14,6 +14,7 @@ import '../products/add_product_screen.dart';
 import '../contacts/contacts_screen.dart';
 import '../modules/customers_screen.dart';
 import '../modules/accounting_screen.dart';
+import '../orders/manual_order_screen.dart';
 import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -243,9 +244,7 @@ class _MoreTab extends StatelessWidget {
             return;
           }
           if (manualOrder) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('سفارش دستی به‌زودی فعال می‌شود'), backgroundColor: Color(0xFF152048)),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualOrderScreen()));
             return;
           }
           if (page != null) {

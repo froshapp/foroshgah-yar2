@@ -17,6 +17,7 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   final _search = TextEditingController();
   String stockFilter = 'all'; // all | instock | outofstock
+  int? catFilter;
 
   @override
   void initState() {
@@ -63,6 +64,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return products.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).where((p) {
       if (stockFilter == 'instock' && !_inStock(p)) return false;
       if (stockFilter == 'outofstock' && _inStock(p)) return false;
+      if (catFilter != null) {
+        final cats = p['categories'];
+        bool ok = false;
+        if (cats is List) {
+          for (final c in cats) {
+            final id = c is Map ? c['id'] : c;
+            if (int.tryParse('$id') == catFilter) ok = true;
+          }
+        }
+        if (!ok) return false;
+      }
       if (q.isEmpty) return true;
       return (p['name']?.toString() ?? '').contains(q) || (p['id']?.toString() ?? '').contains(q);
     }).toList();
@@ -401,34 +413,76 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ]),
           ),
         ),
-        // دکمه افزودن محصول — گرادیان مثل مرجع
+        // دسته + افزودن محصول کنار هم
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-          child: GestureDetector(
-            onTap: () async {
-              final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
-              if (ok == true && mounted) svc.fetchProducts(auth, refresh: true);
-            },
-            child: Container(
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
-                boxShadow: [
-                  BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_rounded, color: Colors.white, size: 22),
-                  SizedBox(width: 8),
-                  Text('افزودن محصول', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                ],
+          child: Row(children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0B1230),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF1E2A55)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: catFilter,
+                    isExpanded: true,
+                    dropdownColor: AppColors.card,
+                    hint: const Text('دسته‌بندی', style: TextStyle(color: AppColors.textMute, fontSize: 13)),
+                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute),
+                    items: [
+                      const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white, fontSize: 13))),
+                      ...svc.categories.map((c) {
+                        final m = Map<String, dynamic>.from(c as Map);
+                        return DropdownMenuItem<int?>(
+                          value: int.tryParse('${m['id']}'),
+                          child: Text(m['name']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        );
+                      }),
+                    ],
+                    onChanged: (v) {
+                      setState(() => catFilter = v);
+                      svc.fetchProducts(auth, refresh: true, categoryId: v);
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                onTap: () async {
+                  final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                  if (ok == true && mounted) svc.fetchProducts(auth, refresh: true);
+                },
+                child: Container(
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
+                    boxShadow: [
+                      BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 6),
+                      Text('افزودن محصول', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ]),
         ),
         // فیلتر موجودی
         SizedBox(
