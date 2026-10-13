@@ -288,6 +288,47 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+
+  Widget _orderAvatar(Map o, String name) {
+    final cust = o['customer'];
+    String url = '';
+    if (cust is Map) url = cust['avatar']?.toString() ?? '';
+    final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
+    final colors = [
+      const Color(0xFF7047F5), const Color(0xFF2868FF), const Color(0xFF39C6D9),
+      const Color(0xFFE879A9), const Color(0xFFF5A524), const Color(0xFF10B981),
+    ];
+    final id = int.tryParse('${o['id'] ?? 0}') ?? 0;
+    final c = colors[id % colors.length];
+    if (url.isNotEmpty && !url.toLowerCase().contains('.svg')) {
+      return ClipOval(
+        child: Image.network(
+          url,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _letterCircle(letter, c),
+        ),
+      );
+    }
+    return _letterCircle(letter, c);
+  }
+
+  Widget _letterCircle(String letter, Color c) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(colors: [c, c.withOpacity(0.7)]),
+        boxShadow: [BoxShadow(color: c.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      alignment: Alignment.center,
+      child: Text(letter, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+    );
+  }
+
   Widget _chip(String label, String val, Color c) {
     final sel = filter == val;
     return Padding(

@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
-void openNotificationsPanel(BuildContext context) {
-  Navigator.of(context).push(
+Future<void> openNotificationsPanel(BuildContext context) async {
+  await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
   );
 }
