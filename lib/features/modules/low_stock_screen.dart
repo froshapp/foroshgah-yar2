@@ -353,6 +353,43 @@ class _LowStockScreenState extends State<LowStockScreen> {
     );
   }
 
+
+  Widget _tabChip(String label, String value, int count, Color color) {
+    final selected = tab == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => tab = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? color.withOpacity(0.2) : const Color(0xFF0B1230),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? color : const Color(0xFF1E2A55)),
+          ),
+          child: Column(children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : AppColors.textMute,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count',
+              style: TextStyle(
+                color: selected ? Colors.white : AppColors.textDim,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _ph() => Container(
         width: 56,
         height: 56,
