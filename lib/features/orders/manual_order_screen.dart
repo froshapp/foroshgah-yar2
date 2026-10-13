@@ -65,8 +65,11 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
     final auth = context.read<AuthService>();
     try {
       final cres = await auth.api.dio.get('products/categories');
-      if (cres.data is Map && cres.data['categories'] is List) {
-        categories = List.from(cres.data['categories'] as List);
+      if (cres.data is Map) {
+        final c = cres.data['categories'] ?? cres.data['items'] ?? cres.data['data'];
+        if (c is List) categories = List.from(c);
+      } else if (cres.data is List) {
+        categories = List.from(cres.data as List);
       }
     } catch (_) {}
     try {
@@ -344,7 +347,7 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           children: [
             _catChip(null, 'تمام محصولات'),
-            ...categories.take(20).map((c) {
+            ...categories.map((c) {
               final m = Map<String, dynamic>.from(c as Map);
               return _catChip(int.tryParse('${m['id']}'), m['name']?.toString() ?? '');
             }),

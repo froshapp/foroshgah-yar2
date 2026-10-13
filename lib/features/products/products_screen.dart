@@ -375,17 +375,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
       if (newPrice < 0) newPrice = 0;
       final id = p['id'];
       try {
-        final res = await auth.api.dio.put('products/$id', data: {
+        final body = {
           'regular_price': newPrice.round().toString(),
           'price': newPrice.round().toString(),
-        }, options: Options(contentType: 'application/json', headers: {'Content-Type': 'application/json'}));
-        if (res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true)) {
-          done++;
+        };
+        final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
+        var res = await auth.api.dio.put('products/$id', data: body, options: opt);
+        var ok = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+        if (!ok) {
+          body['_method'] = 'PUT';
+          res = await auth.api.dio.post('products/$id', data: body, options: opt);
+          ok = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
         }
+        if (ok) done++;
       } catch (_) {}
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$done محصول به‌روز شد')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(done > 0 ? '$done محصول به‌روز شد' : 'هیچ محصولی به‌روز نشد'),
+        backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
+      ));
       await svc.fetchProducts(auth, refresh: true);
     }
   }

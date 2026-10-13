@@ -541,8 +541,12 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     final body = TextEditingController();
     final startC = TextEditingController();
     final endC = TextEditingController();
-    final ok = await showDialog<bool>(
+    String place = 'app';
+    final ok = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
@@ -553,22 +557,60 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 setLocal(() {});
               }
             }
-            return AlertDialog(
-              backgroundColor: AppColors.card,
-              title: const Text('اطلاعیه جدید', style: TextStyle(color: Colors.white)),
-              content: SingleChildScrollView(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عنوان', hintStyle: TextStyle(color: AppColors.textMute))),
-                  TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: const InputDecoration(hintText: 'متن', hintStyle: TextStyle(color: AppColors.textMute))),
-                  const SizedBox(height: 8),
-                  TextField(controller: startC, readOnly: true, onTap: () => pick(startC), style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'شروع (شمسی)', hintStyle: TextStyle(color: AppColors.textMute), suffixIcon: Icon(Icons.calendar_today, color: AppColors.textMute, size: 18))),
-                  TextField(controller: endC, readOnly: true, onTap: () => pick(endC), style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'پایان (شمسی)', hintStyle: TextStyle(color: AppColors.textMute), suffixIcon: Icon(Icons.calendar_today, color: AppColors.textMute, size: 18))),
+            InputDecoration dec(String h, {Widget? suffix}) => InputDecoration(
+              hintText: h,
+              hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
+              filled: true,
+              fillColor: const Color(0xFF0B1230),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              suffixIcon: suffix,
+            );
+            return Padding(
+              padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textMute, borderRadius: BorderRadius.circular(4)))),
+                  const SizedBox(height: 14),
+                  const Text('اطلاعیه جدید', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 16),
+                  TextField(controller: title, style: const TextStyle(color: Colors.white), decoration: dec('عنوان اطلاعیه')),
+                  const SizedBox(height: 10),
+                  TextField(controller: body, style: const TextStyle(color: Colors.white), maxLines: 4, decoration: dec('متن پیام')),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: TextField(controller: startC, readOnly: true, onTap: () => pick(startC), style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: dec('شروع', suffix: const Icon(Icons.event, color: AppColors.textMute, size: 18)))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: endC, readOnly: true, onTap: () => pick(endC), style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: dec('پایان', suffix: const Icon(Icons.event, color: AppColors.textMute, size: 18)))),
+                  ]),
+                  const SizedBox(height: 12),
+                  const Text('محل نمایش', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    ChoiceChip(label: const Text('اپ'), selected: place == 'app', onSelected: (_) => setLocal(() => place = 'app'),
+                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'app' ? Colors.white : AppColors.textDim)),
+                    const SizedBox(width: 8),
+                    ChoiceChip(label: const Text('سایت'), selected: place == 'site', onSelected: (_) => setLocal(() => place = 'site'),
+                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'site' ? Colors.white : AppColors.textDim)),
+                    const SizedBox(width: 8),
+                    ChoiceChip(label: const Text('هر دو'), selected: place == 'both', onSelected: (_) => setLocal(() => place = 'both'),
+                      selectedColor: AppColors.purple.withOpacity(0.3), labelStyle: TextStyle(color: place == 'both' ? Colors.white : AppColors.textDim)),
+                  ]),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purple, foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('ثبت اطلاعیه'),
+                  ),
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف', style: TextStyle(color: AppColors.textMute))),
                 ]),
               ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
-                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ثبت')),
-              ],
             );
           },
         );
@@ -581,7 +623,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           'body': body.text.trim(),
           'start': startC.text.trim().isEmpty ? null : _normJalali(startC.text.trim()),
           'end': endC.text.trim().isEmpty ? null : _normJalali(endC.text.trim()),
-          'place': 'app',
+          'place': place,
           'active': true,
         });
         if (mounted) showOk(context, 'ثبت شد');
