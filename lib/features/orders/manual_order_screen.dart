@@ -182,7 +182,7 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       backgroundColor: AppColors.bg,
       body: Column(children: [
         GlassHeader(
-          showSettingsGear: false,
+          storeOpensSettings: false,
           title: step == 0 ? 'ثبت سفارش' : 'اطلاعات ثبت سفارش',
           subtitle: step == 0 ? 'انتخاب محصولات' : 'اطلاعات صورت حساب',
           leadingIcon: Icons.add_shopping_cart_rounded,
