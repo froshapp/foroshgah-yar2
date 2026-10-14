@@ -77,6 +77,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
         child: const Icon(Icons.image_outlined, color: AppColors.textMute),
       );
 
+  String _toEnDigits(String s) {
+    const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹','٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    const en = ['0','1','2','3','4','5','6','7','8','9','0','1','2','3','4','5','6','7','8','9'];
+    var out = s;
+    for (var i = 0; i < fa.length; i++) {
+      out = out.replaceAll(fa[i], en[i]);
+    }
+    return out.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').trim();
+  }
+
   Future<void> _editProduct(Map<String, dynamic> p) async {
     final id = int.tryParse(p['id']?.toString() ?? '') ?? 0;
     if (id == 0) return;
@@ -187,24 +197,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
             }
           } catch (_) {}
         }
+        final price = _toEnDigits(priceCtrl.text);
+        final sale = _toEnDigits(saleCtrl.text);
         final body = <String, dynamic>{
-          'regular_price': priceCtrl.text.trim().replaceAll(',', ''),
-          'price': priceCtrl.text.trim().replaceAll(',', ''),
+          'regular_price': price,
+          'price': price,
           'status': status,
+          'sale_price': sale, // خالی = حذف ویژه
         };
-        final sale = saleCtrl.text.trim().replaceAll(',', '');
-        body['sale_price'] = sale;
-        final stockVal = int.tryParse(stockCtrl.text.trim());
+        final stockVal = int.tryParse(_toEnDigits(stockCtrl.text));
         if (stockVal != null) {
           body['stock_quantity'] = stockVal;
           body['manage_stock'] = true;
         }
         if (imageId != null) body['image_id'] = imageId;
         final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
-        var res = await auth.api.dio.post('products/$id', data: body, options: opt);
+        // PUT اول (مسیر استاندارد ویرایش)
+        var res = await auth.api.dio.put('products/$id', data: body, options: opt);
         saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
         if (!saved) {
-          res = await auth.api.dio.put('products/$id', data: body, options: opt);
+          res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'}, options: opt);
           saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
         }
         if (!saved && res.data is Map) {

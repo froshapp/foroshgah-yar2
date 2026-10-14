@@ -26,51 +26,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final email = auth.user?['email']?.toString() ?? auth.user?['display_name']?.toString() ?? '';
 
     if (widget.asDrawer) {
+      final displayName = auth.user?['display_name']?.toString() ?? 'مدیر فروشگاه';
       return SafeArea(
         child: Column(
           children: [
-            // هدر سایدبار مثل موکاپ
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(children: [
-                SoftIconBox(icon: Icons.storefront_rounded, color: AppColors.purple, size: 48),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(siteName, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(email, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                  ]),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textMute),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ]),
-            ),
-            const Divider(color: Color(0xFF1E2A55), height: 1),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Row(
                 children: [
-                  _navItem(Icons.person_outline, 'پروفایل', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-                  }),
-                  _navItem(Icons.palette_outlined, 'رنگ وضعیت', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
-                  }),
-                  _navItem(Icons.receipt_long_outlined, 'فاکتور', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
-                  }),
-                  _navItem(Icons.campaign_outlined, 'اطلاعیه‌ها', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
-                  }),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 22),
+                    onPressed: () {},
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textMute, size: 22),
+                    onPressed: () => AppNav.closeDrawer(),
+                  ),
                 ],
               ),
             ),
-
+            // کارت پروفایل مدیر — مثل موکاپ
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: const Color(0xFF121E42),
+                  border: Border.all(color: const Color(0xFF2A3A6A)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 6)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Text(displayName, textAlign: TextAlign.right,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(email.isNotEmpty ? email : siteName, textAlign: TextAlign.right,
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
+                        boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                children: [
+                  _navItem(Icons.person_outline_rounded, 'پروفایل', () {
+                    AppNav.closeDrawer();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                  }),
+                  _navItem(Icons.tune_rounded, 'تنظیمات عمومی', () {
+                    AppNav.closeDrawer();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
+                  }),
+                  _navItem(Icons.notifications_none_rounded, 'اعلان‌ها', () {
+                    AppNav.closeDrawer();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
+                  }),
+                  _navItem(Icons.palette_outlined, 'رنگ وضعیت', () {
+                    AppNav.closeDrawer();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
+                  }),
+                  _navItem(Icons.campaign_outlined, 'اطلاعیه‌ها', () {
+                    AppNav.closeDrawer();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsPage()));
+                  }),
+                  _navItem(Icons.lock_outline_rounded, 'امنیت', () {
+                    AppNav.closeDrawer();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('توکن اتصال تا زمان خروج مدیر معتبر است')),
+                    );
+                  }),
+                  _navItem(Icons.support_agent_rounded, 'پشتیبانی', () {
+                    AppNav.closeDrawer();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('پشتیبانی فروشگاه‌یار — از طریق تیکت در ماژول‌ها')),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  _navItem(Icons.logout_rounded, 'خروج', () async {
+                    AppNav.closeDrawer();
+                    await auth.logout();
+                  }, danger: true),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -152,25 +210,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _navItem(IconData icon, String title, VoidCallback onTap, {bool selected = false}) {
+  Widget _navItem(IconData icon, String title, VoidCallback onTap, {bool selected = false, bool danger = false}) {
+    final c = danger ? const Color(0xFFEF4444) : (selected ? AppColors.purpleGlow : AppColors.textDim);
+    final tc = danger ? const Color(0xFFEF4444) : (selected ? Colors.white : const Color(0xFFD1D5F0));
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: selected ? AppColors.purple.withOpacity(0.25) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        color: selected ? AppColors.purple.withOpacity(0.22) : const Color(0xFF0E1633),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF1E2A55)),
+            ),
             child: Row(children: [
-              Icon(icon, color: selected ? AppColors.purpleGlow : AppColors.textDim, size: 22),
+              const Icon(Icons.chevron_left_rounded, color: AppColors.textMute, size: 20),
+              const Spacer(),
+              Text(title, style: TextStyle(color: tc, fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(width: 12),
-              Text(title, style: TextStyle(
-                color: selected ? Colors.white : AppColors.textDim,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 14,
-              )),
+              Icon(icon, color: c, size: 22),
             ]),
           ),
         ),

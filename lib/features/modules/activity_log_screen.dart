@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/shamsi_picker.dart';
 
 /// لاگ تغییرات مدیریت (قیمت، موجودی، وضعیت سفارش و ...)
 class ActivityLogScreen extends StatefulWidget {
@@ -104,8 +105,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                                 final type = m['type']?.toString() ?? '';
                                 final c = _color(type);
                                 final date = (m['created'] ?? '').toString();
-                                String short = date;
-                                if (date.length >= 16) short = date.substring(0, 16).replaceAll('T', ' ');
+                                final short = formatAnyDate(date);
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: NeonCard(

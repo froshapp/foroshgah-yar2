@@ -89,16 +89,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? weekTotal
         : (stats['today_sales'] is num ? (stats['today_sales'] as num).toDouble() : 0);
 
+    final topInset = MediaQuery.of(context).padding.top;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          GlassHeader(
-            title: 'پیشخوان',
-            subtitle: 'مدیریت فروشگاه ووکامرس',
-            leadingIcon: Icons.storefront_rounded,
-            leadingColor: AppColors.purple,
-          ),
+          // فقط نوار وضعیت — هدر قفل نیست و با اسکرول حرکت می‌کند
+          Container(height: topInset, color: AppColors.bg),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.purple,
@@ -108,8 +105,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 await _loadRecent();
               },
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 28, top: 4),
+                padding: const EdgeInsets.only(bottom: 28),
                 children: [
+            // هدر داخل لیست — اسکرول می‌شود اما از زیر status bar رد نمی‌شود
+            GlassHeader(
+              title: 'پیشخوان',
+              subtitle: 'مدیریت فروشگاه ووکامرس',
+              leadingIcon: Icons.storefront_rounded,
+              leadingColor: AppColors.purple,
+              ignoreTopInset: true,
+            ),
             if (dash.loading && stats['total_products'] == 0)
               const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))
             else ...[

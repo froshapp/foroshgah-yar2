@@ -130,6 +130,7 @@ class GlassHeader extends StatelessWidget {
   final bool showBell;
   final IconData? leadingIcon;
   final Color? leadingColor;
+  final bool ignoreTopInset;
 
   const GlassHeader({
     super.key,
@@ -144,11 +145,12 @@ class GlassHeader extends StatelessWidget {
     this.showBell = true,
     this.leadingIcon,
     this.leadingColor,
+    this.ignoreTopInset = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
+    final topPad = ignoreTopInset ? 0.0 : MediaQuery.of(context).padding.top;
     final color = leadingColor ?? AppColors.purple;
 
     return Padding(

@@ -300,26 +300,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget _orderAvatar(Map o, String name) {
     final cust = o['customer'];
     String url = '';
-    if (cust is Map) url = cust['avatar']?.toString() ?? '';
-    final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
+    if (cust is Map) {
+      url = (cust['avatar'] ?? cust['avatar_url'] ?? '').toString();
+    }
+    final letter = name.isNotEmpty ? name.substring(0, name.length > 0 ? 1 : 0) : '?';
+    final letterSafe = letter.isEmpty ? '?' : letter;
     final colors = [
       const Color(0xFF7047F5), const Color(0xFF2868FF), const Color(0xFF39C6D9),
       const Color(0xFFE879A9), const Color(0xFFF5A524), const Color(0xFF10B981),
     ];
-    final id = int.tryParse('${o['id'] ?? 0}') ?? 0;
-    final c = colors[id % colors.length];
-    if (url.isNotEmpty && !url.toLowerCase().contains('.svg')) {
+    final id = int.tryParse('${o['id'] ?? o['customer']?['id'] ?? 0}') ?? 0;
+    final c = colors[id.abs() % colors.length];
+    if (url.isNotEmpty && url.startsWith('http') && !url.toLowerCase().contains('.svg')) {
       return ClipOval(
         child: Image.network(
           url,
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _letterCircle(letter, c),
+          errorBuilder: (_, __, ___) => _letterCircle(letterSafe, c),
         ),
       );
     }
-    return _letterCircle(letter, c);
+    return _letterCircle(letterSafe, c);
   }
 
   Widget _letterCircle(String letter, Color c) {
