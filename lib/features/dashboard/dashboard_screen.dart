@@ -5,8 +5,8 @@ import '../../core/services/auth_service.dart';
 import '../../core/services/dashboard_service.dart';
 import '../../core/theme/app_theme.dart';
 
-/// پیشخوان دقیقاً مطابق موکاپ:
-/// هدر «پیشخوان» | ۴ کارت افقی | نمودار فروش ۷روز + حلقه | دسترسی سریع ۳ردیفی
+/// موکاپ دقیق:
+/// ۴ کارت آمار کنار هم (بدون اسکرول) | نمودار ۷روز | دسترسی سریع ۳تایی کنار هم | فعالیت اخیر
 class DashboardScreen extends StatefulWidget {
   final void Function(int index)? onNavigate;
   final VoidCallback? onAddProduct;
@@ -87,7 +87,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 28),
           children: [
-            // ─── هدر: عنوان «پیشخوان» ───
             GlassHeader(
               title: 'پیشخوان',
               subtitle: 'مدیریت فروشگاه ووکامرس',
@@ -98,47 +97,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (dash.loading && stats['total_products'] == 0)
               const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))
             else ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
 
-              // ─── ۴ کارت آمار در یک ردیف ───
-              SizedBox(
-                height: 132,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  physics: const BouncingScrollPhysics(),
+              // ═══ ۴ کارت کنار هم — بدون اسکرول ═══
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
                   children: [
-                    _kpi(
-                      icon: Icons.shopping_cart_rounded,
-                      color: const Color(0xFF8B5CF6),
-                      title: 'سفارشات امروز',
-                      value: _fmt(stats['today_orders']),
-                      pct: '٪۱۲+',
-                      sub: 'نسبت به دیروز',
+                    Expanded(
+                      child: _kpi(
+                        icon: Icons.shopping_cart_rounded,
+                        color: const Color(0xFF8B5CF6),
+                        title: 'سفارشات',
+                        value: _fmt(stats['today_orders']),
+                        pct: '٪۱۲+',
+                        sub: 'امروز',
+                      ),
                     ),
-                    _kpi(
-                      icon: Icons.payments_rounded,
-                      color: const Color(0xFF3B82F6),
-                      title: 'درآمد امروز',
-                      value: _fmt(stats['today_sales']),
-                      pct: '٪۱۸+',
-                      sub: 'نسبت به دیروز',
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _kpi(
+                        icon: Icons.payments_rounded,
+                        color: const Color(0xFF3B82F6),
+                        title: 'درآمد',
+                        value: _fmt(stats['today_sales']),
+                        pct: '٪۱۸+',
+                        sub: 'امروز',
+                      ),
                     ),
-                    _kpi(
-                      icon: Icons.view_in_ar_rounded,
-                      color: const Color(0xFF22D3EE),
-                      title: 'محصولات',
-                      value: _fmt(stats['total_products']),
-                      pct: '٪۵+',
-                      sub: 'موجود در فروشگاه',
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _kpi(
+                        icon: Icons.view_in_ar_rounded,
+                        color: const Color(0xFF22D3EE),
+                        title: 'محصولات',
+                        value: _fmt(stats['total_products']),
+                        pct: '٪۵+',
+                        sub: 'موجود',
+                      ),
                     ),
-                    _kpi(
-                      icon: Icons.people_alt_rounded,
-                      color: const Color(0xFFA78BFA),
-                      title: 'مشتریان',
-                      value: _fmt(stats['total_customers']),
-                      pct: '٪۳+',
-                      sub: 'مشتریان فعال',
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _kpi(
+                        icon: Icons.people_alt_rounded,
+                        color: const Color(0xFFA78BFA),
+                        title: 'مشتریان',
+                        value: _fmt(stats['total_customers']),
+                        pct: '٪۳+',
+                        sub: 'فعال',
+                      ),
                     ),
                   ],
                 ),
@@ -146,94 +153,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 12),
 
-              // ─── فروش ۷ روز گذشته + حلقه درآمد ───
+              // ═══ فروش ۷ روز + حلقه ═══
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                  decoration: _cardDeco(AppColors.purple.withOpacity(0.3)),
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  decoration: _deco(AppColors.purple.withOpacity(0.3)),
                   child: Column(
                     children: [
                       Row(
                         children: [
-                          SoftIconBox(icon: Icons.area_chart_rounded, color: AppColors.purple, size: 30),
-                          const SizedBox(width: 8),
+                          SoftIconBox(icon: Icons.area_chart_rounded, color: AppColors.purple, size: 28),
+                          const SizedBox(width: 6),
                           const Expanded(
-                            child: Text(
-                              'فروش ۷ روز گذشته',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-                            ),
+                            child: Text('فروش ۷ روز گذشته',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
                           ),
                           _chip('۷ روز', 7),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           _chip('۳۰', 30),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           _chip('۹۰', 90),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       SizedBox(
-                        height: 148,
+                        height: 140,
                         child: Row(
                           children: [
-                            // حلقه سمت راست در RTL = اول
                             SizedBox(
-                              width: 108,
+                              width: 100,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   SizedBox(
-                                    width: 70,
-                                    height: 70,
+                                    width: 64,
+                                    height: 64,
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
                                         SizedBox(
-                                          width: 70,
-                                          height: 70,
+                                          width: 64,
+                                          height: 64,
                                           child: CircularProgressIndicator(
                                             value: 0.72,
-                                            strokeWidth: 7,
+                                            strokeWidth: 6,
                                             backgroundColor: const Color(0xFF1A2748),
                                             color: AppColors.cyan,
                                             strokeCap: StrokeCap.round,
                                           ),
                                         ),
                                         Container(
-                                          width: 38,
-                                          height: 38,
+                                          width: 34,
+                                          height: 34,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: const LinearGradient(
                                               colors: [Color(0xFF2868FF), Color(0xFF7047F5)],
                                             ),
                                             boxShadow: [
-                                              BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 10, offset: const Offset(0, 3)),
+                                              BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3)),
                                             ],
                                           ),
-                                          child: const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 16),
+                                          child: const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 14),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text('درآمد کل فروش', style: TextStyle(color: AppColors.textDim, fontSize: 10)),
-                                  Text(_fmt(displayTotal), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-                                  const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 9)),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 6),
+                                  const Text('درآمد کل فروش', style: TextStyle(color: AppColors.textDim, fontSize: 9)),
+                                  Text(_fmt(displayTotal),
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                                  const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 8)),
                                   const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.arrow_upward_rounded, size: 11, color: Color(0xFF34D399)),
-                                      Text('٪۱۸+', style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.w700)),
+                                      Icon(Icons.arrow_upward_rounded, size: 10, color: Color(0xFF34D399)),
+                                      Text('٪۱۸+', style: TextStyle(color: Color(0xFF34D399), fontSize: 9, fontWeight: FontWeight.w700)),
                                     ],
                                   ),
-                                  const Text('نسبت به هفته قبل', style: TextStyle(color: AppColors.textMute, fontSize: 8)),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            Expanded(child: _SalesChart(daily: daily, fallback: stats['today_sales'], fmtShort: _fmtShort)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _SalesChart(daily: daily, fallback: stats['today_sales'], fmtShort: _fmtShort),
+                            ),
                           ],
                         ),
                       ),
@@ -242,46 +247,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // ─── دسترسی سریع — سه ردیف افقی با زیرعنوان ───
+              // ═══ دسترسی سریع — ۳ تا کنار هم ═══
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
-                    SoftIconBox(icon: Icons.bolt_rounded, color: AppColors.purple, size: 26),
-                    const SizedBox(width: 8),
+                    SoftIconBox(icon: Icons.bolt_rounded, color: AppColors.purple, size: 24),
+                    const SizedBox(width: 6),
                     const Text('دسترسی سریع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Column(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
                   children: [
-                    _quick(
-                      Icons.phone_in_talk_rounded,
-                      const Color(0xFFA78BFA),
-                      'تماس‌ها',
-                      'پشتیبانی و ارتباط با مشتریان',
-                      () => widget.onContacts?.call(),
+                    Expanded(
+                      child: _quickTile(
+                        Icons.phone_in_talk_rounded,
+                        const Color(0xFF22D3EE),
+                        'تماس‌ها',
+                        () => widget.onContacts?.call(),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    _quick(
-                      Icons.add_rounded,
-                      const Color(0xFF3B82F6),
-                      'افزودن محصول',
-                      'ثبت محصول جدید',
-                      () => widget.onAddProduct?.call(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _quickTile(
+                        Icons.add_rounded,
+                        const Color(0xFF8B5CF6),
+                        'افزودن محصول',
+                        () => widget.onAddProduct?.call(),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    _quick(
-                      Icons.receipt_long_rounded,
-                      const Color(0xFF22D3EE),
-                      'سفارشات',
-                      'مشاهده و مدیریت سفارشات',
-                      () => widget.onNavigate?.call(1),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _quickTile(
+                        Icons.receipt_long_rounded,
+                        const Color(0xFF3B82F6),
+                        'سفارشات',
+                        () => widget.onNavigate?.call(1),
+                      ),
                     ),
                   ],
                 ),
@@ -289,21 +297,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 12),
 
-              // ─── فعالیت اخیر ───
+              // ═══ فعالیت اخیر ═══
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => widget.onNavigate?.call(1),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: _cardDeco(const Color(0xFF2A3A6A)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                      decoration: _deco(const Color(0xFF2A3A6A)),
                       child: Row(
                         children: [
-                          SoftIconBox(icon: Icons.schedule_rounded, color: AppColors.blue, size: 28),
-                          const SizedBox(width: 10),
+                          SoftIconBox(icon: Icons.schedule_rounded, color: AppColors.blue, size: 26),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _recentOrders.isEmpty
@@ -316,7 +324,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             '${_recentOrders.isEmpty ? 0 : _recentOrders.length} فعالیت اخیر',
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                           ),
-                          const Icon(Icons.chevron_left_rounded, color: AppColors.textMute, size: 20),
+                          const Icon(Icons.chevron_left_rounded, color: AppColors.textMute, size: 18),
                         ],
                       ),
                     ),
@@ -330,17 +338,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  BoxDecoration _cardDeco(Color border) => BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+  BoxDecoration _deco(Color border) => BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF1A2858), Color(0xFF121E42), Color(0xFF0C1530)],
         ),
-        border: Border.all(color: border.withOpacity(0.5), width: 1),
+        border: Border.all(color: border.withOpacity(0.5)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 18, offset: const Offset(0, 9)),
-          BoxShadow(color: border.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 14, offset: const Offset(0, 7)),
+          BoxShadow(color: border.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2)),
           BoxShadow(color: Colors.white.withOpacity(0.05), blurRadius: 1, offset: const Offset(0, -1)),
         ],
       );
@@ -350,18 +358,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return GestureDetector(
       onTap: () => setState(() => _rangeDays = days),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
           gradient: on ? const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]) : null,
           color: on ? null : const Color(0xFF0B1230),
-          border: Border.all(color: on ? AppColors.purple.withOpacity(0.55) : const Color(0xFF1E2A55)),
+          border: Border.all(color: on ? AppColors.purple.withOpacity(0.5) : const Color(0xFF1E2A55)),
         ),
-        child: Text(label, style: TextStyle(color: on ? Colors.white : AppColors.textDim, fontSize: 10, fontWeight: FontWeight.w700)),
+        child: Text(label, style: TextStyle(color: on ? Colors.white : AppColors.textDim, fontSize: 9, fontWeight: FontWeight.w700)),
       ),
     );
   }
 
+  /// کارت KPI فشرده برای ۴ ستون کنار هم
   Widget _kpi({
     required IconData icon,
     required Color color,
@@ -371,34 +380,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String sub,
   }) {
     return Container(
-      width: 152,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: _cardDeco(color.withOpacity(0.35)),
+      height: 112,
+      padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
+      decoration: _deco(color.withOpacity(0.35)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              SoftIconBox(icon: icon, color: color, size: 32),
+              SoftIconBox(icon: icon, color: color, size: 26),
               const Spacer(),
-              Icon(Icons.more_horiz, color: AppColors.textMute.withOpacity(0.7), size: 16),
+              Icon(Icons.more_horiz, color: AppColors.textMute.withOpacity(0.6), size: 14),
             ],
           ),
           const Spacer(),
-          Text(title, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-          const SizedBox(height: 2),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.textDim, fontSize: 9)),
           Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.1)),
-          const SizedBox(height: 3),
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, height: 1.15)),
+          const SizedBox(height: 2),
           Row(
             children: [
-              const Icon(Icons.arrow_upward_rounded, size: 11, color: Color(0xFF34D399)),
-              Text(pct, style: const TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textMute, fontSize: 9)),
+              const Icon(Icons.arrow_upward_rounded, size: 9, color: Color(0xFF34D399)),
+              Flexible(
+                child: Text('$pct $sub', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Color(0xFF34D399), fontSize: 8, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -407,30 +413,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _quick(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
+  /// دسترسی سریع — کاشی عمودی برای ردیف ۳تایی
+  Widget _quickTile(IconData icon, Color color, String title, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration: _cardDeco(color.withOpacity(0.28)),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(6, 12, 6, 10),
+          decoration: _deco(color.withOpacity(0.3)),
+          child: Column(
             children: [
-              SoftIconBox(icon: icon, color: color, size: 42),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-                  ],
-                ),
+              SoftIconBox(icon: icon, color: color, size: 40),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+                  ),
+                  const Icon(Icons.chevron_left, color: AppColors.textMute, size: 14),
+                ],
               ),
-              Icon(Icons.chevron_left_rounded, color: AppColors.textMute.withOpacity(0.85), size: 22),
             ],
           ),
         ),
@@ -486,14 +495,13 @@ class _ChartPainter extends CustomPainter {
     if (values.isEmpty || size.width <= 0 || size.height <= 0) return;
     final maxV = values.reduce(math.max).clamp(1.0, double.infinity);
     final n = values.length;
-    final chartH = size.height - 18;
+    final chartH = size.height - 16;
     final points = <Offset>[];
     for (var i = 0; i < n; i++) {
       final x = n == 1 ? size.width / 2 : size.width * i / (n - 1);
-      final y = chartH - (values[i] / maxV) * (chartH * 0.82) - 8;
+      final y = chartH - (values[i] / maxV) * (chartH * 0.82) - 6;
       points.add(Offset(x, y));
     }
-
     final path = Path();
     final fill = Path();
     path.moveTo(points.first.dx, points.first.dy);
@@ -508,14 +516,13 @@ class _ChartPainter extends CustomPainter {
     }
     fill.lineTo(points.last.dx, chartH);
     fill.close();
-
     canvas.drawPath(
       fill,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [const Color(0xFF6366F1).withOpacity(0.45), const Color(0xFF6366F1).withOpacity(0.02)],
+          colors: [const Color(0xFF6366F1).withOpacity(0.4), const Color(0xFF6366F1).withOpacity(0.02)],
         ).createShader(Rect.fromLTWH(0, 0, size.width, chartH)),
     );
     canvas.drawPath(
@@ -523,41 +530,22 @@ class _ChartPainter extends CustomPainter {
       Paint()
         ..color = const Color(0xFF818CF8)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.6
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round,
     );
-
     final last = points.last;
-    canvas.drawCircle(last, 5.5, Paint()..color = const Color(0xFFA78BFA));
-    canvas.drawCircle(last, 2.8, Paint()..color = Colors.white);
-
-    final tp = TextPainter(
-      text: TextSpan(text: lastLabel, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-      textDirection: TextDirection.rtl,
-    )..layout();
-    final bw = tp.width + 12;
-    final bh = tp.height + 8;
-    var bx = last.dx - bw / 2;
-    var by = last.dy - bh - 10;
-    if (bx < 0) bx = 0;
-    if (bx + bw > size.width) bx = size.width - bw;
-    if (by < 0) by = last.dy + 10;
-    final rrect = RRect.fromRectAndRadius(Rect.fromLTWH(bx, by, bw, bh), const Radius.circular(8));
-    canvas.drawRRect(rrect, Paint()..color = const Color(0xFF1E2A55).withOpacity(0.95));
-    tp.paint(canvas, Offset(bx + 6, by + 4));
-
+    canvas.drawCircle(last, 5, Paint()..color = const Color(0xFFA78BFA));
+    canvas.drawCircle(last, 2.5, Paint()..color = Colors.white);
     for (var i = 0; i < labels.length && i < points.length; i++) {
       final lp = TextPainter(
-        text: TextSpan(text: labels[i], style: const TextStyle(color: Color(0xFF6B7A9E), fontSize: 8)),
+        text: TextSpan(text: labels[i], style: const TextStyle(color: Color(0xFF6B7A9E), fontSize: 7)),
         textDirection: TextDirection.rtl,
       )..layout();
       final lx = points[i].dx - lp.width / 2;
-      lp.paint(canvas, Offset(lx.clamp(0, size.width - lp.width), chartH + 2));
+      lp.paint(canvas, Offset(lx.clamp(0, size.width - lp.width), chartH + 1));
     }
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter old) =>
-      old.values != values || old.labels != labels || old.lastLabel != lastLabel;
+  bool shouldRepaint(covariant _ChartPainter old) => old.values != values;
 }

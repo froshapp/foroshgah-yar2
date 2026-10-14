@@ -64,30 +64,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return products.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).where((p) {
       if (stockFilter == 'instock' && !_inStock(p)) return false;
       if (stockFilter == 'outofstock' && _inStock(p)) return false;
-      if (catFilter != null) {
-        final cats = p['categories'];
-        bool ok = false;
-        if (cats is List) {
-          for (final c in cats) {
-            int? id;
-            if (c is Map) {
-              id = int.tryParse('${c['id'] ?? c['term_id'] ?? ''}');
-            } else {
-              id = int.tryParse('$c');
-            }
-            if (id == catFilter) ok = true;
-          }
-        } else if (cats is Map) {
-          ok = int.tryParse('${cats['id']}') == catFilter;
-        }
-        // category_ids alternate field
-        if (!ok && p['category_ids'] is List) {
-          for (final c in p['category_ids'] as List) {
-            if (int.tryParse('$c') == catFilter) ok = true;
-          }
-        }
-        if (!ok) return false;
-      }
+      // فیلتر دسته فقط سمت سرور (شامل زیردسته)
       if (q.isEmpty) return true;
       return (p['name']?.toString() ?? '').contains(q) || (p['id']?.toString() ?? '').contains(q);
     }).toList();

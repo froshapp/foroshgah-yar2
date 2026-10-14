@@ -192,31 +192,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-          child: Row(children: [
-            TextButton.icon(
-              onPressed: _toggleSelectAll,
-              icon: Icon(
-                selected.isNotEmpty && selected.length >= _filtered.length && _filtered.isNotEmpty
-                    ? Icons.check_box_rounded
-                    : Icons.check_box_outline_blank_rounded,
-                color: AppColors.purpleGlow, size: 20,
-              ),
-              label: Text(
-                selected.isEmpty ? 'انتخاب همه' : 'انتخاب‌شده (${selected.length})',
-                style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12),
-              ),
-            ),
-            const Spacer(),
-            if (selected.isNotEmpty)
+        // نوار انتخاب فقط بعد از نگه‌داشتن طولانی
+        if (selectMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: Row(children: [
               TextButton.icon(
-                onPressed: _dismissSelected,
-                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 18),
-                label: const Text('حذف انتخاب‌ها', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+                onPressed: _toggleSelectAll,
+                icon: Icon(
+                  selected.isNotEmpty && selected.length >= _filtered.length && _filtered.isNotEmpty
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank_rounded,
+                  color: AppColors.purpleGlow, size: 20,
+                ),
+                label: Text(
+                  selected.isEmpty ? 'انتخاب همه' : 'انتخاب‌شده (${selected.length})',
+                  style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12),
+                ),
               ),
-          ]),
-        ),
+              TextButton(
+                onPressed: () => setState(() { selected.clear(); selectMode = false; }),
+                child: const Text('لغو', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+              ),
+              const Spacer(),
+              if (selected.isNotEmpty)
+                TextButton.icon(
+                  onPressed: _dismissSelected,
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 18),
+                  label: const Text('حذف انتخاب‌ها', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+                ),
+            ]),
+          ),
         Expanded(
           child: loading
               ? const Center(child: MiniLoader())
@@ -239,28 +245,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           final isSel = selected.contains(sid);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: NeonCard(
+                            child: GestureDetector(
+                              onLongPress: () {
+                                setState(() {
+                                  selectMode = true;
+                                  selected.add(sid);
+                                });
+                              },
+                              onTap: selectMode
+                                  ? () {
+                                      setState(() {
+                                        if (isSel) {
+                                          selected.remove(sid);
+                                          if (selected.isEmpty) selectMode = false;
+                                        } else {
+                                          selected.add(sid);
+                                        }
+                                      });
+                                    }
+                                  : null,
+                              child: NeonCard(
                               padding: const EdgeInsets.all(12),
                               borderColor: isSel ? AppColors.purple : null,
                               child: Row(children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      if (isSel) {
-                                        selected.remove(sid);
-                                      } else {
-                                        selected.add(sid);
-                                        selectMode = true;
-                                      }
-                                    });
-                                  },
-                                  child: Icon(
+                                if (selectMode) ...[
+                                  Icon(
                                     isSel ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
                                     color: isSel ? AppColors.purpleGlow : AppColors.textMute,
                                     size: 22,
                                   ),
-                                ),
-                                const SizedBox(width: 8),
+                                  const SizedBox(width: 8),
+                                ],
                                 SoftIconBox(icon: _icon(type), color: c, size: 44),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -280,11 +295,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ],
                                   ]),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, size: 16, color: AppColors.textMute),
-                                  onPressed: () => _dismiss(id),
-                                ),
+                                if (!selectMode)
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 16, color: AppColors.textMute),
+                                    onPressed: () => _dismiss(id),
+                                  ),
                               ]),
+                            ),
                             ),
                           );
                         },
