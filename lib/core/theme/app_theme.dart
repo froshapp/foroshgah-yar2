@@ -57,9 +57,9 @@ class NeonCard extends StatelessWidget {
         ),
         boxShadow: elevated
             ? [
-                BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10)),
-                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.16), blurRadius: 14, offset: const Offset(0, 4)),
-                BoxShadow(color: Colors.white.withOpacity(0.06), blurRadius: 1, offset: const Offset(0, -1)),
+                BoxShadow(color: Colors.black.withOpacity(0.55), blurRadius: 22, offset: const Offset(0, 12)),
+                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.22), blurRadius: 16, offset: const Offset(0, 5)),
+                BoxShadow(color: Colors.white.withOpacity(0.08), blurRadius: 1.5, offset: const Offset(0, -1.2)),
               ]
             : null,
       ),
@@ -292,9 +292,12 @@ class _NotifBellButtonState extends State<_NotifBellButton> {
       final res = await auth.api.dio.get('notifications');
       int c = 0;
       if (res.data is Map) {
-        final items = res.data['items'] ?? res.data['notifications'];
-        if (items is List) c = items.length;
-        else if (res.data['count'] != null) c = int.tryParse('${res.data['count']}') ?? 0;
+        if (res.data['count'] != null) {
+          c = int.tryParse('${res.data['count']}') ?? 0;
+        } else {
+          final items = res.data['items'] ?? res.data['notifications'];
+          if (items is List) c = items.length;
+        }
       }
       if (mounted) setState(() => count = c);
     } catch (_) {}

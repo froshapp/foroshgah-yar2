@@ -360,8 +360,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
-    // جمع‌آوری شناسه‌ها
-    final list = _filtered(svc.products);
+    // جمع‌آوری شناسه‌ها از لیست فعلی + در صورت خالی بودن، همه محصولات
+    var list = _filtered(svc.products);
+    if (list.isEmpty) {
+      await svc.fetchProducts(auth, refresh: true);
+      list = _filtered(svc.products);
+    }
     final ids = <int>[];
     for (final p in list) {
       if (catId.value != null) {
@@ -369,14 +373,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
         bool okCat = false;
         if (pcats is List) {
           for (final c in pcats) {
-            final id = c is Map ? c['id'] : c;
+            final id = c is Map ? (c['id'] ?? c['term_id']) : c;
             if (int.tryParse('$id') == catId.value) okCat = true;
+          }
+        }
+        // category_ids
+        if (!okCat && p['category_ids'] is List) {
+          for (final c in p['category_ids'] as List) {
+            if (int.tryParse('$c') == catId.value) okCat = true;
           }
         }
         if (!okCat) continue;
       }
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id > 0) ids.add(id);
+    }
+    if (ids.isEmpty && catId.value != null) {
+      // سرور با category پر می‌کند
+    } else if (ids.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('محصولی برای به‌روزرسانی پیدا نشد'),
+          backgroundColor: Color(0xFF7F1D1D),
+        ));
+      }
+      return;
     }
     int done = 0;
     String? errMsg;

@@ -19,6 +19,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool loading = true;
   List items = [];
   String filter = 'all'; // all | order | task | stock | announce
+  final Set<String> selected = {};
+  bool selectMode = false;
 
   @override
   void initState() {
@@ -63,10 +65,43 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _dismiss(dynamic id) async {
+    final sid = id?.toString() ?? '';
+    if (sid.isEmpty) return;
     try {
-      await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': id});
-      setState(() => items = items.where((e) => (e as Map)['id'] != id).toList());
+      await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': sid});
+      setState(() {
+        items = items.where((e) => (e as Map)['id']?.toString() != sid).toList();
+        selected.remove(sid);
+      });
     } catch (_) {}
+  }
+
+  Future<void> _dismissSelected() async {
+    final ids = selected.toList();
+    if (ids.isEmpty) return;
+    for (final id in ids) {
+      try {
+        await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': id});
+      } catch (_) {}
+    }
+    setState(() {
+      items = items.where((e) => !ids.contains((e as Map)['id']?.toString())).toList();
+      selected.clear();
+      selectMode = false;
+    });
+  }
+
+  void _toggleSelectAll() {
+    final list = _filtered;
+    final allIds = list.map((e) => (e as Map)['id']?.toString() ?? '').where((e) => e.isNotEmpty).toSet();
+    setState(() {
+      if (selected.containsAll(allIds) && allIds.isNotEmpty) {
+        selected.removeAll(allIds);
+      } else {
+        selected.addAll(allIds);
+        selectMode = true;
+      }
+    });
   }
 
   IconData _icon(String type) {
@@ -149,6 +184,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          child: Row(children: [
+            TextButton.icon(
+              onPressed: _toggleSelectAll,
+              icon: Icon(
+                selected.isNotEmpty && selected.length >= _filtered.length && _filtered.isNotEmpty
+                    ? Icons.check_box_rounded
+                    : Icons.check_box_outline_blank_rounded,
+                color: AppColors.purpleGlow, size: 20,
+              ),
+              label: Text(
+                selected.isEmpty ? 'انتخاب همه' : 'انتخاب‌شده (${selected.length})',
+                style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12),
+              ),
+            ),
+            const Spacer(),
+            if (selected.isNotEmpty)
+              TextButton.icon(
+                onPressed: _dismissSelected,
+                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 18),
+                label: const Text('حذف انتخاب‌ها', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ),
+          ]),
+        ),
         Expanded(
           child: loading
               ? const Center(child: MiniLoader())
@@ -167,11 +227,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           final id = m['id'];
                           final created = m['created']?.toString() ?? '';
 
+                          final sid = id?.toString() ?? '';
+                          final isSel = selected.contains(sid);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 10),
                             child: NeonCard(
                               padding: const EdgeInsets.all(12),
+                              borderColor: isSel ? AppColors.purple : null,
                               child: Row(children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSel) {
+                                        selected.remove(sid);
+                                      } else {
+                                        selected.add(sid);
+                                        selectMode = true;
+                                      }
+                                    });
+                                  },
+                                  child: Icon(
+                                    isSel ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                                    color: isSel ? AppColors.purpleGlow : AppColors.textMute,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 SoftIconBox(icon: _icon(type), color: c, size: 44),
                                 const SizedBox(width: 12),
                                 Expanded(

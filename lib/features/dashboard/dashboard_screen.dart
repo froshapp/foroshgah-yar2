@@ -59,148 +59,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 28),
           children: [
-            // هدر مطابق موکاپ
             GlassHeader(
               title: 'پیشخوان',
               subtitle: siteName.isNotEmpty ? siteName : 'مدیریت فروشگاه ووکامرس',
               leadingIcon: Icons.storefront_rounded,
               leadingColor: AppColors.purple,
             ),
-
             if (dash.loading && stats['today_orders'] == 0 && stats['total_products'] == 0)
               const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))
             else ...[
-              const SizedBox(height: 14),
-
-              // ۴ کارت KPI افقی — مطابق موکاپ
-              SizedBox(
-                height: 132,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    _kpiCard(
-                      icon: Icons.shopping_cart_rounded,
-                      color: const Color(0xFF8B5CF6),
-                      title: 'سفارشات امروز',
-                      value: _fmt(stats['today_orders']),
-                      pct: '+٪۱۲',
-                      sub: 'نسبت به دیروز',
-                    ),
-                    _kpiCard(
-                      icon: Icons.layers_rounded,
-                      color: const Color(0xFF3B82F6),
-                      title: 'درآمد امروز',
-                      value: _fmt(stats['today_sales']),
-                      pct: '+٪۱۸',
-                      sub: 'نسبت به دیروز',
-                    ),
-                    _kpiCard(
-                      icon: Icons.inventory_2_rounded,
-                      color: const Color(0xFF22D3EE),
-                      title: 'محصولات',
-                      value: _fmt(stats['total_products']),
-                      pct: '+٪۵',
-                      sub: 'موجود در فروشگاه',
-                    ),
-                    _kpiCard(
-                      icon: Icons.people_alt_rounded,
-                      color: const Color(0xFFA78BFA),
-                      title: 'مشتریان',
-                      value: _fmt(stats['total_customers']),
-                      pct: '+٪۳',
-                      sub: 'مشتریان فعال',
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              // ۴ کارت آمار — ۲×۲ کنار هم
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Column(children: [
+                  Row(children: [
+                    Expanded(child: _kpi(
+                      Icons.shopping_cart_rounded, const Color(0xFF8B5CF6),
+                      'سفارشات امروز', _fmt(stats['today_orders']), '+٪۱۲',
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: _kpi(
+                      Icons.layers_rounded, const Color(0xFF3B82F6),
+                      'درآمد امروز', _fmt(stats['today_sales']), '+٪۱۸',
+                    )),
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: _kpi(
+                      Icons.inventory_2_rounded, const Color(0xFF22D3EE),
+                      'محصولات', _fmt(stats['total_products']), '+٪۵',
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: _kpi(
+                      Icons.people_alt_rounded, const Color(0xFFA78BFA),
+                      'مشتریان', _fmt(stats['total_customers']), '+٪۳',
+                    )),
+                  ]),
+                ]),
               ),
 
               const SizedBox(height: 14),
 
-              // کارت نمودار فروش ۷ روز
+              // فروش ۷ روز — فشرده برای موبایل
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: NeonCard(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-                  borderColor: AppColors.purple.withOpacity(0.4),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  borderColor: AppColors.purple.withOpacity(0.35),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          SoftIconBox(icon: Icons.show_chart_rounded, color: AppColors.purple, size: 34),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text('فروش ۷ روز گذشته',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                          ),
-                          _rangeChip('۷ روز', true),
-                          const SizedBox(width: 6),
-                          _rangeChip('۳۰', false),
-                          const SizedBox(width: 6),
-                          _rangeChip('۹۰', false),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
+                      Row(children: [
+                        SoftIconBox(icon: Icons.show_chart_rounded, color: AppColors.purple, size: 32),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text('فروش ۷ روز گذشته',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                        ),
+                        _chip('۷ روز', true),
+                        const SizedBox(width: 4),
+                        _chip('۳۰', false),
+                        const SizedBox(width: 4),
+                        _chip('۹۰', false),
+                      ]),
+                      const SizedBox(height: 10),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             flex: 3,
                             child: SizedBox(
-                              height: 140,
+                              height: 100,
                               child: _SalesChart(daily: daily, fallback: stats['today_sales']),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             flex: 2,
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  width: 72,
-                                  height: 72,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 72,
-                                        height: 72,
-                                        child: CircularProgressIndicator(
-                                          value: 0.72,
-                                          strokeWidth: 7,
-                                          backgroundColor: const Color(0xFF1E2A55),
-                                          color: AppColors.cyan,
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: LinearGradient(colors: [
-                                            AppColors.blue,
-                                            AppColors.purple,
-                                          ]),
-                                          boxShadow: [
-                                            BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 10),
-                                          ],
-                                        ),
-                                        child: const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 18),
-                                      ),
-                                    ],
+                            child: Column(children: [
+                              SizedBox(
+                                width: 64, height: 64,
+                                child: Stack(alignment: Alignment.center, children: [
+                                  SizedBox(
+                                    width: 64, height: 64,
+                                    child: CircularProgressIndicator(
+                                      value: 0.72, strokeWidth: 6,
+                                      backgroundColor: const Color(0xFF1E2A55),
+                                      color: AppColors.cyan,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                const Text('درآمد کل فروش', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${_fmt(weekTotal > 0 ? weekTotal : stats['today_sales'])}',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
-                                ),
-                                const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 10)),
-                              ],
-                            ),
+                                  Container(
+                                    width: 34, height: 34,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: const LinearGradient(colors: [Color(0xFF2868FF), Color(0xFF7047F5)]),
+                                      boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 8)],
+                                    ),
+                                    child: const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 16),
+                                  ),
+                                ]),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text('درآمد کل فروش', style: TextStyle(color: AppColors.textDim, fontSize: 10)),
+                              Text(
+                                _fmt(weekTotal > 0 ? weekTotal : stats['today_sales']),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                              ),
+                              const Text('تومان', style: TextStyle(color: AppColors.textMute, fontSize: 9)),
+                            ]),
                           ),
                         ],
                       ),
@@ -209,40 +176,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
-              // دسترسی سریع
+              // دسترسی سریع — ۳ کنار هم
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.4), blurRadius: 8)],
-                      ),
-                      child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 15),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('دسترسی سریع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                  ],
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(children: [
+                  SoftIconBox(icon: Icons.bolt_rounded, color: AppColors.purple, size: 28),
+                  const SizedBox(width: 8),
+                  const Text('دسترسی سریع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                ]),
               ),
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Column(
-                  children: [
-                    _quickRow(Icons.phone_in_talk_rounded, const Color(0xFFA78BFA), 'تماس‌ها', 'پشتیبانی و ارتباط با مشتریان', () => widget.onContacts?.call()),
-                    const SizedBox(height: 10),
-                    _quickRow(Icons.add_rounded, const Color(0xFF3B82F6), 'افزودن محصول', 'ثبت محصول جدید', () => widget.onAddProduct?.call()),
-                    const SizedBox(height: 10),
-                    _quickRow(Icons.receipt_long_rounded, const Color(0xFF22D3EE), 'سفارشات', 'مشاهده و مدیریت سفارشات', () => widget.onNavigate?.call(1)),
-                  ],
-                ),
+                child: Row(children: [
+                  Expanded(child: _quick(
+                    Icons.phone_in_talk_rounded, const Color(0xFFA78BFA),
+                    'تماس‌ها', 'پشتیبانی', () => widget.onContacts?.call(),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: _quick(
+                    Icons.add_rounded, const Color(0xFF3B82F6),
+                    'افزودن محصول', 'محصول جدید', () => widget.onAddProduct?.call(),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: _quick(
+                    Icons.receipt_long_rounded, const Color(0xFF22D3EE),
+                    'سفارشات', 'مدیریت', () => widget.onNavigate?.call(1),
+                  )),
+                ]),
               ),
             ],
           ],
@@ -251,159 +214,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _rangeChip(String label, bool on) {
+  Widget _chip(String label, bool on) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        gradient: on
-            ? const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)])
-            : null,
+        borderRadius: BorderRadius.circular(9),
+        gradient: on ? const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]) : null,
         color: on ? null : const Color(0xFF0B1230),
         border: Border.all(color: on ? AppColors.purple.withOpacity(0.5) : const Color(0xFF1E2A55)),
-        boxShadow: on
-            ? [BoxShadow(color: AppColors.purple.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 2))]
-            : null,
+        boxShadow: on ? [BoxShadow(color: AppColors.purple.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
       ),
-      child: Text(label,
-          style: TextStyle(
-            color: on ? Colors.white : AppColors.textDim,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-          )),
+      child: Text(label, style: TextStyle(color: on ? Colors.white : AppColors.textDim, fontSize: 9, fontWeight: FontWeight.w700)),
     );
   }
 
-  Widget _kpiCard({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String value,
-    required String pct,
-    required String sub,
-  }) {
+  Widget _kpi(IconData icon, Color color, String title, String value, String pct) {
     return Container(
-      width: 148,
-      margin: const EdgeInsets.only(left: 10),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      height: 118,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF18265A), Color(0xFF101B3C), Color(0xFF0B1230)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFF1A2858), Color(0xFF121E42), Color(0xFF0C1530)],
         ),
         border: Border.all(color: color.withOpacity(0.35)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8)),
-          BoxShadow(color: color.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.black.withOpacity(0.45), blurRadius: 16, offset: const Offset(0, 8)),
+          BoxShadow(color: color.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(color: Colors.white.withOpacity(0.05), blurRadius: 1, offset: const Offset(0, -1)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SoftIconBox(icon: icon, color: color, size: 34),
-              const Spacer(),
-              Icon(Icons.more_horiz, color: AppColors.textMute.withOpacity(0.7), size: 18),
-            ],
-          ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          SoftIconBox(icon: icon, color: color, size: 32),
           const Spacer(),
-          Text(title, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Text(pct, style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(sub,
-                    style: const TextStyle(color: AppColors.textMute, fontSize: 9),
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-        ],
-      ),
+          Icon(Icons.more_horiz, color: AppColors.textMute.withOpacity(0.6), size: 16),
+        ]),
+        const Spacer(),
+        Text(title, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+        Text(pct, style: const TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 
-  Widget _quickRow(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
+  Widget _quick(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF18265A), Color(0xFF101B3C), Color(0xFF0B1230)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [Color(0xFF1A2858), Color(0xFF121E42), Color(0xFF0C1530)],
             ),
             border: Border.all(color: color.withOpacity(0.3)),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8)),
-              BoxShadow(color: color.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 3)),
+              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 14, offset: const Offset(0, 7)),
+              BoxShadow(color: color.withOpacity(0.18), blurRadius: 10, offset: const Offset(0, 2)),
+              BoxShadow(color: Colors.white.withOpacity(0.05), blurRadius: 1, offset: const Offset(0, -1)),
             ],
           ),
-          child: Row(children: [
-            SoftIconBox(icon: icon, color: color, size: 44),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
-              ]),
-            ),
-            Icon(Icons.chevron_left, color: AppColors.textMute.withOpacity(0.8)),
+          child: Column(children: [
+            SoftIconBox(icon: icon, color: color, size: 40),
+            const SizedBox(height: 8),
+            Text(title, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(sub, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.textMute, fontSize: 9)),
           ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _quickTile(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF18265A), Color(0xFF101B3C), Color(0xFF0B1230)],
-            ),
-            border: Border.all(color: color.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 6)),
-              BoxShadow(color: color.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            children: [
-              SoftIconBox(icon: icon, color: color, size: 40),
-              const SizedBox(height: 8),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
-              const SizedBox(height: 2),
-              Text(sub,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.textMute, fontSize: 9)),
-            ],
-          ),
         ),
       ),
     );
@@ -426,20 +312,9 @@ class _SalesChart extends StatelessWidget {
     }
     if (vals.isEmpty) {
       final base = fallback is num ? fallback.toDouble() : double.tryParse('$fallback') ?? 1000;
-      vals.addAll([
-        base * 0.35,
-        base * 0.5,
-        base * 0.42,
-        base * 0.65,
-        base * 0.58,
-        base * 0.8,
-        base * 1.0,
-      ]);
+      vals.addAll([base * 0.35, base * 0.5, base * 0.42, base * 0.65, base * 0.58, base * 0.8, base * 1.0]);
     }
-    return CustomPaint(
-      painter: _ChartPainter(vals),
-      size: Size.infinite,
-    );
+    return CustomPaint(painter: _ChartPainter(vals), size: Size.infinite);
   }
 }
 
@@ -456,7 +331,7 @@ class _ChartPainter extends CustomPainter {
     final fill = Path();
     for (var i = 0; i < n; i++) {
       final x = n == 1 ? size.width / 2 : size.width * i / (n - 1);
-      final y = size.height - (values[i] / maxV) * (size.height * 0.82) - 6;
+      final y = size.height - (values[i] / maxV) * (size.height * 0.82) - 4;
       if (i == 0) {
         path.moveTo(x, y);
         fill.moveTo(x, size.height);
@@ -468,17 +343,12 @@ class _ChartPainter extends CustomPainter {
     }
     fill.lineTo(size.width, size.height);
     fill.close();
-
     canvas.drawPath(
       fill,
       Paint()
         ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF6366F1).withOpacity(0.4),
-            const Color(0xFF6366F1).withOpacity(0.02),
-          ],
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [const Color(0xFF6366F1).withOpacity(0.4), const Color(0xFF6366F1).withOpacity(0.02)],
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
     canvas.drawPath(
@@ -486,15 +356,14 @@ class _ChartPainter extends CustomPainter {
       Paint()
         ..color = const Color(0xFF818CF8)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.6
+        ..strokeWidth = 2.4
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
-    // نقطه آخر
     final lx = n == 1 ? size.width / 2 : size.width;
-    final ly = size.height - (values.last / maxV) * (size.height * 0.82) - 6;
-    canvas.drawCircle(Offset(lx, ly), 5, Paint()..color = const Color(0xFFA78BFA));
-    canvas.drawCircle(Offset(lx, ly), 2.5, Paint()..color = Colors.white);
+    final ly = size.height - (values.last / maxV) * (size.height * 0.82) - 4;
+    canvas.drawCircle(Offset(lx, ly), 4.5, Paint()..color = const Color(0xFFA78BFA));
+    canvas.drawCircle(Offset(lx, ly), 2.2, Paint()..color = Colors.white);
   }
 
   @override

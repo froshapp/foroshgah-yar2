@@ -64,10 +64,16 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
     setState(() => loadingProducts = true);
     final auth = context.read<AuthService>();
     try {
-      final cres = await auth.api.dio.get('products/categories');
+      final cres = await auth.api.dio.get('products/categories', queryParameters: {'parent_only': true});
       if (cres.data is Map) {
         final c = cres.data['categories'] ?? cres.data['items'] ?? cres.data['data'];
-        if (c is List) categories = List.from(c);
+        if (c is List) {
+          categories = List.from(c).where((e) {
+            if (e is! Map) return true;
+            final parent = int.tryParse('${e['parent'] ?? 0}') ?? 0;
+            return parent == 0;
+          }).toList();
+        }
       } else if (cres.data is List) {
         categories = List.from(cres.data as List);
       }
