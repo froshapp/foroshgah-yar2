@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shamsi_date/shamsi_date.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/dashboard_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -33,10 +34,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadRecent() async {
     try {
-      final o = await context.read<AuthService>().api.dio.get('orders', queryParameters: {'per_page': 3, 'page': 1});
+      final api = context.read<AuthService>().api.dio;
+      final o = await api.get('orders', queryParameters: {'per_page': 3, 'page': 1});
       if (o.data is Map && o.data['orders'] is List && mounted) {
         setState(() => _recentOrders = o.data['orders'] as List);
       }
+      // تاریخ آخرین فعالیت مدیریت — شمسی
+      try {
+        final act = await api.get('activity-log', queryParameters: {'per_page': 1});
+        if (act.data is Map && mounted) {
+          final j = (act.data['last_mgmt_jalali'] ?? '').toString();
+          if (j.isNotEmpty) {
+            setState(() => _lastMgmtJalali = j);
+          } else if (act.data['items'] is List && (act.data['items'] as List).isNotEmpty) {
+            final first = Map<String, dynamic>.from((act.data['items'] as List).first as Map);
+            final dj = (first['date_jalali'] ?? first['date_display'] ?? '').toString();
+            if (dj.isNotEmpty) setState(() => _lastMgmtJalali = dj.split(' ').first);
+          }
+        }
+      } catch (_) {}
     } catch (_) {}
   }
 
@@ -59,17 +75,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _fmt(n.round());
   }
 
-  /// برچسب آخرین فعالیت مدیریت (از سفارشات اخیر)
+  String _lastMgmtJalali = '';
+
+  /// برچسب آخرین فعالیت مدیریت — شمسی از لاگ
   String _mgmtLabel() {
-    if (_recentOrders.isEmpty) {
-      final now = DateTime.now();
-      return '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
+    if (_lastMgmtJalali.isNotEmpty) return _lastMgmtJalali;
+    try {
+      final j = Jalali.now();
+      return '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '—';
     }
-    final o = _recentOrders.first;
-    if (o is! Map) return '—';
-    final date = (o['date_created'] ?? o['date'] ?? o['created'] ?? '').toString();
-    if (date.length >= 10) return date.substring(0, 10).replaceAll('-', '/');
-    return date.isEmpty ? '—' : date;
   }
 
   @override

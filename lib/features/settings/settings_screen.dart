@@ -97,10 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     AppNav.closeDrawer();
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceSettingsPage()));
                   }),
-                  _navItem(Icons.notifications_none_rounded, 'اعلان‌ها', () {
-                    AppNav.closeDrawer();
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
-                  }),
                   _navItem(Icons.palette_outlined, 'رنگ وضعیت', () {
                     AppNav.closeDrawer();
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusColorsPage()));
@@ -111,15 +107,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }),
                   _navItem(Icons.lock_outline_rounded, 'امنیت', () {
                     AppNav.closeDrawer();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('توکن اتصال تا زمان خروج مدیر معتبر است')),
-                    );
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SecurityPage()));
                   }),
                   _navItem(Icons.support_agent_rounded, 'پشتیبانی', () {
                     AppNav.closeDrawer();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('پشتیبانی فروشگاه‌یار — از طریق تیکت در ماژول‌ها')),
-                    );
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportPage()));
                   }),
                   const SizedBox(height: 8),
                   _navItem(Icons.logout_rounded, 'خروج', () async {
@@ -1211,5 +1203,158 @@ class ProfilePage extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// صفحه امنیت — توکن و نشست
+class SecurityPage extends StatelessWidget {
+  const SecurityPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final email = auth.user?['email']?.toString() ?? '—';
+    final role = (auth.user?['roles'] is List && (auth.user!['roles'] as List).isNotEmpty)
+        ? (auth.user!['roles'] as List).first.toString()
+        : 'administrator';
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
+        const GlassHeader(
+          title: 'امنیت',
+          subtitle: 'نشست و دسترسی مدیر',
+          showSettingsGear: false,
+          leadingIcon: Icons.lock_outline_rounded,
+          leadingColor: Color(0xFFF59E0B),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+            children: [
+              NeonCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('وضعیت اتصال', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 10),
+                  _secRow(Icons.verified_user_rounded, 'توکن', 'فعال تا زمان خروج دستی'),
+                  const SizedBox(height: 8),
+                  _secRow(Icons.email_outlined, 'حساب', email),
+                  const SizedBox(height: 8),
+                  _secRow(Icons.badge_outlined, 'نقش', role),
+                  const SizedBox(height: 8),
+                  _secRow(Icons.storefront_outlined, 'فروشگاه', auth.site?['name']?.toString() ?? '—'),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              NeonCard(
+                padding: const EdgeInsets.all(16),
+                child: const Text(
+                  'توکن اتصال روی گوشی ذخیره می‌شود و تا وقتی خودتان «خروج» نزنید منقضی نمی‌شود. برای قطع دسترسی از همه دستگاه‌ها، از پیشخوان وردپرس نقش/رمز را تغییر دهید.',
+                  style: TextStyle(color: AppColors.textDim, fontSize: 13, height: 1.6),
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppColors.card,
+                        title: const Text('خروج از حساب؟', style: TextStyle(color: Colors.white)),
+                        content: const Text('توکن حذف می‌شود و باید دوباره وارد شوید.', style: TextStyle(color: AppColors.textDim)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('خروج', style: TextStyle(color: AppColors.red))),
+                        ],
+                      ),
+                    );
+                    if (ok == true && context.mounted) {
+                      await context.read<AuthService>().logout();
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('خروج از حساب'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7F1D1D),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _secRow(IconData icon, String label, String value) {
+    return Row(children: [
+      Icon(icon, color: AppColors.purpleGlow, size: 18),
+      const SizedBox(width: 10),
+      Text(label, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+      const Spacer(),
+      Flexible(child: Text(value, textAlign: TextAlign.left, style: const TextStyle(color: Colors.white, fontSize: 13))),
+    ]);
+  }
+}
+
+/// صفحه پشتیبانی
+class SupportPage extends StatelessWidget {
+  const SupportPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Column(children: [
+        const GlassHeader(
+          title: 'پشتیبانی',
+          subtitle: 'راهنما و ارتباط',
+          showSettingsGear: false,
+          leadingIcon: Icons.support_agent_rounded,
+          leadingColor: Color(0xFF39C6D9),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+            children: [
+              NeonCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('فروشگاه‌یار', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  const Text('نسخه اپ: ۲.۰ · افزونه: ۱.۹.۷', style: TextStyle(color: AppColors.textDim, fontSize: 13)),
+                  const SizedBox(height: 14),
+                  _supRow(Icons.email_outlined, 'ایمیل', 'info@apadanasleep.ir'),
+                  const SizedBox(height: 8),
+                  _supRow(Icons.language_rounded, 'سایت', 'apadanasleep.ir'),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              NeonCard(
+                padding: const EdgeInsets.all(16),
+                child: const Text(
+                  'برای تیکت و پشتیبانی مشتریان فروشگاه، از بخش «تیکت» در ماژول‌ها استفاده کنید. تیکت‌ها به افزونه تیکت نصب‌شده روی سایت (مثل مهرنوش) وصل می‌شوند.',
+                  style: TextStyle(color: AppColors.textDim, fontSize: 13, height: 1.65),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _supRow(IconData icon, String label, String value) {
+    return Row(children: [
+      Icon(icon, color: const Color(0xFF39C6D9), size: 18),
+      const SizedBox(width: 10),
+      Text(label, style: const TextStyle(color: AppColors.textDim, fontSize: 12)),
+      const Spacer(),
+      Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+    ]);
   }
 }

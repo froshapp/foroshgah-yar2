@@ -104,8 +104,8 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                                 final m = Map<String, dynamic>.from(items[i] as Map);
                                 final type = m['type']?.toString() ?? '';
                                 final c = _color(type);
-                                final date = (m['created'] ?? '').toString();
-                                final short = formatAnyDate(date);
+                                final date = (m['date_display'] ?? m['date_jalali'] ?? m['created'] ?? '').toString();
+                                final short = date.contains('/') ? date : formatAnyDate(date);
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: NeonCard(

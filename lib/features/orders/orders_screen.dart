@@ -99,12 +99,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   String _date(Map o) {
-    final j = o['date_jalali']?.toString();
-    if (j != null && j.isNotEmpty && !j.contains('-10-') && !j.startsWith('202')) return j;
-    // اگر میلادی بود فقط تاریخ را کوتاه نشان بده
+    final j = o['date_created_jalali']?.toString() ?? o['date_jalali']?.toString();
+    if (j != null && j.isNotEmpty && !j.startsWith('202') && !RegExp(r'^\d{4}-\d{2}').hasMatch(j)) return j;
     final d = o['date_created_gmt']?.toString() ?? o['date_created']?.toString() ?? o['date']?.toString() ?? '';
     if (d.length >= 10) {
-      // YYYY-MM-DD HH:mm
       final clean = d.replaceAll('T', ' ').substring(0, d.length >= 16 ? 16 : 10);
       return clean;
     }

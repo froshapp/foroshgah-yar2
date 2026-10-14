@@ -421,7 +421,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
 
     if (ok != true || !mounted) return;
-    final raw = valueCtrl.text.trim().replaceAll(',', '');
+    // نرمال‌سازی ارقام فارسی/عربی و جداکننده
+    var raw = valueCtrl.text.trim();
+    const fa = '۰۱۲۳۴۵۶۷۸۹';
+    const ar = '٠١٢٣٤٥٦٧٨٩';
+    for (var i = 0; i < 10; i++) {
+      raw = raw.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
+    }
+    raw = raw.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
     final val = double.tryParse(raw);
     if (val == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مقدار معتبر وارد کنید')));

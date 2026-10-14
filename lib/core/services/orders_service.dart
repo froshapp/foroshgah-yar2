@@ -36,10 +36,26 @@ class OrdersService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final res = await auth.api.dio.get('orders', queryParameters: {
-        'page': _page,
-        'per_page': 20,
-      });
+      Response? res;
+      Object? lastErr;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          res = await auth.api.dio.get(
+            'orders',
+            queryParameters: {'page': _page, 'per_page': 20},
+            options: Options(
+              receiveTimeout: const Duration(seconds: 45),
+              sendTimeout: const Duration(seconds: 20),
+            ),
+          );
+          lastErr = null;
+          break;
+        } catch (e) {
+          lastErr = e;
+          await Future.delayed(Duration(milliseconds: 450 * (attempt + 1)));
+        }
+      }
+      if (res == null) throw lastErr ?? Exception('خطای ارتباط');
 
       List list = [];
       if (res.data is Map) {
