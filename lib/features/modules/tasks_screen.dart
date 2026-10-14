@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notif_badge_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snack.dart';
 
@@ -68,7 +69,12 @@ class _TasksScreenState extends State<TasksScreen> {
         items = List.from(res.data['items'] as List);
       } else {
         await _load();
+      try { await context.read<NotifBadgeService>().refresh(context.read<AuthService>()); } catch (_) {}
       }
+      // به‌روزرسانی فوری عدد اعلان
+      try {
+        await context.read<NotifBadgeService>().refresh(context.read<AuthService>());
+      } catch (_) {}
       if (mounted) {
         setState(() {});
         showOk(context, 'ثبت شد');
@@ -99,6 +105,7 @@ class _TasksScreenState extends State<TasksScreen> {
       }
     } catch (_) {
       await _load();
+      try { await context.read<NotifBadgeService>().refresh(context.read<AuthService>()); } catch (_) {}
     }
   }
 
@@ -116,6 +123,7 @@ class _TasksScreenState extends State<TasksScreen> {
       }
     } catch (_) {
       await _load();
+      try { await context.read<NotifBadgeService>().refresh(context.read<AuthService>()); } catch (_) {}
     }
   }
 

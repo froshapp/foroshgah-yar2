@@ -393,17 +393,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id > 0) ids.add(id);
     }
-    if (ids.isEmpty && catId.value != null) {
-      // سرور با category پر می‌کند
-    } else if (ids.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('محصولی برای به‌روزرسانی پیدا نشد'),
-          backgroundColor: Color(0xFF7F1D1D),
-        ));
-      }
-      return;
-    }
+    // اگر لیست محلی خالی بود، سرور با category یا all پر می‌کند
     int done = 0;
     String? errMsg;
     try {
@@ -412,9 +402,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
         'mode': mode.value,
         'value': val,
         if (catId.value != null) 'category': catId.value,
-        if (ids.isEmpty && catId.value == null) 'all': true,
+        if (ids.isEmpty) 'all': true,
       };
-      final res = await auth.api.dio.post('products/bulk-price', data: body);
+      // اطمینان از ارسال JSON
+      final opt = Options(
+        contentType: 'application/json',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      );
+      final res = await auth.api.dio.post('products/bulk-price', data: body, options: opt);
       if (res.data is Map) {
         done = int.tryParse('${res.data['updated'] ?? 0}') ?? 0;
         errMsg = res.data['message']?.toString();
