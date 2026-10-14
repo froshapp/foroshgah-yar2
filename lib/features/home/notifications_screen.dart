@@ -39,7 +39,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         list.addAll(res.data['items'] as List);
       }
     } catch (_) {}
-    // کارهای در صف از API جداگانه (اگر در اعلان‌ها نیامده باشند)
+    // کارهای در صف فقط اگر در اعلان‌ها نیامده باشند
     try {
       final tres = await auth.api.dio.get('tasks');
       if (tres.data is Map && tres.data['items'] is List) {
@@ -62,6 +62,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (_) {}
     items = list;
+    // همگام‌سازی فوری badge با لیست واقعی (رفع عدد ۱ و لیست خالی)
+    try {
+      context.read<NotifBadgeService>().setCount(items.length);
+    } catch (_) {}
     if (mounted) setState(() => loading = false);
   }
 
@@ -115,17 +119,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _icon(String type) {
     switch (type) {
       case 'order':
-        return Icons.receipt_long_rounded;
+        return Icons.shopping_cart_rounded; // سفارش جدید
+      case 'order_done':
+      case 'completed':
+        return Icons.check_rounded; // تکمیل سفارش
       case 'stock':
-        return Icons.inventory_2_rounded;
+        return Icons.priority_high_rounded; // هشدار موجودی
       case 'task':
-        return Icons.checklist_rtl_rounded;
+        return Icons.inventory_2_rounded; // یادآوری محصول
       case 'announce':
         return Icons.campaign_rounded;
       case 'review':
         return Icons.reviews_rounded;
       case 'ticket':
-        return Icons.headset_mic_rounded;
+        return Icons.chat_bubble_rounded; // پاسخ تیکت
       default:
         return Icons.notifications_active_rounded;
     }
@@ -134,17 +141,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _iconBg(String type) {
     switch (type) {
       case 'order':
-        return const Color(0xFF3B82F6);
+        return const Color(0xFF3B82F6); // آبی
+      case 'order_done':
+      case 'completed':
+        return const Color(0xFF22C55E); // سبز
       case 'stock':
-        return const Color(0xFFF59E0B);
+        return const Color(0xFFEF4444); // قرمز هشدار
       case 'task':
-        return const Color(0xFF22D3EE);
+        return const Color(0xFFF59E0B); // نارنجی جعبه
       case 'announce':
         return const Color(0xFFA78BFA);
       case 'review':
         return const Color(0xFFFBBF24);
       case 'ticket':
-        return const Color(0xFF34D399);
+        return const Color(0xFF06B6D4); // فیروزه‌ای
       default:
         return AppColors.purple;
     }

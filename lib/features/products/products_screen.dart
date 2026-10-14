@@ -459,6 +459,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
       final opt = Options(
         contentType: 'application/json',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        sendTimeout: const Duration(seconds: 120),
+        receiveTimeout: const Duration(seconds: 120),
       );
       final res = await auth.api.dio.post('products/bulk-price', data: body, options: opt);
       if (res.data is Map) {

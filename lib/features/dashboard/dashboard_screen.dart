@@ -64,7 +64,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final o = _recentOrders.first;
     if (o is! Map) return 'بدون فعالیت';
     final id = o['id'] ?? o['number'] ?? o['order_id'];
-    final status = (o['status'] ?? o['status_name'] ?? '').toString();
+    var status = (o['status_label'] ?? o['status_name'] ?? o['status'] ?? '').toString();
+    const map = {
+      'pending': 'در انتظار',
+      'processing': 'در حال انجام',
+      'on-hold': 'معلق',
+      'completed': 'تکمیل‌شده',
+      'cancelled': 'لغو شده',
+      'refunded': 'مسترد',
+      'failed': 'ناموفق',
+      'checkout-draft': 'پیش‌نویس',
+    };
+    status = map[status] ?? status;
     final date = (o['date_created'] ?? o['date'] ?? o['created'] ?? '').toString();
     String shortDate = date;
     if (date.length >= 16) {
