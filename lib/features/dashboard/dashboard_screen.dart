@@ -58,6 +58,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _fmt(n.round());
   }
 
+  /// برچسب آخرین فعالیت مدیریت (از سفارشات اخیر)
+  String _mgmtLabel() {
+    if (_recentOrders.isEmpty) return 'بدون فعالیت';
+    final o = _recentOrders.first;
+    if (o is! Map) return 'بدون فعالیت';
+    final id = o['id'] ?? o['number'] ?? o['order_id'];
+    final status = (o['status'] ?? o['status_name'] ?? '').toString();
+    final date = (o['date_created'] ?? o['date'] ?? o['created'] ?? '').toString();
+    String shortDate = date;
+    if (date.length >= 16) {
+      shortDate = date.substring(0, 16).replaceAll('T', ' ');
+    } else if (date.length > 10) {
+      shortDate = date.substring(0, 10);
+    }
+    final parts = <String>[];
+    if (id != null) parts.add('#$id');
+    if (status.isNotEmpty) parts.add(status);
+    if (shortDate.isNotEmpty) parts.add(shortDate);
+    return parts.isEmpty ? 'بدون فعالیت' : parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
