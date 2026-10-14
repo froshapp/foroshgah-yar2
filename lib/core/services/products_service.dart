@@ -24,14 +24,17 @@ class ProductsService extends ChangeNotifier {
       try {
         await auth.api.ensureReachable();
       } catch (_) {}
-      final res = await auth.api.dio.get('products/categories');
+      final res = await auth.api.dio.get('products/categories', queryParameters: {'parent_only': true});
       List list = [];
       if (res.data is Map && res.data['categories'] is List) {
         list = res.data['categories'] as List;
       } else if (res.data is List) {
         list = res.data as List;
       }
-      _categories = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _categories = list.map((e) => Map<String, dynamic>.from(e as Map)).where((e) {
+        final parent = int.tryParse('${e['parent'] ?? 0}') ?? 0;
+        return parent == 0;
+      }).toList();
       notifyListeners();
     } catch (_) {}
   }

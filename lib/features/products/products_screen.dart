@@ -200,36 +200,41 @@ class _ProductsScreenState extends State<ProductsScreen> {
       final svc = context.read<ProductsService>();
       bool saved = false;
       try {
+        dynamic imageId;
         if (newImage != null) {
           try {
             final form = FormData.fromMap({'file': await MultipartFile.fromFile(newImage!.path, filename: newImage!.name)});
             final media = await auth.api.dio.post('products/upload', data: form, options: Options(contentType: 'multipart/form-data'));
-            final imageId = media.data is Map ? (media.data['id'] ?? media.data['attachment_id']) : null;
-            if (imageId != null) {
-              await auth.api.dio.put('products/$id', data: {'image_id': imageId});
+            if (media.data is Map) {
+              imageId = media.data['id'] ?? media.data['attachment_id'] ?? media.data['image_id'];
             }
           } catch (_) {}
         }
         final body = <String, dynamic>{
-          'regular_price': priceCtrl.text.trim(),
-          'price': priceCtrl.text.trim(),
+          'regular_price': priceCtrl.text.trim().replaceAll(',', ''),
+          'price': priceCtrl.text.trim().replaceAll(',', ''),
           'status': status,
         };
-        if (saleCtrl.text.trim().isNotEmpty) {
-          body['sale_price'] = saleCtrl.text.trim();
-        } else {
-          body['sale_price'] = '';
-        }
+        final sale = saleCtrl.text.trim().replaceAll(',', '');
+        body['sale_price'] = sale;
         final stockVal = int.tryParse(stockCtrl.text.trim());
         if (stockVal != null) {
           body['stock_quantity'] = stockVal;
           body['manage_stock'] = true;
         }
-        var res = await auth.api.dio.put('products/$id', data: body);
+        if (imageId != null) body['image_id'] = imageId;
+        final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
+        var res = await auth.api.dio.post('products/$id', data: body, options: opt);
         saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
         if (!saved) {
-          res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'});
+          res = await auth.api.dio.put('products/$id', data: body, options: opt);
           saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+        }
+        if (!saved && res.data is Map) {
+          final msg = res.data['message']?.toString() ?? res.data['code']?.toString() ?? '';
+          if (msg.isNotEmpty && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: const Color(0xFF7F1D1D)));
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -407,6 +412,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         'mode': mode.value,
         'value': val,
         if (catId.value != null) 'category': catId.value,
+        if (ids.isEmpty && catId.value == null) 'all': true,
       };
       final res = await auth.api.dio.post('products/bulk-price', data: body);
       if (res.data is Map) {
@@ -533,6 +539,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ],
                     onChanged: (v) {
                       setState(() => catFilter = v);
+                      context.read<ProductsService>().fetchProducts(
+                        context.read<AuthService>(),
+                        refresh: true,
+                        categoryId: v ?? 0,
+                      );
                       // فیلتر سمت کلاینت + درخواست سرور
                       svc.fetchProducts(auth, refresh: true, categoryId: v ?? 0);
                     },

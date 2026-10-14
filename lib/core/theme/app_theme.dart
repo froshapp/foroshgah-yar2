@@ -2,6 +2,7 @@ import '../nav.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/notif_badge_service.dart';
 import '../../features/home/notifications_screen.dart' show openNotificationsPanel;
 
 class AppColors {
@@ -57,9 +58,9 @@ class NeonCard extends StatelessWidget {
         ),
         boxShadow: elevated
             ? [
-                BoxShadow(color: Colors.black.withOpacity(0.55), blurRadius: 22, offset: const Offset(0, 12)),
-                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.22), blurRadius: 16, offset: const Offset(0, 5)),
-                BoxShadow(color: Colors.white.withOpacity(0.08), blurRadius: 1.5, offset: const Offset(0, -1.2)),
+                BoxShadow(color: Colors.black.withOpacity(0.58), blurRadius: 24, offset: const Offset(0, 12)),
+                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.25), blurRadius: 18, offset: const Offset(0, 6)),
+                BoxShadow(color: Colors.white.withOpacity(0.09), blurRadius: 1.5, offset: const Offset(0, -1.2)),
               ]
             : null,
       ),
@@ -101,15 +102,15 @@ class SoftIconBox extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color.lerp(color, Colors.white, 0.18)!, color, color.withOpacity(0.75)],
-          stops: const [0.0, 0.45, 1.0],
+          colors: [Color.lerp(color, Colors.white, 0.28)!, color, Color.lerp(color, Colors.black, 0.15)!],
+          stops: const [0.0, 0.4, 1.0],
         ),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 7)),
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3)),
-          BoxShadow(color: Colors.white.withOpacity(0.2), blurRadius: 1, offset: const Offset(0, -1)),
+          BoxShadow(color: color.withOpacity(0.55), blurRadius: 18, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.white.withOpacity(0.25), blurRadius: 1.5, offset: const Offset(0, -1.2)),
         ],
-        border: Border.all(color: Colors.white.withOpacity(0.22), width: 1),
+        border: Border.all(color: Colors.white.withOpacity(0.28), width: 1.1),
       ),
       child: Icon(icon, color: Colors.white, size: size * 0.46),
     );
@@ -277,34 +278,20 @@ class _NotifBellButton extends StatefulWidget {
 }
 
 class _NotifBellButtonState extends State<_NotifBellButton> {
-  int count = 0;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-  }
-
-  Future<void> _load() async {
-    try {
-      if (!mounted) return;
-      final auth = context.read<AuthService>();
-      final res = await auth.api.dio.get('notifications');
-      int c = 0;
-      if (res.data is Map) {
-        if (res.data['count'] != null) {
-          c = int.tryParse('${res.data['count']}') ?? 0;
-        } else {
-          final items = res.data['items'] ?? res.data['notifications'];
-          if (items is List) c = items.length;
-        }
-      }
-      if (mounted) setState(() => count = c);
-    } catch (_) {}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final auth = context.read<AuthService>();
+        context.read<NotifBadgeService>().refresh(auth);
+      } catch (_) {}
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final count = context.watch<NotifBadgeService>().count;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -314,7 +301,9 @@ class _NotifBellButtonState extends State<_NotifBellButton> {
           icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
           onPressed: () async {
             await openNotificationsPanel(context);
-            await _load();
+            try {
+              await context.read<NotifBadgeService>().refresh(context.read<AuthService>());
+            } catch (_) {}
           },
         ),
         if (count > 0)

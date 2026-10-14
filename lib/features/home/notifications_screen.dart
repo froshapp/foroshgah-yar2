@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notif_badge_service.dart';
 import '../../core/theme/app_theme.dart';
 
 Future<void> openNotificationsPanel(BuildContext context) async {
@@ -73,6 +74,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         items = items.where((e) => (e as Map)['id']?.toString() != sid).toList();
         selected.remove(sid);
       });
+      // به‌روزرسانی فوری badge
+      try {
+        context.read<NotifBadgeService>().setCount(items.length);
+      } catch (_) {}
     } catch (_) {}
   }
 
@@ -89,6 +94,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       selected.clear();
       selectMode = false;
     });
+    try {
+      context.read<NotifBadgeService>().setCount(items.length);
+    } catch (_) {}
   }
 
   void _toggleSelectAll() {
@@ -107,19 +115,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _icon(String type) {
     switch (type) {
       case 'order':
-        return Icons.shopping_cart_outlined;
+        return Icons.shopping_bag_rounded;
       case 'stock':
-        return Icons.inventory_2_outlined;
+        return Icons.warning_amber_rounded;
       case 'task':
-        return Icons.checklist_rtl_rounded;
+        return Icons.task_alt_rounded;
       case 'announce':
-        return Icons.campaign_outlined;
+        return Icons.campaign_rounded;
       case 'review':
-        return Icons.star_outline_rounded;
+        return Icons.star_rounded;
       case 'ticket':
-        return Icons.headset_mic_outlined;
+        return Icons.support_agent_rounded;
       default:
-        return Icons.notifications_none;
+        return Icons.notifications_active_rounded;
     }
   }
 

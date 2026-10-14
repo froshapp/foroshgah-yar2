@@ -7,6 +7,7 @@ import 'core/services/store_service.dart';
 import 'core/services/orders_service.dart';
 import 'core/services/products_service.dart';
 import 'core/services/dashboard_service.dart';
+import 'core/services/notif_badge_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => OrdersService()),
         ChangeNotifierProvider(create: (_) => ProductsService()),
         ChangeNotifierProvider(create: (_) => DashboardService()),
+        ChangeNotifierProvider(create: (_) => NotifBadgeService()),
       ],
       child: const ForoshgahYarApp(),
     ),

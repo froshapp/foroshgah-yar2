@@ -127,9 +127,10 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
                           const SizedBox(height: 12),
                           NeonCard(
                             child: Column(children: [
-                              _row('سفارش امروز', '${data['orders_today'] ?? 0}', valueColor: AppColors.purpleGlow),
-                              _row('تعداد محصولات', '${data['products_count'] ?? 0}'),
-                              _row('تعداد کاربران', '${data['users_count'] ?? 0}'),
+                              _row('ایندکس‌گذاری', '${data['indexing'] ?? '—'}'),
+                              _row('حافظه پنهان Opcode', '${data['opcode'] ?? '—'}'),
+                              _row('حافظه آزاد', '${data['free_memory'] ?? '—'}'),
+                              _row('MCP (اوج مصرف)', '${data['mcp'] ?? '—'}'),
                               _row('حافظه PHP', '${data['memory_limit'] ?? '—'}'),
                               if (data['disk_free_mb'] != null)
                                 _row('فضای آزاد', '${data['disk_free_mb']} MB از ${data['disk_total_mb'] ?? '?'} MB'),

@@ -155,7 +155,7 @@ class MainShellState extends State<MainShell> with WidgetsBindingObserver {
               children: [
                 // ترتیب بصری RTL: ماژول‌ها | محصولات | پیشخوان | سفارشات | بیشتر
                 _nav(3, Icons.grid_view_rounded, 'ماژول‌ها'),
-                _nav(2, Icons.inventory_2_outlined, 'محصولات'),
+                _nav(2, Icons.view_in_ar_rounded, 'محصولات'),
                 _nav(0, Icons.home_rounded, 'پیشخوان'),
                 _nav(1, Icons.shopping_cart_outlined, 'سفارشات'),
                 _nav(4, Icons.more_horiz_rounded, 'بیشتر'),
