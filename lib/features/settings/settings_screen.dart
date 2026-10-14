@@ -1,6 +1,7 @@
 import '../../core/utils/shamsi_picker.dart'; // formatJalali, pickShamsiDate, formatAnyDate
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
@@ -993,8 +994,20 @@ class ProfilePage extends StatelessWidget {
                 child: Column(children: [
                   Builder(builder: (_) {
                     final avatar = user['avatar']?.toString() ?? '';
-                    final isDefault = avatar.contains('d=mm') || avatar.contains('d=mp') || avatar.contains('d=blank') || avatar.contains('gravatar.com/avatar') && avatar.contains('d=');
+                    final lower = avatar.toLowerCase();
+                    final isDefault = lower.contains('gravatar.com') && (lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank'));
                     final showImg = avatar.startsWith('http') && avatar.isNotEmpty && !isDefault;
+                    final isSvg = lower.contains('.svg');
+                    Widget child;
+                    if (showImg && isSvg) {
+                      child = SvgPicture.network(avatar, width: 88, height: 88, fit: BoxFit.cover,
+                        placeholderBuilder: (_) => Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)));
+                    } else if (showImg) {
+                      child = Image.network(avatar, width: 88, height: 88, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)));
+                    } else {
+                      child = Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold));
+                    }
                     return Container(
                       width: 88,
                       height: 88,
@@ -1011,10 +1024,7 @@ class ProfilePage extends StatelessWidget {
                         ],
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: showImg
-                          ? Image.network(avatar, width: 88, height: 88, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)))
-                          : Text(letter, style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+                      child: child,
                     );
                   }),
                   const SizedBox(height: 14),

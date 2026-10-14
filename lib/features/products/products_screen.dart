@@ -225,8 +225,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
           body['stock_quantity'] = stockVal;
           body['manage_stock'] = true;
         }
-        final res = await auth.api.dio.put('products/$id', data: body);
+        var res = await auth.api.dio.put('products/$id', data: body);
         saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+        if (!saved) {
+          res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'});
+          saved = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: const Color(0xFF7F1D1D)));
@@ -356,8 +360,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
+    // جمع‌آوری شناسه‌ها
     final list = _filtered(svc.products);
-    int done = 0;
+    final ids = <int>[];
     for (final p in list) {
       if (catId.value != null) {
         final pcats = p['categories'];
@@ -370,29 +375,50 @@ class _ProductsScreenState extends State<ProductsScreen> {
         }
         if (!okCat) continue;
       }
-      final price = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
-      double newPrice = mode.value == 'percent' ? price * (1 + val / 100) : price + val;
-      if (newPrice < 0) newPrice = 0;
-      final id = p['id'];
-      try {
-        final body = {
-          'regular_price': newPrice.round().toString(),
-          'price': newPrice.round().toString(),
-        };
-        final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
-        var res = await auth.api.dio.put('products/$id', data: body, options: opt);
-        var ok = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
-        if (!ok) {
-          body['_method'] = 'PUT';
-          res = await auth.api.dio.post('products/$id', data: body, options: opt);
-          ok = res.statusCode == 200 || res.statusCode == 201 || (res.data is Map && res.data['success'] == true);
+      final id = int.tryParse('${p['id']}') ?? 0;
+      if (id > 0) ids.add(id);
+    }
+    int done = 0;
+    String? errMsg;
+    try {
+      final body = <String, dynamic>{
+        'ids': ids,
+        'mode': mode.value,
+        'value': val,
+        if (catId.value != null) 'category': catId.value,
+      };
+      final res = await auth.api.dio.post('products/bulk-price', data: body);
+      if (res.data is Map) {
+        done = int.tryParse('${res.data['updated'] ?? 0}') ?? 0;
+        errMsg = res.data['message']?.toString();
+      }
+      if (done == 0 && ids.isNotEmpty) {
+        // fallback: یکی‌یکی
+        for (final id in ids) {
+          try {
+            final p = list.firstWhere((e) => '${e['id']}' == '$id', orElse: () => <String, dynamic>{});
+            final price = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
+            final newPrice = mode.value == 'percent' ? price * (1 + val / 100) : price + val;
+            final b = {
+              'regular_price': newPrice.round().toString(),
+              'price': newPrice.round().toString(),
+            };
+            var r = await auth.api.dio.put('products/$id', data: b);
+            var ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
+            if (!ok) {
+              r = await auth.api.dio.post('products/$id', data: {...b, '_method': 'PUT'});
+              ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
+            }
+            if (ok) done++;
+          } catch (_) {}
         }
-        if (ok) done++;
-      } catch (_) {}
+      }
+    } catch (e) {
+      errMsg = e.toString();
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(done > 0 ? '$done محصول به‌روز شد' : 'هیچ محصولی به‌روز نشد'),
+        content: Text(done > 0 ? '$done محصول به‌روز شد' : (errMsg ?? 'هیچ محصولی به‌روز نشد')),
         backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       ));
       await svc.fetchProducts(auth, refresh: true);

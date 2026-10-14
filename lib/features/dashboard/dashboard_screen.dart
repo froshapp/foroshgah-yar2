@@ -148,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Expanded(
                             flex: 3,
                             child: SizedBox(
-                              height: 120,
+                              height: 140,
                               child: _SalesChart(daily: daily, fallback: stats['today_sales']),
                             ),
                           ),
@@ -234,37 +234,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: _quickTile(
-                        Icons.phone_in_talk_rounded,
-                        const Color(0xFFA78BFA),
-                        'تماس‌ها',
-                        'پشتیبانی و ارتباط',
-                        () => widget.onContacts?.call(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _quickTile(
-                        Icons.add_rounded,
-                        const Color(0xFF3B82F6),
-                        'افزودن محصول',
-                        'ثبت محصول جدید',
-                        () => widget.onAddProduct?.call(),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _quickTile(
-                        Icons.receipt_long_rounded,
-                        const Color(0xFF22D3EE),
-                        'سفارشات',
-                        'مشاهده و مدیریت',
-                        () => widget.onNavigate?.call(1),
-                      ),
-                    ),
+                    _quickRow(Icons.phone_in_talk_rounded, const Color(0xFFA78BFA), 'تماس‌ها', 'پشتیبانی و ارتباط با مشتریان', () => widget.onContacts?.call()),
+                    const SizedBox(height: 10),
+                    _quickRow(Icons.add_rounded, const Color(0xFF3B82F6), 'افزودن محصول', 'ثبت محصول جدید', () => widget.onAddProduct?.call()),
+                    const SizedBox(height: 10),
+                    _quickRow(Icons.receipt_long_rounded, const Color(0xFF22D3EE), 'سفارشات', 'مشاهده و مدیریت سفارشات', () => widget.onNavigate?.call(1)),
                   ],
                 ),
               ),
@@ -350,6 +326,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _quickRow(IconData icon, Color color, String title, String sub, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF18265A), Color(0xFF101B3C), Color(0xFF0B1230)],
+            ),
+            border: Border.all(color: color.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8)),
+              BoxShadow(color: color.withOpacity(0.18), blurRadius: 12, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Row(children: [
+            SoftIconBox(icon: icon, color: color, size: 44),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(sub, style: const TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ]),
+            ),
+            Icon(Icons.chevron_left, color: AppColors.textMute.withOpacity(0.8)),
+          ]),
+        ),
       ),
     );
   }

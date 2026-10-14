@@ -56,6 +56,20 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
     if (mounted) setState(() => loading = false);
   }
 
+  String _themeName(dynamic v) {
+    var s = (v ?? '—').toString().trim();
+    if (s.contains(' - ')) {
+      final parts = s.split(' - ').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      // ترجیح بخش فارسی
+      for (final p in parts.reversed) {
+        if (RegExp(r'[\u0600-\u06FF]').hasMatch(p)) return p;
+      }
+      return parts.isNotEmpty ? parts.last : s;
+    }
+    if (s.length > 28) return s.substring(0, 28) + '…';
+    return s;
+  }
+
   Widget _row(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -106,8 +120,8 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
                               _row('ووکامرس', '${data['wc_version'] ?? '—'}'),
                               _row('PHP', '${data['php_version'] ?? '—'}'),
                               _row('افزونه فروشگاه‌یار', '${data['plugin_version'] ?? '—'}'),
-                              _row('قالب', '${data['theme'] ?? '—'}'),
-                              _row('افزونه‌های فعال', '${data['active_plugins'] ?? '—'}'),
+                              _row('قالب', _themeName(data['theme'])),
+                              _row('افزونه‌های فعال', '${data['active_plugins_count'] ?? data['active_plugins'] ?? '—'}'),
                             ]),
                           ),
                           const SizedBox(height: 12),

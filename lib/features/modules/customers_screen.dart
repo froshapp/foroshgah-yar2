@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/auth_service.dart';
@@ -43,29 +44,43 @@ Widget letterAvatar(String letter, Color c, double size) {
 
 Widget avatarWidget(Map m, {double size = 40}) {
   final url = m['avatar']?.toString() ?? '';
-  final name = (m['name'] ?? m['display_name'] ?? m['billing_name'] ?? '?').toString();
-  final letter = name.trim().isNotEmpty ? name.trim().substring(0, 1) : '?';
+  final name = m['name']?.toString() ?? m['display_name']?.toString() ?? '?';
+  final letter = name.isNotEmpty ? name.substring(0, 1) : '?';
   final c = avatarColor(m['id'] ?? m['customer_id'] ?? name.hashCode);
-  // گراواتار پیش‌فرض یا لینک خراب → حرف رنگی
   final lower = url.toLowerCase();
-  final isDefaultGravatar = lower.contains('gravatar.com') || lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank') || lower.contains('d=identicon') || lower.contains('d=retro');
-  if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://')) && !isDefaultGravatar) {
+  final isDefaultGravatar = lower.contains('gravatar.com') &&
+      (lower.contains('d=mm') || lower.contains('d=mp') || lower.contains('d=blank') ||
+       lower.contains('d=identicon') || lower.contains('d=retro') || lower.contains('d=wavatar'));
+  if (url.isEmpty || !(url.startsWith('http://') || url.startsWith('https://')) || isDefaultGravatar) {
+    return letterAvatar(letter, c, size);
+  }
+  // SVG آواتار پنل آپادانا
+  if (lower.contains('.svg')) {
     return ClipOval(
-      child: Image.network(
+      child: SvgPicture.network(
         url,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
-        loadingBuilder: (ctx, child, prog) {
-          if (prog == null) return child;
-          return letterAvatar(letter, c, size);
-        },
+        placeholderBuilder: (_) => letterAvatar(letter, c, size),
       ),
     );
   }
-  return letterAvatar(letter, c, size);
+  return ClipOval(
+    child: Image.network(
+      url,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => letterAvatar(letter, c, size),
+      loadingBuilder: (ctx, child, prog) {
+        if (prog == null) return child;
+        return letterAvatar(letter, c, size);
+      },
+    ),
+  );
 }
+
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
