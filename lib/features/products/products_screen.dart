@@ -240,6 +240,80 @@ class _ProductsScreenState extends State<ProductsScreen> {
       );
 
 
+
+  String _catLabel(ProductsService svc) {
+    if (catFilter == null) return 'همه دسته‌ها';
+    for (final c in svc.categories) {
+      final m = Map<String, dynamic>.from(c as Map);
+      if (int.tryParse('${m['id']}') == catFilter) return m['name']?.toString() ?? 'دسته';
+    }
+    return 'دسته';
+  }
+
+  Future<void> _pickCategory(AuthService auth, ProductsService svc) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: const Color(0xFF0E1838),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        final cats = svc.categories;
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(ctx).size.height * 0.55,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textMute, borderRadius: BorderRadius.circular(4))),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('انتخاب دسته‌بندی', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: cats.length + 1,
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                    itemBuilder: (_, i) {
+                      if (i == 0) {
+                        final sel = catFilter == null;
+                        return ListTile(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          selected: sel,
+                          selectedTileColor: AppColors.purple.withOpacity(0.2),
+                          leading: Icon(sel ? Icons.check_circle_rounded : Icons.apps_rounded, color: sel ? AppColors.purpleGlow : AppColors.textMute),
+                          title: const Text('همه دسته‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          onTap: () => Navigator.pop(ctx, {'picked': true, 'id': null}),
+                        );
+                      }
+                      final m = Map<String, dynamic>.from(cats[i - 1] as Map);
+                      final id = int.tryParse('${m['id']}');
+                      final sel = id == catFilter;
+                      return ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        selected: sel,
+                        selectedTileColor: AppColors.purple.withOpacity(0.2),
+                        leading: Icon(sel ? Icons.check_circle_rounded : Icons.folder_outlined, color: sel ? AppColors.purpleGlow : AppColors.textMute),
+                        title: Text(m['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+                        onTap: () => Navigator.pop(ctx, {'picked': true, 'id': id}),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (result == null || result['picked'] != true) return;
+    final v = result['id'] as int?;
+    setState(() => catFilter = v);
+    await svc.fetchProducts(auth, refresh: true, categoryId: v ?? 0);
+  }
+
   Future<void> _openBulkPrice(AuthService auth, ProductsService svc) async {
     final mode = ValueNotifier<String>('percent');
     final valueCtrl = TextEditingController();
@@ -379,7 +453,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         'mode': mode.value,
         'value': val,
         if (catId.value != null) 'category': catId.value,
-        if (ids.isEmpty) 'all': true,
+        'all': ids.isEmpty,
       };
       // اطمینان از ارسال JSON
       final opt = Options(
@@ -482,43 +556,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
           child: Row(children: [
             Expanded(
               flex: 2,
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B1230),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF1E2A55)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int?>(
-                    value: catFilter,
-                    isExpanded: true,
-                    dropdownColor: AppColors.card,
-                    menuMaxHeight: 220,
-                    hint: const Text('دسته‌بندی', style: TextStyle(color: AppColors.textMute, fontSize: 13)),
-                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMute),
-                    items: [
-                      const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white, fontSize: 13))),
-                      ...svc.categories.map((c) {
-                        final m = Map<String, dynamic>.from(c as Map);
-                        return DropdownMenuItem<int?>(
-                          value: int.tryParse('${m['id']}'),
-                          child: Text(m['name']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontSize: 13)),
-                        );
-                      }),
+              child: GestureDetector(
+                onTap: () => _pickCategory(auth, svc),
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0B1230),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF1E2A55)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3)),
                     ],
-                    onChanged: (v) {
-                      setState(() => catFilter = v);
-                      context.read<ProductsService>().fetchProducts(
-                        context.read<AuthService>(),
-                        refresh: true,
-                        categoryId: v ?? 0,
-                      );
-                      // فیلتر سمت کلاینت + درخواست سرور
-                      svc.fetchProducts(auth, refresh: true, categoryId: v ?? 0);
-                    },
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.category_outlined, color: AppColors.purpleGlow, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _catLabel(svc),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMute, size: 20),
+                    ],
                   ),
                 ),
               ),

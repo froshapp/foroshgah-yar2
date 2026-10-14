@@ -58,9 +58,9 @@ class NeonCard extends StatelessWidget {
         ),
         boxShadow: elevated
             ? [
-                BoxShadow(color: Colors.black.withOpacity(0.58), blurRadius: 24, offset: const Offset(0, 12)),
-                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.25), blurRadius: 18, offset: const Offset(0, 6)),
-                BoxShadow(color: Colors.white.withOpacity(0.09), blurRadius: 1.5, offset: const Offset(0, -1.2)),
+                BoxShadow(color: Colors.black.withOpacity(0.65), blurRadius: 28, offset: const Offset(0, 14)),
+                BoxShadow(color: (borderColor ?? AppColors.purple).withOpacity(0.32), blurRadius: 20, offset: const Offset(0, 7)),
+                BoxShadow(color: Colors.white.withOpacity(0.12), blurRadius: 2, offset: const Offset(0, -1.5)),
               ]
             : null,
       ),
@@ -106,9 +106,9 @@ class SoftIconBox extends StatelessWidget {
           stops: const [0.0, 0.4, 1.0],
         ),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.55), blurRadius: 18, offset: const Offset(0, 8)),
-          BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4)),
-          BoxShadow(color: Colors.white.withOpacity(0.25), blurRadius: 1.5, offset: const Offset(0, -1.2)),
+          BoxShadow(color: color.withOpacity(0.6), blurRadius: 20, offset: const Offset(0, 9)),
+          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 5)),
+          BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 2, offset: const Offset(0, -1.5)),
         ],
         border: Border.all(color: Colors.white.withOpacity(0.28), width: 1.1),
       ),

@@ -115,19 +115,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _icon(String type) {
     switch (type) {
       case 'order':
-        return Icons.shopping_bag_rounded;
+        return Icons.receipt_long_rounded;
       case 'stock':
-        return Icons.warning_amber_rounded;
+        return Icons.inventory_2_rounded;
       case 'task':
-        return Icons.task_alt_rounded;
+        return Icons.checklist_rtl_rounded;
       case 'announce':
         return Icons.campaign_rounded;
       case 'review':
-        return Icons.star_rounded;
+        return Icons.reviews_rounded;
       case 'ticket':
-        return Icons.support_agent_rounded;
+        return Icons.headset_mic_rounded;
       default:
         return Icons.notifications_active_rounded;
+    }
+  }
+
+  Color _iconBg(String type) {
+    switch (type) {
+      case 'order':
+        return const Color(0xFF3B82F6);
+      case 'stock':
+        return const Color(0xFFF59E0B);
+      case 'task':
+        return const Color(0xFF22D3EE);
+      case 'announce':
+        return const Color(0xFFA78BFA);
+      case 'review':
+        return const Color(0xFFFBBF24);
+      case 'ticket':
+        return const Color(0xFF34D399);
+      default:
+        return AppColors.purple;
     }
   }
 
@@ -276,7 +295,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                 ],
-                                SoftIconBox(icon: _icon(type), color: c, size: 44),
+                                SoftIconBox(icon: _icon(type), color: _iconBg(type), size: 44),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

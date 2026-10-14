@@ -314,14 +314,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _recentOrders.isEmpty
-                                  ? 'آخرین بروزرسانی: همین الان'
-                                  : 'آخرین بروزرسانی: ${_recentOrders.length} سفارش اخیر',
+                              'آخرین بروزرسانی مدیریت: ${_mgmtLabel()}',
                               style: const TextStyle(color: AppColors.textDim, fontSize: 11),
                             ),
                           ),
                           Text(
-                            '${_recentOrders.isEmpty ? 0 : _recentOrders.length} فعالیت اخیر',
+                            '${_recentOrders.length} فعالیت اخیر',
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                           ),
                           const Icon(Icons.chevron_left_rounded, color: AppColors.textMute, size: 18),
