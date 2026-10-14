@@ -265,6 +265,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                           Text(date, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
                                           const SizedBox(height: 4),
                                           Text('$total تومان', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                                          if ((o['payment_title'] ?? o['payment_method_title'] ?? o['payment_method'] ?? '').toString().isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                'پرداخت: ${o['payment_title'] ?? o['payment_method_title'] ?? o['payment_method']}',
+                                                style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                                              ),
+                                            ),
                                         ]),
                                       ),
                                       Container(

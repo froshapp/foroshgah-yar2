@@ -448,28 +448,46 @@ class _ProductsScreenState extends State<ProductsScreen> {
     int done = 0;
     String? errMsg;
     try {
-      final body = <String, dynamic>{
-        'ids': ids,
-        'mode': mode.value,
-        'value': val,
-        if (catId.value != null) 'category': catId.value,
-        'all': ids.isEmpty,
-      };
-      // اطمینان از ارسال JSON
       final opt = Options(
         contentType: 'application/json',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        sendTimeout: const Duration(seconds: 120),
-        receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 90),
+        receiveTimeout: const Duration(seconds: 90),
       );
-      final res = await auth.api.dio.post('products/bulk-price', data: body, options: opt);
-      if (res.data is Map) {
-        done = int.tryParse('${res.data['updated'] ?? 0}') ?? 0;
-        errMsg = res.data['message']?.toString();
+      // دسته‌های ۳۰تایی تا connection reset نشود
+      final chunks = <List<int>>[];
+      if (ids.isEmpty) {
+        chunks.add([]); // سرور با category/all پر می‌کند
+      } else {
+        for (var i = 0; i < ids.length; i += 30) {
+          chunks.add(ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30));
+        }
       }
+      for (final chunk in chunks) {
+        final body = <String, dynamic>{
+          'ids': chunk,
+          'mode': mode.value,
+          'value': val,
+          if (catId.value != null) 'category': catId.value,
+          'all': chunk.isEmpty && ids.isEmpty,
+        };
+        dynamic resData;
+        // اول مسیر جایگزین /bulk-price
+        try {
+          final res = await auth.api.dio.post('bulk-price', data: body, options: opt);
+          resData = res.data;
+        } catch (_) {
+          final res = await auth.api.dio.post('products/bulk-price', data: body, options: opt);
+          resData = res.data;
+        }
+        if (resData is Map) {
+          done += int.tryParse('${resData['updated'] ?? 0}') ?? 0;
+          errMsg = resData['message']?.toString() ?? errMsg;
+        }
+      }
+      // fallback یکی‌یکی اگر هنوز صفر
       if (done == 0 && ids.isNotEmpty) {
-        // fallback: یکی‌یکی
-        for (final id in ids) {
+        for (final id in ids.take(40)) {
           try {
             final p = list.firstWhere((e) => '${e['id']}' == '$id', orElse: () => <String, dynamic>{});
             final price = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;

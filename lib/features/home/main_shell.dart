@@ -16,6 +16,8 @@ import '../modules/customers_screen.dart';
 import '../modules/accounting_screen.dart';
 import '../orders/manual_order_screen.dart';
 import '../modules/site_status_screen.dart';
+import '../modules/coupons_screen.dart';
+import '../modules/activity_log_screen.dart';
 import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -231,6 +233,8 @@ class _MoreTab extends StatelessWidget {
           _item(context, Icons.account_balance_wallet_rounded, 'حسابداری', 'گزارش مالی و تراکنش‌ها', AppColors.cyan, const AccountingScreen()),
           _item(context, Icons.add_shopping_cart_rounded, 'سفارش دستی', 'ثبت سفارش جدید به‌صورت دستی', AppColors.blue, null, manualOrder: true),
           _item(context, Icons.monitor_heart_outlined, 'وضعیت سایت', 'سلامت وردپرس، PHP، SSL و ...', AppColors.green, const SiteStatusScreen()),
+          _item(context, Icons.local_offer_rounded, 'کوپن و تخفیف', 'ساخت و مدیریت کد تخفیف', const Color(0xFF22C55E), const CouponsScreen()),
+          _item(context, Icons.history_rounded, 'لاگ تغییرات', 'سوابق کارهای مدیریت', AppColors.blue, const ActivityLogScreen()),
         ],
       ),
     );

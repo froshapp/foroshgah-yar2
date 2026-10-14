@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/dashboard_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../modules/activity_log_screen.dart';
 
 /// موکاپ دقیق:
 /// ۴ کارت آمار کنار هم (بدون اسکرول) | نمودار ۷روز | دسترسی سریع ۳تایی کنار هم | فعالیت اخیر
@@ -60,34 +61,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// برچسب آخرین فعالیت مدیریت (از سفارشات اخیر)
   String _mgmtLabel() {
-    if (_recentOrders.isEmpty) return 'بدون فعالیت';
-    final o = _recentOrders.first;
-    if (o is! Map) return 'بدون فعالیت';
-    final id = o['id'] ?? o['number'] ?? o['order_id'];
-    var status = (o['status_label'] ?? o['status_name'] ?? o['status'] ?? '').toString();
-    const map = {
-      'pending': 'در انتظار',
-      'processing': 'در حال انجام',
-      'on-hold': 'معلق',
-      'completed': 'تکمیل‌شده',
-      'cancelled': 'لغو شده',
-      'refunded': 'مسترد',
-      'failed': 'ناموفق',
-      'checkout-draft': 'پیش‌نویس',
-    };
-    status = map[status] ?? status;
-    final date = (o['date_created'] ?? o['date'] ?? o['created'] ?? '').toString();
-    String shortDate = date;
-    if (date.length >= 16) {
-      shortDate = date.substring(0, 16).replaceAll('T', ' ');
-    } else if (date.length > 10) {
-      shortDate = date.substring(0, 10);
+    if (_recentOrders.isEmpty) {
+      final now = DateTime.now();
+      return '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
     }
-    final parts = <String>[];
-    if (id != null) parts.add('#$id');
-    if (status.isNotEmpty) parts.add(status);
-    if (shortDate.isNotEmpty) parts.add(shortDate);
-    return parts.isEmpty ? 'بدون فعالیت' : parts.join(' · ');
+    final o = _recentOrders.first;
+    if (o is! Map) return '—';
+    final date = (o['date_created'] ?? o['date'] ?? o['created'] ?? '').toString();
+    if (date.length >= 10) return date.substring(0, 10).replaceAll('-', '/');
+    return date.isEmpty ? '—' : date;
   }
 
   @override
@@ -109,23 +91,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: RefreshIndicator(
-        color: AppColors.purple,
-        backgroundColor: AppColors.card,
-        onRefresh: () async {
-          await dash.fetchStats(auth);
-          await _loadRecent();
-        },
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 28),
-          children: [
-            GlassHeader(
-              title: 'پیشخوان',
-              subtitle: 'مدیریت فروشگاه ووکامرس',
-              leadingIcon: Icons.storefront_rounded,
-              leadingColor: AppColors.purple,
-            ),
-
+      body: Column(
+        children: [
+          GlassHeader(
+            title: 'پیشخوان',
+            subtitle: 'مدیریت فروشگاه ووکامرس',
+            leadingIcon: Icons.storefront_rounded,
+            leadingColor: AppColors.purple,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppColors.purple,
+              backgroundColor: AppColors.card,
+              onRefresh: () async {
+                await dash.fetchStats(auth);
+                await _loadRecent();
+              },
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 28, top: 4),
+                children: [
             if (dash.loading && stats['total_products'] == 0)
               const Padding(padding: EdgeInsets.all(48), child: Center(child: MiniLoader()))
             else ...[
@@ -329,13 +313,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 12),
 
-              // ═══ فعالیت اخیر ═══
+              // ═══ فعالیت اخیر → لاگ تغییرات ═══
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => widget.onNavigate?.call(1),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ActivityLogScreen()),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -350,9 +338,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: const TextStyle(color: AppColors.textDim, fontSize: 11),
                             ),
                           ),
-                          Text(
-                            '${_recentOrders.length} فعالیت اخیر',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                          const Text(
+                            'فعالیت اخیر',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
                           ),
                           const Icon(Icons.chevron_left_rounded, color: AppColors.textMute, size: 18),
                         ],
@@ -362,8 +350,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ],
-          ],
-        ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
