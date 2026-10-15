@@ -397,8 +397,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _chip(String label, int days) {
     final on = _rangeDays == days;
+    // بارگذاری مجدد با بازه انتخابی
     return GestureDetector(
-      onTap: () => setState(() => _rangeDays = days),
+      onTap: () {
+        setState(() => _rangeDays = days);
+        context.read<DashboardService>().fetchStats(context.read<AuthService>(), days: days);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(

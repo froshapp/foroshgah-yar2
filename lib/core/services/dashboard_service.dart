@@ -27,7 +27,7 @@ class DashboardService extends ChangeNotifier {
     return int.tryParse(v.toString().replaceAll(RegExp(r'[^0-9\-]'), '')) ?? 0;
   }
 
-  Future<void> fetchStats(AuthService auth) async {
+  Future<void> fetchStats(AuthService auth, {int days = 7}) async {
     _loading = true;
     _error = null;
     notifyListeners();
@@ -37,7 +37,7 @@ class DashboardService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final res = await auth.api.dio.get('dashboard');
+      final res = await auth.api.dio.get('dashboard', queryParameters: {'days': days});
       final data = res.data;
       if (data is Map) {
         final raw = Map<String, dynamic>.from(data);

@@ -243,45 +243,93 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               final date = _date(o);
                               final name = _customerName(o);
 
+                              final products = (o['product_names'] ?? o['products_summary'] ?? '').toString();
+                              final pay = (o['payment_title'] ?? o['payment_method_title'] ?? o['payment_method'] ?? '').toString();
+                              final orderNo = '#${o['number'] ?? o['id'] ?? ''}';
+
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: NeonCard(
                                   onTap: () => _openOrder(o),
-                                  padding: const EdgeInsets.all(14),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
-                                      // در RTL اولی سمت راست می‌آید = آیکون
-                                      _orderAvatar(o, name),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Text(name.isNotEmpty ? name : 'مشتری', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                                          const SizedBox(height: 4),
-                                          Text('جزئیات در صفحه سفارش', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                          const SizedBox(height: 6),
-                                          Text(date, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
-                                          const SizedBox(height: 4),
-                                          Text('$total تومان', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                                          if ((o['payment_title'] ?? o['payment_method_title'] ?? o['payment_method'] ?? '').toString().isNotEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 2),
-                                              child: Text(
-                                                'پرداخت: ${o['payment_title'] ?? o['payment_method_title'] ?? o['payment_method']}',
-                                                style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _orderAvatar(o, name),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  name.isNotEmpty ? name : 'مشتری',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  orderNo,
+                                                  style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Flexible(
+                                            child: Align(
+                                              alignment: Alignment.topLeft,
+                                              child: Container(
+                                                constraints: const BoxConstraints(maxWidth: 120),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: sc.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  border: Border.all(color: sc.withOpacity(0.4)),
+                                                ),
+                                                child: Text(
+                                                  sl,
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700, height: 1.2),
+                                                ),
                                               ),
                                             ),
-                                        ]),
+                                          ),
+                                        ],
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: sc.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: sc.withOpacity(0.4)),
+                                      if (products.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          products,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                                         ),
-                                        child: Text(sl, style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                                      ],
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Text(date, style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
+                                          const Spacer(),
+                                          Text(
+                                            '$total تومان',
+                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                                          ),
+                                        ],
                                       ),
+                                      if (pay.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'پرداخت: $pay',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: AppColors.textMute, fontSize: 11),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
