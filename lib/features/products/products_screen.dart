@@ -466,6 +466,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     // اگر لیست محلی خالی بود، سرور با category یا all پر می‌کند
     int done = 0;
     String? errMsg;
+    final sampleInfo = <String>[];
     try {
       final opt = Options(
         contentType: 'application/json',
@@ -502,26 +503,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
         if (resData is Map) {
           done += int.tryParse('${resData['updated'] ?? 0}') ?? 0;
           errMsg = resData['message']?.toString() ?? errMsg;
+          final samples = resData['samples'];
+          if (samples is List && samples.isNotEmpty && sampleInfo.isEmpty) {
+            for (final s in samples.take(3)) {
+              if (s is Map) {
+                sampleInfo.add('${s['from'] ?? '?'} → ${s['to'] ?? s['active_price'] ?? '?'}');
+              }
+            }
+          }
         }
       }
-      // fallback یکی‌یکی اگر هنوز صفر
+      // fallback یکی‌یکی فقط اگر API گروهی هیچ‌چیز به‌روز نکرد
       if (done == 0 && ids.isNotEmpty) {
         for (final id in ids.take(40)) {
           try {
-            final p = list.firstWhere((e) => '${e['id']}' == '$id', orElse: () => <String, dynamic>{});
-            final price = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
-            final newPrice = mode.value == 'percent' ? price * (1 + val / 100) : price + val;
-            final b = {
-              'regular_price': newPrice.round().toString(),
-              'price': newPrice.round().toString(),
+            final bodyOne = <String, dynamic>{
+              'ids': [id],
+              'mode': mode.value,
+              'value': val,
             };
-            var r = await auth.api.dio.put('products/$id', data: b);
-            var ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
-            if (!ok) {
-              r = await auth.api.dio.post('products/$id', data: {...b, '_method': 'PUT'});
-              ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
+            final r = await auth.api.dio.post('bulk-price', data: bodyOne, options: opt);
+            if (r.data is Map) {
+              final u = int.tryParse('${r.data['updated'] ?? 0}') ?? 0;
+              if (u > 0) done += u;
             }
-            if (ok) done++;
           } catch (_) {}
         }
       }
@@ -529,9 +534,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       errMsg = e.toString();
     }
     if (mounted) {
+      final extra = sampleInfo.isNotEmpty ? ' (${sampleInfo.join(' | ')})' : '';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(done > 0 ? '$done محصول به‌روز شد' : (errMsg ?? 'هیچ محصولی به‌روز نشد')),
+        content: Text(done > 0 ? '$done محصول به‌روز شد$extra' : (errMsg ?? 'هیچ محصولی به‌روز نشد')),
         backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
+        duration: const Duration(seconds: 4),
       ));
       await svc.fetchProducts(auth, refresh: true);
     }
