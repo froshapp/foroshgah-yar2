@@ -29,6 +29,7 @@ class NeonCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? borderColor;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final double radius;
   final bool elevated;
   const NeonCard({
@@ -37,6 +38,7 @@ class NeonCard extends StatelessWidget {
     this.padding,
     this.borderColor,
     this.onTap,
+    this.onLongPress,
     this.radius = 18,
     this.elevated = true,
   });
@@ -66,10 +68,15 @@ class NeonCard extends StatelessWidget {
       ),
       child: child,
     );
-    if (onTap == null) return content;
+    if (onTap == null && onLongPress == null) return content;
     return Material(
       color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(radius), child: content),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(radius),
+        child: content,
+      ),
     );
   }
 }
