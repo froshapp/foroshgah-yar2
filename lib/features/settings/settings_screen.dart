@@ -72,15 +72,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ]),
                     ),
                     const SizedBox(width: 12),
-                    Container(
-                      width: 48, height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
-                        boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 10, offset: const Offset(0, 4))],
-                      ),
-                      child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
-                    ),
+                    Builder(builder: (_) {
+                      final av = auth.user?['avatar']?.toString() ?? '';
+                      final lower = av.toLowerCase();
+                      final isDefault = lower.contains('gravatar.com');
+                      final show = av.startsWith('http') && av.isNotEmpty && !isDefault;
+                      final letter = (auth.user?['display_name']?.toString() ?? 'م');
+                      final ch = letter.isNotEmpty ? letter.substring(0, 1) : 'م';
+                      return Container(
+                        width: 48, height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(colors: [Color(0xFF7047F5), Color(0xFF2868FF)]),
+                          boxShadow: [BoxShadow(color: AppColors.purple.withOpacity(0.45), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: show
+                            ? Image.network(av, width: 48, height: 48, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(child: Text(ch, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700))))
+                            : Center(child: Text(ch, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700))),
+                      );
+                    }),
                   ],
                 ),
               ),

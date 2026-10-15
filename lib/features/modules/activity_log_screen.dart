@@ -185,6 +185,27 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                 icon: Icon(selectMode ? Icons.close : Icons.checklist_rounded, size: 18, color: AppColors.purpleGlow),
                 label: Text(selectMode ? 'انصراف' : 'انتخاب', style: const TextStyle(color: AppColors.purpleGlow, fontSize: 12)),
               ),
+              if (selectMode)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      if (selected.length == items.length && items.isNotEmpty) {
+                        selected.clear();
+                      } else {
+                        selected
+                          ..clear()
+                          ..addAll(items.map((e) {
+                            final m = Map<String, dynamic>.from(e as Map);
+                            return m['id']?.toString() ?? '';
+                          }).where((id) => id.isNotEmpty));
+                      }
+                    });
+                  },
+                  child: Text(
+                    selected.length == items.length && items.isNotEmpty ? 'لغو همه' : 'انتخاب همه',
+                    style: const TextStyle(color: AppColors.blue, fontSize: 12),
+                  ),
+                ),
               if (selectMode && selected.isNotEmpty)
                 TextButton.icon(
                   onPressed: () => _clear(all: false),
@@ -194,7 +215,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               const Spacer(),
               TextButton(
                 onPressed: () => _clear(all: true),
-                child: const Text('پاک کردن همه', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+                child: Text('پاک کردن همه', style: const TextStyle(color: AppColors.textMute, fontSize: 11)),
               ),
             ]),
           ),

@@ -507,7 +507,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (samples is List && samples.isNotEmpty && sampleInfo.isEmpty) {
             for (final s in samples.take(3)) {
               if (s is Map) {
-                sampleInfo.add('${s['from'] ?? '?'} → ${s['to'] ?? s['active_price'] ?? '?'}');
+                final from = s['from'] ?? '?';
+                final to = s['to'] ?? '?';
+                final active = s['active_price'];
+                final saleTo = s['sale_to'];
+                if (saleTo != null) {
+                  sampleInfo.add('$from→$to (نمایش:$active)');
+                } else {
+                  sampleInfo.add('$from → $to');
+                }
               }
             }
           }
