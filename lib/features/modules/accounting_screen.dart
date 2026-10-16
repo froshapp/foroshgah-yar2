@@ -94,56 +94,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                             const SizedBox(width: 8),
                             Expanded(child: _kpi('هزینه‌ها', _fmt(expense), AppColors.pink)),
                           ]),
-                          const SizedBox(height: 14),
-                          // نمودار
-                          NeonCard(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Row(
-                                children: [
-                                  Expanded(
-                                    child: Text('نمودار فروش',
-                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                                  ),
-                                  Text('۷ روز اخیر', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                height: 120,
-                                child: daily.isEmpty
-                                    ? const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textMute)))
-                                    : Row(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: daily.map((e) {
-                                          final m = Map<String, dynamic>.from(e as Map);
-                                          final t = double.tryParse('${m['total'] ?? 0}') ?? 0;
-                                          final h = (t / maxY) * 100;
-                                          return Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 3),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.end,
-                                                children: [
-                                                  Container(
-                                                    height: h.clamp(4, 100),
-                                                    decoration: BoxDecoration(
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      gradient: const LinearGradient(
-                                                        begin: Alignment.bottomCenter,
-                                                        end: Alignment.topCenter,
-                                                        colors: [Color(0xFF4A2BB8), Color(0xFFA78BFF)],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                              ),
-                            ]),
-                          ),
+
                         ],
                       ),
                     ),

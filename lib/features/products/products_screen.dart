@@ -93,6 +93,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final priceCtrl = TextEditingController(text: p['regular_price']?.toString() ?? p['price']?.toString() ?? '');
     final saleCtrl = TextEditingController(text: p['sale_price']?.toString() ?? '');
     final threshCtrl = TextEditingController(text: '${p['low_stock_amount'] ?? p['low_stock'] ?? ''}');
+    String? selectedWarehouse = p['warehouse']?.toString();
+    List warehouseList = [];
+    try {
+      final wr = await context.read<AuthService>().api.dio.get('warehouses');
+      if (wr.data is Map && wr.data['warehouses'] is List) warehouseList = wr.data['warehouses'] as List;
+    } catch (_) {}
     final stockCtrl = TextEditingController(text: p['stock_quantity']?.toString() ?? '');
     String status = p['status']?.toString() ?? 'publish';
     bool manageStock = p['manage_stock'] == true || p['stock_quantity'] != null;
@@ -165,6 +171,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: _dec('آستانه موجودی کم'),
                 ),
+                if (warehouseList.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: (selectedWarehouse == null || selectedWarehouse!.isEmpty) ? '' : selectedWarehouse,
+                    dropdownColor: const Color(0xFF121E42),
+                    decoration: _dec('انبار'),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('بدون انبار', style: TextStyle(color: Colors.white))),
+                      ...warehouseList.map((w) {
+                        final m = Map<String, dynamic>.from(w as Map);
+                        return DropdownMenuItem(value: m['id']?.toString() ?? '', child: Text(m['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)));
+                      }),
+                    ],
+                    onChanged: (v) => setModal(() => selectedWarehouse = (v == null || v.isEmpty) ? null : v),
+                  ),
+                ],
+
                 const SizedBox(height: 10),
                 SwitchListTile(
                   title: const Text('مدیریت موجودی', style: TextStyle(color: Colors.white, fontSize: 13)),
@@ -221,6 +244,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
         final threshVal = int.tryParse(_toEnDigits(threshCtrl.text));
         if (threshVal != null) {
           body['low_stock_amount'] = threshVal;
+        }
+        if (selectedWarehouse != null && selectedWarehouse!.isNotEmpty) {
+          body['warehouse'] = selectedWarehouse;
         }
         if (imageId != null) body['image_id'] = imageId;
         final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
@@ -447,33 +473,52 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
-    // لیست هدف: فیلتر فعلی صفحه + دسته انتخاب‌شده در دیالوگ
+    // لیست هدف: اول محصولات قابل‌مشاهده صفحه، بعد در صورت نیاز همه
+    await svc.fetchProducts(auth, refresh: true);
     var list = _filtered(svc.products);
-    if (list.isEmpty) {
-      await svc.fetchProducts(auth, refresh: true);
-      list = _filtered(svc.products);
-    }
-    final targets = <Map<String, dynamic>>[];
-    for (final p in list) {
-      if (catId.value != null) {
-        final pcats = p['categories'] ?? p['category_ids'];
-        bool okCat = false;
-        if (pcats is List) {
-          for (final c in pcats) {
-            final id = c is Map ? (c['id'] ?? c['term_id']) : c;
-            if (int.tryParse('$id') == catId.value) okCat = true;
-          }
+    if (list.isEmpty) list = List<Map<String, dynamic>>.from(svc.products);
+
+    bool matchCat(Map p, int? want) {
+      if (want == null) return true;
+      final pcats = p['categories'] ?? p['category_ids'] ?? p['category'];
+      if (pcats is List) {
+        for (final c in pcats) {
+          final id = c is Map ? (c['id'] ?? c['term_id']) : c;
+          if (int.tryParse('$id') == want) return true;
         }
-        if (!okCat) continue;
+      } else if (pcats != null) {
+        if (int.tryParse('$pcats') == want) return true;
       }
+      // نام دسته
+      final names = p['category_names'] ?? p['categories_names'];
+      return false;
+    }
+
+    final wantCat = catId.value ?? catFilter;
+    var targets = <Map<String, dynamic>>[];
+    for (final p in list) {
+      if (!matchCat(p, wantCat)) continue;
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id > 0) targets.add(Map<String, dynamic>.from(p));
     }
+    // اگر با فیلتر دسته چیزی نماند، همان لیست صفحه بدون فیلتر مجدد دسته
+    if (targets.isEmpty) {
+      for (final p in list) {
+        final id = int.tryParse('${p['id']}') ?? 0;
+        if (id > 0) targets.add(Map<String, dynamic>.from(p));
+      }
+    }
+    if (targets.isEmpty) {
+      for (final p in svc.products) {
+        final id = int.tryParse('${p['id']}') ?? 0;
+        if (id > 0) targets.add(Map<String, dynamic>.from(p));
+      }
+    }
 
     if (targets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('محصولی برای تغییر قیمت یافت نشد'),
-        backgroundColor: Color(0xFF7F1D1D),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('محصولی یافت نشد (کل بارگذاری‌شده: ${svc.products.length})'),
+        backgroundColor: const Color(0xFF7F1D1D),
       ));
       return;
     }
@@ -493,10 +538,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id <= 0) continue;
       try {
-        final reg = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
+        String dig(dynamic v) {
+          var s = '${v ?? ''}'.trim();
+          const fa = '۰۱۲۳۴۵۶۷۸۹';
+          const ar = '٠١٢٣٤٥٦٧٨٩';
+          for (var i = 0; i < 10; i++) {
+            s = s.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
+          }
+          return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
+        }
+        final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
         final saleRaw = p['sale_price'];
-        final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && (double.tryParse('$saleRaw') ?? 0) > 0;
-        final sale = hasSale ? (double.tryParse('$saleRaw') ?? 0) : 0.0;
+        final saleNum = double.tryParse(dig(saleRaw)) ?? 0;
+        final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
+        final sale = hasSale ? saleNum : 0.0;
         if (reg <= 0 && sale <= 0) {
           failed++;
           continue;

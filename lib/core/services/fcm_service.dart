@@ -6,13 +6,24 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 
-/// هندلر پس‌زمینه (باید top-level باشد)
+/// مقادیر از google-services.json پروژه foroshgah-yar
+class FyFirebaseOptions {
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyBJ-c1hiyqQFPyAi9gMiJR_QIPnzq70rUE',
+    appId: '1:288700049655:android:fe7310cbe96e8e18f3cbf2',
+    messagingSenderId: '288700049655',
+    projectId: 'foroshgah-yar',
+    storageBucket: 'foroshgah-yar.firebasestorage.app',
+  );
+}
+
 @pragma('vm:entry-point')
 Future<void> fyFirebaseBackgroundHandler(RemoteMessage message) async {
   try {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: FyFirebaseOptions.android);
+    }
   } catch (_) {}
-  debugPrint('FY FCM background: ${message.messageId} ${message.notification?.title}');
 }
 
 class FcmService {
@@ -22,6 +33,7 @@ class FcmService {
 
   final _local = FlutterLocalNotificationsPlugin();
   bool ready = false;
+  bool enabled = true;
   String? token;
   String? lastError;
 
@@ -34,13 +46,28 @@ class FcmService {
 
   Future<void> init() async {
     try {
-      await Firebase.initializeApp();
+      final prefs = await SharedPreferences.getInstance();
+      enabled = prefs.getBool('fy_fcm_enabled') ?? true;
+      if (!enabled) {
+        ready = false;
+        lastError = 'پوش توسط کاربر غیرفعال شده';
+        return;
+      }
+
+      if (Firebase.apps.isEmpty) {
+        try {
+          await Firebase.initializeApp(options: FyFirebaseOptions.android);
+        } catch (_) {
+          // fallback بدون options (اگر google-services اعمال شده باشد)
+          await Firebase.initializeApp();
+        }
+      }
+
       FirebaseMessaging.onBackgroundMessage(fyFirebaseBackgroundHandler);
 
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const initSettings = InitializationSettings(android: androidInit);
       await _local.initialize(
-        initSettings,
+        const InitializationSettings(android: androidInit),
         onDidReceiveNotificationResponse: (resp) {
           debugPrint('FY local notif tap: ${resp.payload}');
         },
@@ -51,19 +78,8 @@ class FcmService {
       await androidPlugin?.requestNotificationsPermission();
 
       final messaging = FirebaseMessaging.instance;
-      final settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      debugPrint('FY FCM permission: ${settings.authorizationStatus}');
-
-      // پیش‌زمینه
-      await messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+      await messaging.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
 
       FirebaseMessaging.onMessage.listen(_showLocal);
       FirebaseMessaging.onMessageOpenedApp.listen((m) {
@@ -72,15 +88,11 @@ class FcmService {
 
       token = await messaging.getToken();
       if (token != null) {
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('fy_fcm_token', token!);
       }
-
       messaging.onTokenRefresh.listen((t) async {
         token = t;
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('fy_fcm_token', t);
-        // اگر لاگین بود بعداً sync می‌شود
       });
 
       ready = true;
@@ -92,7 +104,20 @@ class FcmService {
     }
   }
 
+  Future<void> setEnabled(bool v) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('fy_fcm_enabled', v);
+    enabled = v;
+    if (v) {
+      await init();
+    } else {
+      ready = false;
+      lastError = 'پوش توسط کاربر غیرفعال شده';
+    }
+  }
+
   void _showLocal(RemoteMessage message) {
+    if (!enabled) return;
     final n = message.notification;
     final title = n?.title ?? message.data['title']?.toString() ?? 'فروشگاه‌یار';
     final body = n?.body ?? message.data['body']?.toString() ?? '';
@@ -114,12 +139,14 @@ class FcmService {
     );
   }
 
-  /// ارسال توکن به افزونه وردپرس
   Future<bool> syncToken(AuthService auth) async {
-    if (!auth.isAuthenticated) return false;
+    if (!enabled || !auth.isAuthenticated) return false;
     try {
       if (token == null || token!.isEmpty) {
         try {
+          if (Firebase.apps.isEmpty) {
+            await Firebase.initializeApp(options: FyFirebaseOptions.android);
+          }
           token = await FirebaseMessaging.instance.getToken();
         } catch (_) {}
       }

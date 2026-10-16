@@ -121,7 +121,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'نکته: موجودی تفکیک‌شده هر انبار در نسخه بعدی به محصول متصل می‌شود. فعلاً لیست شعب/انبارها برای سازماندهی است.',
+                      'انبارها را اینجا تعریف کن. بعد در ویرایش هر محصول، از لیست کشویی «انبار» یکی را انتخاب و ذخیره کن.',
                       style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.4),
                     ),
                   ],

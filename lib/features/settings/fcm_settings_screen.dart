@@ -100,6 +100,24 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
                   children: [
                     NeonCard(
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('فعال‌سازی اعلان پوش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          FcmService().enabled ? 'پوش روشن است' : 'پوش خاموش است',
+                          style: const TextStyle(color: AppColors.textDim, fontSize: 12),
+                        ),
+                        value: FcmService().enabled,
+                        activeColor: AppColors.purple,
+                        onChanged: (v) async {
+                          await FcmService().setEnabled(v);
+                          setState(() {});
+                          if (v) await _syncDevice();
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    NeonCard(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         const Text('وضعیت سرور', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
                         const SizedBox(height: 8),
