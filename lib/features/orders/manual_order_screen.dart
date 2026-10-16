@@ -148,7 +148,7 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       final items = cart.entries.map((e) => {'product_id': e.key, 'quantity': e.value}).toList();
       final res = await context.read<AuthService>().api.dio.post('orders', data: {
         'items': items,
-        'status': 'pending',
+        'status': 'processing',
         'note': note.text.trim(),
         'billing': {
           'first_name': firstName.text.trim(),
@@ -170,7 +170,8 @@ class _ManualOrderScreenState extends State<ManualOrderScreen> {
       if (code >= 400) {
         showErr(context, res.data is Map ? '${res.data['message'] ?? 'خطا'}' : 'ثبت نشد');
       } else {
-        showOk(context, 'سفارش ثبت شد');
+        final oid = res.data is Map ? (res.data['order_id'] ?? res.data['order']?['id'] ?? '') : '';
+        showOk(context, oid != '' && oid != null ? 'سفارش #$oid ثبت شد' : 'سفارش ثبت شد');
         if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {

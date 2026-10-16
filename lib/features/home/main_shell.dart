@@ -15,6 +15,8 @@ import '../contacts/contacts_screen.dart';
 import '../modules/customers_screen.dart';
 import '../modules/accounting_screen.dart';
 import '../orders/manual_order_screen.dart';
+import '../../core/services/orders_service.dart';
+import '../../core/services/auth_service.dart';
 import '../modules/site_status_screen.dart';
 import '../modules/coupons_screen.dart';
 import '../modules/activity_log_screen.dart';
@@ -250,7 +252,10 @@ class _MoreTab extends StatelessWidget {
             return;
           }
           if (manualOrder) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ManualOrderScreen()));
+            final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const ManualOrderScreen()));
+            if (ok == true && context.mounted) {
+              try { context.read<OrdersService>().fetchOrders(context.read<AuthService>(), refresh: true); } catch (_) {}
+            }
             return;
           }
           if (page != null) {
