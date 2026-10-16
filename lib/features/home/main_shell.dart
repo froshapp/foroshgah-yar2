@@ -246,7 +246,7 @@ class _MoreTab extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: NeonCard(
-        onTap: () {
+        onTap: () async {
           if (openSettings) {
             AppNav.openSettingsDrawer();
             return;
