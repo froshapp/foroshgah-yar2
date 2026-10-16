@@ -75,10 +75,16 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     );
     if (ok != true) return;
     try {
-      await context.read<AuthService>().api.dio.post('activity-log', data: {
+      final body = <String, dynamic>{
         if (all) 'all': true,
         if (!all) 'ids': selected.toList(),
-      });
+      };
+      try {
+        await context.read<AuthService>().api.dio.post('activity-log', data: body);
+      } catch (_) {
+        await context.read<AuthService>().api.dio.delete('activity-log', data: body);
+      }
+      setState(() { selected.clear(); selectMode = false; });
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

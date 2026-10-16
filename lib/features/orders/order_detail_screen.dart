@@ -73,6 +73,53 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+
+  Future<void> _deleteOrder() async {
+    final id = int.tryParse(order['id']?.toString() ?? '') ?? 0;
+    if (id == 0) return;
+    final isManual = order['is_manual'] == true || order['is_manual'] == 1 ||
+        order['_fy_manual'] == 1 || (order['created_via']?.toString() ?? '').contains('manual');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF121E42),
+        title: const Text('حذف سفارش؟', style: TextStyle(color: Colors.white)),
+        content: Text(
+          isManual ? 'این سفارش دستی برای همیشه حذف می‌شود.' : 'سفارش به سطل زباله منتقل می‌شود.',
+          style: const TextStyle(color: Color(0xFF9AA9CC)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف', style: TextStyle(color: Color(0xFFEF4444))),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => saving = true);
+    try {
+      final auth = context.read<AuthService>();
+      await auth.api.dio.delete('orders/$id', queryParameters: {'force': isManual});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('سفارش حذف شد'),
+          backgroundColor: Color(0xFF065F46),
+        ));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('حذف نشد: $e'),
+          backgroundColor: const Color(0xFF7F1D1D),
+        ));
+      }
+    }
+    if (mounted) setState(() => saving = false);
+  }
+
   String _fmt(dynamic v) {
     if (v == null) return '۰';
     final n = double.tryParse(v.toString().replaceAll(',', '')) ?? 0;
@@ -274,6 +321,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final payTitle = order['payment_method_title']?.toString() ?? order['payment_method']?.toString() ?? '';
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: saving ? null : _deleteOrder,
+        backgroundColor: const Color(0xFF7F1D1D),
+        icon: const Icon(Icons.delete_outline, color: Colors.white),
+        label: const Text('حذف سفارش', style: TextStyle(color: Colors.white)),
+      ),
+
       backgroundColor: const Color(0xFF1A1B2E),
       appBar: AppBar(
         actions: [

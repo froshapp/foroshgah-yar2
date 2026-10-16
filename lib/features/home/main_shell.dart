@@ -20,6 +20,7 @@ import '../../core/services/auth_service.dart';
 import '../modules/site_status_screen.dart';
 import '../modules/coupons_screen.dart';
 import '../modules/activity_log_screen.dart';
+import '../modules/managers_screen.dart';
 import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -237,6 +238,7 @@ class _MoreTab extends StatelessWidget {
           _item(context, Icons.monitor_heart_outlined, 'وضعیت سایت', 'سلامت وردپرس، PHP، SSL و ...', AppColors.green, const SiteStatusScreen()),
           _item(context, Icons.local_offer_rounded, 'کوپن و تخفیف', 'ساخت و مدیریت کد تخفیف', const Color(0xFF22C55E), const CouponsScreen()),
           _item(context, Icons.history_rounded, 'لاگ تغییرات', 'سوابق کارهای مدیریت', AppColors.blue, const ActivityLogScreen()),
+          _item(context, Icons.admin_panel_settings_rounded, 'مدیران و دسترسی', 'نقش مدیران فروشگاه', AppColors.purple, const ManagersScreen()),
         ],
       ),
     );

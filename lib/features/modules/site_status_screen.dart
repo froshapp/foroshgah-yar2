@@ -118,6 +118,9 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
                             child: Column(children: [
                               _row('وردپرس', '${data['wp_version'] ?? '—'}'),
                               _row('ووکامرس', '${data['wc_version'] ?? '—'}'),
+                              _row('وضعیت کرون', _cronLabel(data)),
+                              _row('رویدادهای کرون', '${data['cron_events'] ?? '—'}'),
+                              _row('کرون بعدی', '${data['cron_next_jalali'] ?? data['cron_next'] ?? '—'}'),
                               _row('PHP', '${data['php_version'] ?? '—'}'),
                               _row('افزونه فروشگاه‌یار', '${data['plugin_version'] ?? '—'}'),
                               _row('قالب', _themeName(data['theme'])),
@@ -147,4 +150,14 @@ class _SiteStatusScreenState extends State<SiteStatusScreen> {
       ]),
     );
   }
+
+  String _cronLabel(Map data) {
+    final st = (data['cron_status'] ?? '').toString();
+    final disabled = data['cron_disabled'] == true || data['cron_disabled'] == 1 || data['cron_disabled'] == '1';
+    if (disabled) return 'غیرفعال (DISABLE_WP_CRON)';
+    if (st == 'ok') return 'فعال و سالم';
+    if (st == 'error') return 'خطا';
+    return st.isNotEmpty ? st : '—';
+  }
+
 }
