@@ -471,6 +471,51 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
 
+
+  Future<void> _deleteOrderFromList(Map o) async {
+    final id = int.tryParse('${o['id'] ?? ''}') ?? 0;
+    if (id == 0) return;
+    final isManual = o['is_manual'] == true || o['is_manual'] == 1 ||
+        (o['created_via']?.toString() ?? '').contains('manual');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text('حذف سفارش؟', style: TextStyle(color: Colors.white)),
+        content: Text(
+          isManual ? 'سفارش دستی برای همیشه حذف می‌شود.' : 'سفارش به سطل زباله منتقل می‌شود.',
+          style: const TextStyle(color: AppColors.textDim),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف', style: TextStyle(color: AppColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final auth = context.read<AuthService>();
+      await auth.api.dio.delete('orders/$id', queryParameters: {'force': isManual});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('سفارش حذف شد'),
+          backgroundColor: Color(0xFF065F46),
+        ));
+        context.read<OrdersService>().fetchOrders(auth, refresh: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('حذف نشد: $e'),
+          backgroundColor: const Color(0xFF7F1D1D),
+        ));
+      }
+    }
+  }
+
   Widget _orderAvatar(Map o, String name) {
     final cust = o['customer'];
     String url = '';
