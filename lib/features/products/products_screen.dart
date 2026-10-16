@@ -92,6 +92,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (id == 0) return;
     final priceCtrl = TextEditingController(text: p['regular_price']?.toString() ?? p['price']?.toString() ?? '');
     final saleCtrl = TextEditingController(text: p['sale_price']?.toString() ?? '');
+    final threshCtrl = TextEditingController(text: '${p['low_stock_amount'] ?? p['low_stock'] ?? ''}');
     final stockCtrl = TextEditingController(text: p['stock_quantity']?.toString() ?? '');
     String status = p['status']?.toString() ?? 'publish';
     bool manageStock = p['manage_stock'] == true || p['stock_quantity'] != null;
@@ -158,6 +159,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   decoration: _dec('موجودی'),
                 ),
                 const SizedBox(height: 10),
+                TextField(
+                  controller: threshCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _dec('آستانه موجودی کم'),
+                ),
+                const SizedBox(height: 10),
                 SwitchListTile(
                   title: const Text('مدیریت موجودی', style: TextStyle(color: Colors.white, fontSize: 13)),
                   value: manageStock,
@@ -209,6 +217,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
         if (stockVal != null) {
           body['stock_quantity'] = stockVal;
           body['manage_stock'] = true;
+        }
+        final threshVal = int.tryParse(_toEnDigits(threshCtrl.text));
+        if (threshVal != null) {
+          body['low_stock_amount'] = threshVal;
         }
         if (imageId != null) body['image_id'] = imageId;
         final opt = Options(contentType: 'application/json', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'});
@@ -435,16 +447,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
-    // جمع‌آوری شناسه‌ها از لیست فعلی + در صورت خالی بودن، همه محصولات
+    // لیست هدف: فیلتر فعلی صفحه + دسته انتخاب‌شده در دیالوگ
     var list = _filtered(svc.products);
     if (list.isEmpty) {
       await svc.fetchProducts(auth, refresh: true);
       list = _filtered(svc.products);
     }
-    final ids = <int>[];
+    final targets = <Map<String, dynamic>>[];
     for (final p in list) {
       if (catId.value != null) {
-        final pcats = p['categories'];
+        final pcats = p['categories'] ?? p['category_ids'];
         bool okCat = false;
         if (pcats is List) {
           for (final c in pcats) {
@@ -452,99 +464,87 @@ class _ProductsScreenState extends State<ProductsScreen> {
             if (int.tryParse('$id') == catId.value) okCat = true;
           }
         }
-        // category_ids
-        if (!okCat && p['category_ids'] is List) {
-          for (final c in p['category_ids'] as List) {
-            if (int.tryParse('$c') == catId.value) okCat = true;
-          }
-        }
         if (!okCat) continue;
       }
       final id = int.tryParse('${p['id']}') ?? 0;
-      if (id > 0) ids.add(id);
+      if (id > 0) targets.add(Map<String, dynamic>.from(p));
     }
-    // اگر لیست محلی خالی بود، سرور با category یا all پر می‌کند
+
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('محصولی برای تغییر قیمت یافت نشد'),
+        backgroundColor: Color(0xFF7F1D1D),
+      ));
+      return;
+    }
+
     int done = 0;
-    String? errMsg;
+    int failed = 0;
     final sampleInfo = <String>[];
-    try {
-      final opt = Options(
-        contentType: 'application/json',
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        sendTimeout: const Duration(seconds: 90),
-        receiveTimeout: const Duration(seconds: 90),
-      );
-      // دسته‌های ۳۰تایی تا connection reset نشود
-      final chunks = <List<int>>[];
-      if (ids.isEmpty) {
-        chunks.add([]); // سرور با category/all پر می‌کند
-      } else {
-        for (var i = 0; i < ids.length; i += 30) {
-          chunks.add(ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30));
+    final opt = Options(
+      contentType: 'application/json',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      sendTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
+    );
+
+    // مسیر قطعی: همان PUT تکی که کار می‌کند
+    for (final p in targets.take(80)) {
+      final id = int.tryParse('${p['id']}') ?? 0;
+      if (id <= 0) continue;
+      try {
+        final reg = double.tryParse('${p['regular_price'] ?? p['price'] ?? 0}') ?? 0;
+        final saleRaw = p['sale_price'];
+        final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && (double.tryParse('$saleRaw') ?? 0) > 0;
+        final sale = hasSale ? (double.tryParse('$saleRaw') ?? 0) : 0.0;
+        if (reg <= 0 && sale <= 0) {
+          failed++;
+          continue;
         }
-      }
-      for (final chunk in chunks) {
+        final base = reg > 0 ? reg : sale;
+        double calc(double b) {
+          final n = mode.value == 'percent' ? b + (b * val / 100.0) : b + val;
+          return n < 0 ? 0 : n.roundToDouble();
+        }
+        final newReg = calc(base > 0 ? (reg > 0 ? reg : base) : base);
+        double? newSale;
+        if (hasSale && sale > 0) {
+          final ns = calc(sale);
+          if (ns > 0 && ns < newReg) newSale = ns;
+        }
         final body = <String, dynamic>{
-          'ids': chunk,
-          'mode': mode.value,
-          'value': val,
-          if (catId.value != null) 'category': catId.value,
-          'all': chunk.isEmpty && ids.isEmpty,
+          'regular_price': newReg.round().toString(),
+          'price': (newSale ?? newReg).round().toString(),
+          if (newSale != null) 'sale_price': newSale.round().toString(),
+          if (newSale == null) 'sale_price': '',
         };
-        dynamic resData;
-        // اول مسیر جایگزین /bulk-price
-        try {
-          final res = await auth.api.dio.post('bulk-price', data: body, options: opt);
-          resData = res.data;
-        } catch (_) {
-          final res = await auth.api.dio.post('products/bulk-price', data: body, options: opt);
-          resData = res.data;
+        var res = await auth.api.dio.put('products/$id', data: body, options: opt);
+        var ok = res.statusCode == 200 || res.statusCode == 201 ||
+            (res.data is Map && (res.data['success'] == true || res.data['product'] != null));
+        if (!ok) {
+          res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'}, options: opt);
+          ok = res.statusCode == 200 || res.statusCode == 201 ||
+              (res.data is Map && res.data['success'] == true);
         }
-        if (resData is Map) {
-          done += int.tryParse('${resData['updated'] ?? 0}') ?? 0;
-          errMsg = resData['message']?.toString() ?? errMsg;
-          final samples = resData['samples'];
-          if (samples is List && samples.isNotEmpty && sampleInfo.isEmpty) {
-            for (final s in samples.take(3)) {
-              if (s is Map) {
-                final from = s['from'] ?? '?';
-                final to = s['to'] ?? '?';
-                final active = s['active_price'];
-                final saleTo = s['sale_to'];
-                if (saleTo != null) {
-                  sampleInfo.add('$from→$to (نمایش:$active)');
-                } else {
-                  sampleInfo.add('$from → $to');
-                }
-              }
-            }
+        if (ok) {
+          done++;
+          if (sampleInfo.length < 3) {
+            sampleInfo.add('${reg.round()} → ${newReg.round()}');
           }
+        } else {
+          failed++;
         }
+      } catch (_) {
+        failed++;
       }
-      // fallback یکی‌یکی فقط اگر API گروهی هیچ‌چیز به‌روز نکرد
-      if (done == 0 && ids.isNotEmpty) {
-        for (final id in ids.take(40)) {
-          try {
-            final bodyOne = <String, dynamic>{
-              'ids': [id],
-              'mode': mode.value,
-              'value': val,
-            };
-            final r = await auth.api.dio.post('bulk-price', data: bodyOne, options: opt);
-            if (r.data is Map) {
-              final u = int.tryParse('${r.data['updated'] ?? 0}') ?? 0;
-              if (u > 0) done += u;
-            }
-          } catch (_) {}
-        }
-      }
-    } catch (e) {
-      errMsg = e.toString();
     }
+
     if (mounted) {
       final extra = sampleInfo.isNotEmpty ? ' (${sampleInfo.join(' | ')})' : '';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(done > 0 ? '$done محصول به‌روز شد$extra' : (errMsg ?? 'هیچ محصولی به‌روز نشد')),
+        content: Text(done > 0
+            ? '$done محصول به‌روز شد$extra${failed > 0 ? ' — ناموفق: $failed' : ''}'
+            : 'هیچ محصولی به‌روز نشد${failed > 0 ? ' ($failed خطا)' : ''}'),
         backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
         duration: const Duration(seconds: 4),
       ));

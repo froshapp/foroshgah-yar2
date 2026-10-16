@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/store_service.dart';
+import '../../core/services/fcm_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,6 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
         url: url,
         token: token,
       ));
+      // ثبت توکن FCM برای پوش
+      try {
+        await FcmService().syncToken(auth);
+      } catch (_) {}
     }
   }
 

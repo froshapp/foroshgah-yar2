@@ -18,7 +18,7 @@ class OrdersService extends ChangeNotifier {
   int get total => _total;
   String? get debug => _debug;
 
-  Future<void> fetchOrders(AuthService auth, {bool refresh = false}) async {
+  Future<void> fetchOrders(AuthService auth, {bool refresh = false, Map<String, dynamic>? extra}) async {
     if (refresh) {
       _page = 1;
       _hasMore = true;
@@ -38,11 +38,13 @@ class OrdersService extends ChangeNotifier {
 
       Response? res;
       Object? lastErr;
+      final q = <String, dynamic>{'page': _page, 'per_page': 20};
+      if (extra != null) q.addAll(extra);
       for (var attempt = 0; attempt < 3; attempt++) {
         try {
           res = await auth.api.dio.get(
             'orders',
-            queryParameters: {'page': _page, 'per_page': 20},
+            queryParameters: q,
             options: Options(
               receiveTimeout: const Duration(seconds: 45),
               sendTimeout: const Duration(seconds: 20),

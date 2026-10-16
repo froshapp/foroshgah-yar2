@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "288700049655",
+    "project_id": "foroshgah-yar",
+    "storage_bucket": "foroshgah-yar.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288700049655:android:fe7310cbe96e8e18f3cbf2",
+        "android_client_info": {
+          "package_name": "ir.apadanasleep.foroshgah_yar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ-c1hiyqQFPyAi9gMiJR_QIPnzq70rUE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

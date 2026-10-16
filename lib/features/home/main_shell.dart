@@ -21,6 +21,9 @@ import '../modules/site_status_screen.dart';
 import '../modules/coupons_screen.dart';
 import '../modules/activity_log_screen.dart';
 import '../modules/managers_screen.dart';
+import '../settings/fcm_settings_screen.dart';
+import '../modules/sales_report_screen.dart';
+import '../modules/warehouses_screen.dart';
 import '../settings/plugins_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -234,11 +237,14 @@ class _MoreTab extends StatelessWidget {
           const SizedBox(height: 12),
           _item(context, Icons.extension_rounded, 'افزونه‌های سایت', 'فعال و غیرفعال کردن افزونه‌ها', AppColors.purple, const PluginsScreen()),
           _item(context, Icons.account_balance_wallet_rounded, 'حسابداری', 'گزارش مالی و تراکنش‌ها', AppColors.cyan, const AccountingScreen()),
+          _item(context, Icons.area_chart_rounded, 'گزارش فروش', 'روزانه و هفتگی با نمودار', AppColors.purple, const SalesReportScreen()),
+          _item(context, Icons.warehouse_rounded, 'انبارها', 'شعب و انبار فروشگاه', AppColors.cyan, const WarehousesScreen()),
           _item(context, Icons.add_shopping_cart_rounded, 'سفارش دستی', 'ثبت سفارش جدید به‌صورت دستی', AppColors.blue, null, manualOrder: true),
           _item(context, Icons.monitor_heart_outlined, 'وضعیت سایت', 'سلامت وردپرس، PHP، SSL و ...', AppColors.green, const SiteStatusScreen()),
           _item(context, Icons.local_offer_rounded, 'کوپن و تخفیف', 'ساخت و مدیریت کد تخفیف', const Color(0xFF22C55E), const CouponsScreen()),
           _item(context, Icons.history_rounded, 'لاگ تغییرات', 'سوابق کارهای مدیریت', AppColors.blue, const ActivityLogScreen()),
           _item(context, Icons.admin_panel_settings_rounded, 'مدیران و دسترسی', 'نقش مدیران فروشگاه', AppColors.purple, const ManagersScreen()),
+          _item(context, Icons.notifications_active_rounded, 'اعلان پوش FCM', 'کلید فایربیس و پوش سفارش', AppColors.blue, const FcmSettingsScreen()),
         ],
       ),
     );

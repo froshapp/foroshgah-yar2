@@ -14,6 +14,12 @@ class OrdersScreen extends StatefulWidget {
 class _OrdersScreenState extends State<OrdersScreen> {
   final _search = TextEditingController();
   String filter = 'all'; // all | processing | completed | cancelled
+  String? dateFrom;
+  String? dateTo;
+  String? minTotal;
+  String? maxTotal;
+  String? paymentFilter;
+  bool advancedOpen = false;
 
   @override
   void initState() {
@@ -140,6 +146,113 @@ class _OrdersScreenState extends State<OrdersScreen> {
       context.read<OrdersService>().fetchOrders(context.read<AuthService>(), refresh: true);
     }
   }
+
+
+  Future<void> _openAdvancedFilter() async {
+    final minCtrl = TextEditingController(text: minTotal ?? '');
+    final maxCtrl = TextEditingController(text: maxTotal ?? '');
+    final payCtrl = TextEditingController(text: paymentFilter ?? '');
+    String? df = dateFrom;
+    String? dt = dateTo;
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setModal) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 16, left: 16, right: 16, top: 16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('فیلتر پیشرفته سفارشات', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              const Text('تاریخ (YYYY-MM-DD)', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(child: _dateBox('از', df, () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(context: ctx, initialDate: now, firstDate: DateTime(2020), lastDate: now);
+                  if (picked != null) setModal(() => df = '${picked.year.toString().padLeft(4,'0')}-${picked.month.toString().padLeft(2,'0')}-${picked.day.toString().padLeft(2,'0')}');
+                })),
+                const SizedBox(width: 8),
+                Expanded(child: _dateBox('تا', dt, () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(context: ctx, initialDate: now, firstDate: DateTime(2020), lastDate: now);
+                  if (picked != null) setModal(() => dt = '${picked.year.toString().padLeft(4,'0')}-${picked.month.toString().padLeft(2,'0')}-${picked.day.toString().padLeft(2,'0')}');
+                })),
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: TextField(controller: minCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white),
+                  decoration: _fDec('حداقل مبلغ'))),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(controller: maxCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white),
+                  decoration: _fDec('حداکثر مبلغ'))),
+              ]),
+              const SizedBox(height: 12),
+              TextField(controller: payCtrl, style: const TextStyle(color: Colors.white),
+                decoration: _fDec('روش پرداخت (مثلا cod / zarinpal)')),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(child: OutlinedButton(
+                  onPressed: () {
+                    minCtrl.clear(); maxCtrl.clear(); payCtrl.clear();
+                    setModal(() { df = null; dt = null; });
+                  },
+                  child: const Text('پاک کردن'),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white),
+                  child: const Text('اعمال فیلتر'),
+                )),
+              ]),
+            ]),
+          );
+        });
+      },
+    );
+    if (applied == true) {
+      setState(() {
+        dateFrom = df;
+        dateTo = dt;
+        minTotal = minCtrl.text.trim().isEmpty ? null : minCtrl.text.trim();
+        maxTotal = maxCtrl.text.trim().isEmpty ? null : maxCtrl.text.trim();
+        paymentFilter = payCtrl.text.trim().isEmpty ? null : payCtrl.text.trim();
+      });
+      final auth = context.read<AuthService>();
+      final q = <String, dynamic>{
+        if (dateFrom != null) 'date_from': dateFrom,
+        if (dateTo != null) 'date_to': dateTo,
+        if (minTotal != null) 'min_total': minTotal,
+        if (maxTotal != null) 'max_total': maxTotal,
+        if (paymentFilter != null) 'payment_method': paymentFilter,
+        if (filter != 'all') 'status': filter,
+        if (_search.text.trim().isNotEmpty) 'search': _search.text.trim(),
+      };
+      await context.read<OrdersService>().fetchOrders(auth, refresh: true, extra: q);
+    }
+  }
+
+  Widget _dateBox(String label, String? value, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(color: const Color(0xFF0B1230), borderRadius: BorderRadius.circular(12)),
+        child: Text(value == null ? label : '$label: $value', style: TextStyle(color: value == null ? AppColors.textMute : Colors.white, fontSize: 13)),
+      ),
+    );
+  }
+
+  InputDecoration _fDec(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
+    filled: true,
+    fillColor: const Color(0xFF0B1230),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -278,11 +391,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                               ],
                                             ),
                                           ),
-                                          Flexible(
-                                            child: Align(
-                                              alignment: Alignment.topLeft,
-                                              child: Container(
-                                                constraints: const BoxConstraints(maxWidth: 120),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                constraints: const BoxConstraints(maxWidth: 100),
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color: sc.withOpacity(0.15),
@@ -297,7 +410,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                                   style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700, height: 1.2),
                                                 ),
                                               ),
-                                            ),
+                                              const SizedBox(width: 4),
+                                              InkWell(
+                                                onTap: () => _deleteOrderFromList(o),
+                                                borderRadius: BorderRadius.circular(16),
+                                                child: Container(
+                                                  width: 30,
+                                                  height: 30,
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFEF4444).withOpacity(0.12),
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.35)),
+                                                  ),
+                                                  child: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),

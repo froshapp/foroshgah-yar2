@@ -13,6 +13,7 @@ class _ManagersScreenState extends State<ManagersScreen> {
   bool loading = true;
   String? error;
   List items = [];
+  final searchCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -23,7 +24,10 @@ class _ManagersScreenState extends State<ManagersScreen> {
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
     try {
-      final res = await context.read<AuthService>().api.dio.get('managers');
+      final q = searchCtrl.text.trim();
+      final res = await context.read<AuthService>().api.dio.get('managers', queryParameters: {
+        if (q.isNotEmpty) 'search': q,
+      });
       if (res.data is Map && res.data['managers'] is List) {
         items = res.data['managers'] as List;
       } else {
@@ -107,6 +111,23 @@ class _ManagersScreenState extends State<ManagersScreen> {
           leadingColor: AppColors.purple,
           showSettingsGear: false,
           onRefresh: _load,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+          child: TextField(
+            controller: searchCtrl,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'جستجوی کاربر برای ارتقا به مدیر...',
+              hintStyle: const TextStyle(color: AppColors.textMute, fontSize: 13),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textMute),
+              filled: true,
+              fillColor: const Color(0xFF0B1230),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              suffixIcon: IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.purpleGlow), onPressed: _load),
+            ),
+            onSubmitted: (_) => _load(),
+          ),
         ),
         Expanded(
           child: loading

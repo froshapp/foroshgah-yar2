@@ -8,6 +8,7 @@ import 'core/services/orders_service.dart';
 import 'core/services/products_service.dart';
 import 'core/services/dashboard_service.dart';
 import 'core/services/notif_badge_service.dart';
+import 'core/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,8 +17,14 @@ void main() async {
     statusBarIconBrightness: Brightness.light,
   ));
 
+  // FCM — اگر google-services.json واقعی نباشد، خطا را می‌بلعد و اپ بالا می‌آید
+  await FcmService().init();
+
   final auth = AuthService();
   await auth.tryAutoLogin();
+  if (auth.isAuthenticated) {
+    await FcmService().syncToken(auth);
+  }
 
   runApp(
     MultiProvider(

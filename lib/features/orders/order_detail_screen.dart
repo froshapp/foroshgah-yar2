@@ -321,12 +321,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final payTitle = order['payment_method_title']?.toString() ?? order['payment_method']?.toString() ?? '';
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: saving ? null : _deleteOrder,
-        backgroundColor: const Color(0xFF7F1D1D),
-        icon: const Icon(Icons.delete_outline, color: Colors.white),
-        label: const Text('حذف سفارش', style: TextStyle(color: Colors.white)),
-      ),
+
 
       backgroundColor: const Color(0xFF1A1B2E),
       appBar: AppBar(
