@@ -21,6 +21,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List items = [];
   String filter = 'all'; // all | order | task | stock | announce
   final Set<String> selected = {};
+  final Set<String> localDismissed = {};
   bool selectMode = false;
 
   @override
@@ -61,8 +62,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }
       }
     } catch (_) {}
-    items = list;
-    // همگام‌سازی فوری badge با لیست واقعی (رفع عدد ۱ و لیست خالی)
+    // حذف موارد dismiss‌شدهٔ محلی (تا قبل از همگام سرور دوباره نیایند)
+    items = list.where((e) {
+      final id = (e is Map ? e['id'] : null)?.toString() ?? '';
+      return id.isEmpty || !localDismissed.contains(id);
+    }).toList();
     try {
       context.read<NotifBadgeService>().setCount(items.length);
     } catch (_) {}
@@ -72,27 +76,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _dismiss(dynamic id) async {
     final sid = id?.toString() ?? '';
     if (sid.isEmpty) return;
+    localDismissed.add(sid);
+    setState(() {
+      items = items.where((e) => (e as Map)['id']?.toString() != sid).toList();
+      selected.remove(sid);
+    });
+    try {
+      context.read<NotifBadgeService>().setCount(items.length);
+    } catch (_) {}
     try {
       await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': sid});
-      setState(() {
-        items = items.where((e) => (e as Map)['id']?.toString() != sid).toList();
-        selected.remove(sid);
-      });
-      // به‌روزرسانی فوری badge
+      // همگام badge از سرور
       try {
-        context.read<NotifBadgeService>().setCount(items.length);
+        await context.read<NotifBadgeService>().refresh(context.read<AuthService>());
+        // اگر سرور هنوز شمرده، با لیست محلی هم‌تراز کن
+        final badge = context.read<NotifBadgeService>();
+        if (badge.count > items.length) badge.setCount(items.length);
       } catch (_) {}
-    } catch (_) {}
+    } catch (_) {
+      // حتی اگر API خطا داد، از UI حذف مانده
+    }
   }
 
   Future<void> _dismissSelected() async {
     final ids = selected.toList();
     if (ids.isEmpty) return;
-    for (final id in ids) {
-      try {
-        await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': id});
-      } catch (_) {}
-    }
+    localDismissed.addAll(ids);
     setState(() {
       items = items.where((e) => !ids.contains((e as Map)['id']?.toString())).toList();
       selected.clear();
@@ -100,6 +109,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
     try {
       context.read<NotifBadgeService>().setCount(items.length);
+    } catch (_) {}
+    for (final id in ids) {
+      try {
+        await context.read<AuthService>().api.dio.post('notifications/dismiss', data: {'id': id});
+      } catch (_) {}
+    }
+    try {
+      await context.read<NotifBadgeService>().refresh(context.read<AuthService>());
+      final badge = context.read<NotifBadgeService>();
+      if (badge.count > items.length) badge.setCount(items.length);
     } catch (_) {}
   }
 

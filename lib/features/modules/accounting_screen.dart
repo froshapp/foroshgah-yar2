@@ -20,6 +20,9 @@ class _AccountingScreenState extends State<AccountingScreen> {
     _load();
   }
 
+  int days = 7;
+  Map sales = {};
+
   Future<void> _load() async {
     setState(() {
       loading = true;
@@ -31,6 +34,10 @@ class _AccountingScreenState extends State<AccountingScreen> {
     } catch (e) {
       error = e.toString();
     }
+    try {
+      final sres = await context.read<AuthService>().api.dio.get('sales-report', queryParameters: {'days': days});
+      if (sres.data is Map) sales = Map<String, dynamic>.from(sres.data as Map);
+    } catch (_) {}
     if (mounted) setState(() => loading = false);
   }
 
@@ -74,7 +81,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                   GlassHeader(
                     showSettingsGear: false,
                     title: 'حسابداری فروشگاه',
-                    subtitle: 'گزارش مالی و تراکنش‌ها',
+                    subtitle: 'گزارش فروش روزانه و مالی',
                     leadingIcon: Icons.account_balance_wallet_rounded,
                     leadingColor: AppColors.purple,
                     onRefresh: _load,
@@ -94,6 +101,31 @@ class _AccountingScreenState extends State<AccountingScreen> {
                             const SizedBox(width: 8),
                             Expanded(child: _kpi('هزینه‌ها', _fmt(expense), AppColors.pink)),
                           ]),
+                          const SizedBox(height: 14),
+                          // گزارش فروش
+                          NeonCard(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              Row(children: [
+                                const Expanded(child: Text('گزارش فروش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                                _dayChip(7),
+                                const SizedBox(width: 6),
+                                _dayChip(14),
+                                const SizedBox(width: 6),
+                                _dayChip(30),
+                              ]),
+                              const SizedBox(height: 12),
+                              Row(children: [
+                                Expanded(child: _kpi('فروش', _fmt(sales['total_sales'] ?? sales['sales'] ?? income), AppColors.purple)),
+                                const SizedBox(width: 8),
+                                Expanded(child: _kpi('سفارش‌ها', '${sales['total_orders'] ?? sales['orders'] ?? '—'}', AppColors.blue)),
+                              ]),
+                              const SizedBox(height: 12),
+                              const Text('نمودار روزانه', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+                              const SizedBox(height: 8),
+                              SizedBox(height: 120, child: _miniChart()),
+                            ]),
+                          ),
+                          const SizedBox(height: 14),
 
                         ],
                       ),
@@ -125,4 +157,66 @@ class _AccountingScreenState extends State<AccountingScreen> {
           ),
         ),
       );
+
+  Widget _dayChip(int d) {
+    final sel = days == d;
+    return GestureDetector(
+      onTap: () {
+        setState(() => days = d);
+        _load();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: sel ? AppColors.purple : const Color(0xFF0B1230),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text('$d روز', style: TextStyle(color: sel ? Colors.white : AppColors.textDim, fontSize: 11, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  Widget _miniChart() {
+    List daily = [];
+    if (sales['daily'] is List) {
+      daily = sales['daily'] as List;
+    } else if (sales['days'] is List) {
+      daily = sales['days'] as List;
+    } else if (data['daily_sales'] is List) {
+      daily = data['daily_sales'] as List;
+    }
+    if (daily.isEmpty) {
+      return const Center(child: Text('داده‌ای نیست', style: TextStyle(color: AppColors.textDim, fontSize: 12)));
+    }
+    double maxV = 1;
+    final vals = <double>[];
+    for (final e in daily) {
+      final m = e is Map ? Map<String, dynamic>.from(e as Map) : <String, dynamic>{};
+      final v = double.tryParse('${m['sales'] ?? m['total'] ?? m['amount'] ?? 0}') ?? 0;
+      vals.add(v);
+      if (v > maxV) maxV = v;
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final v in vals)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Container(
+                height: 16 + (v / maxV) * 90,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [AppColors.purple.withOpacity(0.35), AppColors.blue],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

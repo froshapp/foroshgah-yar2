@@ -11,60 +11,15 @@ class FcmSettingsScreen extends StatefulWidget {
 }
 
 class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
-  final keyCtrl = TextEditingController();
-  bool saving = false;
-  bool showAdvanced = false;
-  bool hasKey = false;
-  int deviceCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final res = await context.read<AuthService>().api.dio.get('fcm-settings');
-      if (res.data is Map) {
-        hasKey = res.data['has_server_key'] == true;
-        deviceCount = int.tryParse('${res.data['device_count'] ?? res.data['token_count'] ?? 0}') ?? 0;
-      }
-    } catch (_) {}
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _saveKey() async {
-    final key = keyCtrl.text.trim();
-    if (key.isEmpty) return;
-    setState(() => saving = true);
-    try {
-      await context.read<AuthService>().api.dio.post('fcm-settings', data: {'server_key': key});
-      keyCtrl.clear();
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('ذخیره شد'),
-          backgroundColor: Color(0xFF065F46),
-        ));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('ذخیره نشد'),
-          backgroundColor: Color(0xFF7F1D1D),
-        ));
-      }
-    }
-    if (mounted) setState(() => saving = false);
-  }
+  bool busy = false;
 
   Future<void> _activate() async {
+    setState(() => busy = true);
     final fcm = FcmService();
     await fcm.setEnabled(true);
     await fcm.syncToken(context.read<AuthService>());
     if (mounted) {
-      setState(() {});
+      setState(() => busy = false);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('اعلان فعال شد'),
         backgroundColor: Color(0xFF065F46),
@@ -72,9 +27,22 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
     }
   }
 
+  Future<void> _deactivate() async {
+    setState(() => busy = true);
+    await FcmService().setEnabled(false);
+    if (mounted) {
+      setState(() => busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('اعلان غیرفعال شد'),
+        backgroundColor: Color(0xFF374151),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final fcm = FcmService();
+    final on = fcm.enabled;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
@@ -90,85 +58,75 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
             children: [
               NeonCard(
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('فعال‌سازی اعلان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    fcm.enabled ? fcm.statusText : 'خاموش',
-                    style: const TextStyle(color: AppColors.textDim, fontSize: 12),
+                borderColor: on ? AppColors.purple.withOpacity(0.4) : null,
+                child: Row(children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: on ? const Color(0xFF10B981) : AppColors.textMute,
+                    ),
                   ),
-                  value: fcm.enabled,
-                  activeColor: AppColors.purple,
-                  onChanged: (v) async {
-                    if (v) {
-                      await _activate();
-                    } else {
-                      await fcm.setEnabled(false);
-                      setState(() {});
-                    }
-                  },
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(on ? 'فعال' : 'غیرفعال', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text(
+                        on ? fcm.statusText : 'اعلان سفارش خاموش است',
+                        style: const TextStyle(color: AppColors.textDim, fontSize: 12),
+                      ),
+                    ]),
+                  ),
+                  Switch(
+                    value: on,
+                    activeColor: AppColors.purple,
+                    onChanged: busy
+                        ? null
+                        : (v) async {
+                            if (v) {
+                              await _activate();
+                            } else {
+                              await _deactivate();
+                            }
+                          },
+                  ),
+                ]),
               ),
               const SizedBox(height: 12),
               NeonCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _row('وضعیت', fcm.enabled ? 'فعال' : 'غیرفعال'),
-                  _row('روش', fcm.gmsAvailable ? 'پوش گوگل + صف سرور' : 'صف سرور (هواوی و همه گوشی‌ها)'),
-                  if (deviceCount > 0) _row('دستگاه‌های ثبت‌شده', '$deviceCount'),
+                  _row('وضعیت', on ? 'فعال' : 'غیرفعال'),
+                  _row('روش', on ? (fcm.gmsAvailable ? 'پوش گوگل + صف سرور' : 'صف سرور (هواوی و همه گوشی‌ها)') : '—'),
                   const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: _activate,
-                    icon: const Icon(Icons.done_all, size: 18),
-                    label: const Text('فعال‌سازی روی این گوشی'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.blue,
-                      foregroundColor: Colors.white,
+                  if (on)
+                    OutlinedButton.icon(
+                      onPressed: busy ? null : _activate,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('ثبت مجدد این گوشی'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: AppColors.purple.withOpacity(0.5)),
+                      ),
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: busy ? null : _activate,
+                      icon: const Icon(Icons.notifications_active_rounded, size: 18),
+                      label: const Text('فعال‌سازی اعلان'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.blue,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   const Text(
-                    'با روشن بودن، سفارش جدید به‌صورت خودکار روی گوشی نمایش داده می‌شود. روی هواوی بدون سرویس گوگل هم کار می‌کند.',
+                    'با روشن بودن، سفارش جدید روی گوشی نمایش داده می‌شود. روی هواوی بدون سرویس گوگل هم کار می‌کند.',
                     style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.45),
                   ),
                 ]),
               ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => setState(() => showAdvanced = !showAdvanced),
-                child: Text(
-                  showAdvanced ? 'بستن تنظیمات پیشرفته' : 'تنظیمات پیشرفته',
-                  style: const TextStyle(color: AppColors.textDim),
-                ),
-              ),
-              if (showAdvanced)
-                NeonCard(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    const Text('کلید سرور فایربیس (اختیاری)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'فقط برای گوشی‌های دارای گوگل. برای هواوی لازم نیست.',
-                      style: TextStyle(color: AppColors.textDim, fontSize: 11),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: keyCtrl,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Server Key',
-                        hintStyle: const TextStyle(color: AppColors.textMute),
-                        filled: true,
-                        fillColor: const Color(0xFF0B1230),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: saving ? null : _saveKey,
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple, foregroundColor: Colors.white),
-                      child: Text(saving ? '...' : 'ذخیره'),
-                    ),
-                  ]),
-                ),
             ],
           ),
         ),

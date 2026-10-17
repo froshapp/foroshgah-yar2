@@ -367,8 +367,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Future<void> _openBulkPrice(AuthService auth, ProductsService svc) async {
     final mode = ValueNotifier<String>('percent');
     final valueCtrl = TextEditingController();
-    final catId = ValueNotifier<int?>(null);
-    final cats = svc.categories;
+    final pageCat = catFilter; // ملاک: دسته انتخاب‌شده در صفحه محصولات
+    String catTitle = 'همه محصولات';
+    if (pageCat != null) {
+      for (final c in svc.categories) {
+        final m = Map<String, dynamic>.from(c as Map);
+        if (int.tryParse('${m['id']}') == pageCat) {
+          catTitle = m['name']?.toString() ?? 'دسته انتخاب‌شده';
+          break;
+        }
+      }
+      if (catTitle == 'همه محصولات') catTitle = 'دسته #$pageCat';
+    }
 
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -379,75 +389,73 @@ class _ProductsScreenState extends State<ProductsScreen> {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 16, left: 16, right: 16, top: 16),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('تغییر قیمت گروهی', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text('تغییر قیمت گروهی', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B1230),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.purple.withOpacity(0.35)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.category_rounded, color: AppColors.purple, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text('اعمال روی: $catTitle', style: const TextStyle(color: Colors.white, fontSize: 13))),
+              ]),
+            ),
+            if (pageCat == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text('برای محدود کردن به یک دسته، اول از فیلتر بالای صفحه دسته را انتخاب کنید.', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+              ),
             const SizedBox(height: 14),
             ValueListenableBuilder<String>(
               valueListenable: mode,
               builder: (_, m, __) => Row(children: [
-                Expanded(child: ChoiceChip(
-                  label: const Text('درصدی'),
-                  selected: m == 'percent',
-                  onSelected: (_) => mode.value = 'percent',
-                  selectedColor: AppColors.purple,
-                  labelStyle: TextStyle(color: m == 'percent' ? Colors.white : AppColors.textDim),
-                )),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('درصدی'),
+                    selected: m == 'percent',
+                    onSelected: (_) => mode.value = 'percent',
+                    selectedColor: AppColors.purple,
+                    labelStyle: TextStyle(color: m == 'percent' ? Colors.white : AppColors.textDim),
+                    backgroundColor: const Color(0xFF0B1230),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: ChoiceChip(
-                  label: const Text('مبلغ ثابت'),
-                  selected: m == 'fixed',
-                  onSelected: (_) => mode.value = 'fixed',
-                  selectedColor: AppColors.purple,
-                  labelStyle: TextStyle(color: m == 'fixed' ? Colors.white : AppColors.textDim),
-                )),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('مبلغ ثابت'),
+                    selected: m == 'fixed',
+                    onSelected: (_) => mode.value = 'fixed',
+                    selectedColor: AppColors.purple,
+                    labelStyle: TextStyle(color: m == 'fixed' ? Colors.white : AppColors.textDim),
+                    backgroundColor: const Color(0xFF0B1230),
+                  ),
+                ),
               ]),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: valueCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'مقدار (درصد یا تومان)',
-                hintStyle: TextStyle(color: AppColors.textMute),
+              decoration: InputDecoration(
+                labelText: 'مقدار (درصد یا تومان)',
+                labelStyle: const TextStyle(color: AppColors.textDim),
                 filled: true,
-                fillColor: Color(0xFF0B1230),
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide.none),
+                fillColor: const Color(0xFF0B1230),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
-            if (cats.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ValueListenableBuilder<int?>(
-                valueListenable: catId,
-                builder: (_, cid, __) => DropdownButtonFormField<int?>(
-                  value: cid,
-                  dropdownColor: AppColors.card,
-                  decoration: const InputDecoration(
-                    filled: true,
-                    fillColor: Color(0xFF0B1230),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide.none),
-                  ),
-                  hint: const Text('همه دسته‌ها', style: TextStyle(color: AppColors.textMute)),
-                  items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('همه دسته‌ها', style: TextStyle(color: Colors.white))),
-                    ...cats.map((c) {
-                      final m = Map<String, dynamic>.from(c as Map);
-                      return DropdownMenuItem<int?>(
-                        value: int.tryParse('${m['id']}'),
-                        child: Text(m['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)),
-                      );
-                    }),
-                  ],
-                  onChanged: (v) => catId.value = v,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.purple,
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: const Text('اعمال روی محصولات'),
@@ -494,19 +502,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return false;
     }
 
-    final wantCat = catId.value ?? catFilter;
+    final wantCat = catFilter; // فقط فیلتر صفحه محصولات
     var targets = <Map<String, dynamic>>[];
     for (final p in list) {
       if (!matchCat(p, wantCat)) continue;
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id > 0) targets.add(Map<String, dynamic>.from(p));
     }
-    // اگر با فیلتر دسته چیزی نماند، همان لیست صفحه بدون فیلتر مجدد دسته
-    if (targets.isEmpty) {
-      for (final p in list) {
-        final id = int.tryParse('${p['id']}') ?? 0;
-        if (id > 0) targets.add(Map<String, dynamic>.from(p));
+    if (targets.isEmpty && wantCat != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('در این دسته محصولی برای تغییر نیست'),
+          backgroundColor: Color(0xFF7F1D1D),
+        ));
       }
+      valueCtrl.dispose();
+      return;
     }
     if (targets.isEmpty) {
       for (final p in svc.products) {
