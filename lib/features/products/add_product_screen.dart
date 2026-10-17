@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/products_service.dart';
+import '../../core/theme/app_theme.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
