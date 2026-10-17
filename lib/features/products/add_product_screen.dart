@@ -37,6 +37,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String? _brandName;
   String? _shippingMethod;
   int? _categoryId;
+  String? _warehouseId;
+  List _warehouses = [];
   bool _saving = false;
   XFile? _image;
   final _picker = ImagePicker();
@@ -56,6 +58,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         if (s.data is Map && s.data['methods'] is List) {
           setState(() => _shipping = (s.data['methods'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
         }
+        try {
+          final w = await auth.api.dio.get('warehouses');
+          if (w.data is Map && w.data['warehouses'] is List) {
+            setState(() => _warehouses = w.data['warehouses'] as List);
+          }
+        } catch (_) {}
         final a = await auth.api.dio.get('products/attributes');
         if (a.data is Map && a.data['attributes'] is List) {
           setState(() => _attrList = (a.data['attributes'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
@@ -134,6 +142,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_salePrice.text.trim().isNotEmpty) body['sale_price'] = _salePrice.text.trim();
       if (_sku.text.trim().isNotEmpty) body['sku'] = _sku.text.trim();
       if (_stock.text.trim().isNotEmpty) body['stock_quantity'] = int.tryParse(_stock.text.trim()) ?? 0;
+      if (_warehouseId != null && _warehouseId!.isNotEmpty) body['warehouse'] = _warehouseId;
       if (_categoryId != null) body['categories'] = [_categoryId];
       if (imageId != null) body['image_id'] = imageId;
       if (_brand.text.trim().isNotEmpty) body['brand'] = _brand.text.trim();
@@ -277,6 +286,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       _label('موجودی'),
                       const SizedBox(height: 8),
                       _field(_stock, 'اختیاری', number: true),
+                      if (_warehouses.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          value: _warehouseId ?? '',
+                          dropdownColor: const Color(0xFF121E42),
+                          decoration: InputDecoration(
+                            labelText: 'انبار',
+                            labelStyle: const TextStyle(color: AppColors.textDim),
+                            filled: true,
+                            fillColor: const Color(0xFF0B1230),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                          items: [
+                            const DropdownMenuItem(value: '', child: Text('بدون انبار', style: TextStyle(color: Colors.white))),
+                            ..._warehouses.map((w) {
+                              final m = Map<String, dynamic>.from(w as Map);
+                              return DropdownMenuItem(value: m['id']?.toString() ?? '', child: Text(m['name']?.toString() ?? '', style: const TextStyle(color: Colors.white)));
+                            }),
+                          ],
+                          onChanged: (v) => setState(() => _warehouseId = (v == null || v.isEmpty) ? null : v),
+                        ),
+                      ],
                     ])),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

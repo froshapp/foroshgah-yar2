@@ -526,14 +526,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
     int done = 0;
     int failed = 0;
     final sampleInfo = <String>[];
-    final opt = Options(
-      contentType: 'application/json',
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      sendTimeout: const Duration(seconds: 60),
-      receiveTimeout: const Duration(seconds: 60),
-    );
 
-    // مسیر قطعی: همان PUT تکی که کار می‌کند
+    // نمایش لودینگ
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('در حال اعمال روی ${targets.length} محصول...'),
+        duration: const Duration(seconds: 2),
+      ));
+    }
+
     for (final p in targets.take(80)) {
       final id = int.tryParse('${p['id']}') ?? 0;
       if (id <= 0) continue;
@@ -556,35 +557,37 @@ class _ProductsScreenState extends State<ProductsScreen> {
           failed++;
           continue;
         }
-        final base = reg > 0 ? reg : sale;
+        final baseReg = reg > 0 ? reg : sale;
         double calc(double b) {
           final n = mode.value == 'percent' ? b + (b * val / 100.0) : b + val;
           return n < 0 ? 0 : n.roundToDouble();
         }
-        final newReg = calc(base > 0 ? (reg > 0 ? reg : base) : base);
-        double? newSale;
+        final newReg = calc(baseReg);
+        String? newSaleStr;
         if (hasSale && sale > 0) {
           final ns = calc(sale);
-          if (ns > 0 && ns < newReg) newSale = ns;
+          if (ns > 0 && ns < newReg) {
+            newSaleStr = ns.round().toString();
+          } else {
+            newSaleStr = ''; // حذف ویژه اگر نامعتبر
+          }
+        } else {
+          newSaleStr = '';
         }
-        final body = <String, dynamic>{
-          'regular_price': newReg.round().toString(),
-          'price': (newSale ?? newReg).round().toString(),
-          if (newSale != null) 'sale_price': newSale.round().toString(),
-          if (newSale == null) 'sale_price': '',
-        };
-        var res = await auth.api.dio.put('products/$id', data: body, options: opt);
-        var ok = res.statusCode == 200 || res.statusCode == 201 ||
-            (res.data is Map && (res.data['success'] == true || res.data['product'] != null));
-        if (!ok) {
-          res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'}, options: opt);
-          ok = res.statusCode == 200 || res.statusCode == 201 ||
-              (res.data is Map && res.data['success'] == true);
-        }
+        final active = (newSaleStr != null && newSaleStr.isNotEmpty) ? newSaleStr : newReg.round().toString();
+        final ok = await svc.updateProduct(
+          auth,
+          id,
+          price: active,
+          regularPrice: newReg.round().toString(),
+          salePrice: newSaleStr,
+        );
         if (ok) {
           done++;
+          // به‌روزرسانی فوری لیست
+          svc.patchLocal(id, price: active, regularPrice: newReg.round().toString(), salePrice: newSaleStr);
           if (sampleInfo.length < 3) {
-            sampleInfo.add('${reg.round()} → ${newReg.round()}');
+            sampleInfo.add('${p['name'] ?? id}: ${baseReg.round()}→${newReg.round()}');
           }
         } else {
           failed++;
@@ -594,17 +597,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
       }
     }
 
-    if (mounted) {
-      final extra = sampleInfo.isNotEmpty ? ' (${sampleInfo.join(' | ')})' : '';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(done > 0
-            ? '$done محصول به‌روز شد$extra${failed > 0 ? ' — ناموفق: $failed' : ''}'
-            : 'هیچ محصولی به‌روز نشد${failed > 0 ? ' ($failed خطا)' : ''}'),
-        backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
-        duration: const Duration(seconds: 4),
-      ));
-      await svc.fetchProducts(auth, refresh: true);
-    }
+    if (!mounted) return;
+    final extra = sampleInfo.isEmpty ? '' : ' | نمونه: ${sampleInfo.join(' · ')}';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(done > 0 ? '✓ $done محصول به‌روز شد$extra' : 'هیچ محصولی به‌روز نشد (ناموفق: $failed)'),
+      backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
+      duration: const Duration(seconds: 4),
+    ));
+    // رفرش از سرور بعد از کوتاهی تأخیر (پاک‌سازی کش)
+    await Future.delayed(const Duration(milliseconds: 600));
+    await svc.fetchProducts(auth, refresh: true);
   }
 
   @override

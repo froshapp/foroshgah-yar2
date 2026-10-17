@@ -10,6 +10,7 @@ import '../../core/nav.dart';
 import '../modules/customers_screen.dart';
 import '../../core/utils/snack.dart';
 import 'plugins_screen.dart';
+import 'fcm_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool asDrawer;
@@ -1171,6 +1172,9 @@ class ProfilePage extends StatelessWidget {
               }),
               _menu(context, Icons.notifications_none_rounded, 'تنظیمات اعلان‌ها', AppColors.orange, () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const AppNotifyPage()));
+              }),
+              _menu(context, Icons.notifications_active_rounded, 'اعلان پوش', AppColors.blue, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const FcmSettingsScreen()));
               }),
               const SizedBox(height: 8),
               _menu(context, Icons.logout_rounded, 'خروج از حساب', AppColors.red, () async {

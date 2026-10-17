@@ -97,11 +97,24 @@ class ProductsService extends ChangeNotifier {
     _categoryId = null;
   }
 
+  void patchLocal(int id, {dynamic price, dynamic regularPrice, dynamic salePrice, int? stock}) {
+    final idx = _products.indexWhere((p) => p['id'].toString() == id.toString());
+    if (idx < 0) return;
+    if (price != null) _products[idx]['price'] = price;
+    if (regularPrice != null) _products[idx]['regular_price'] = regularPrice;
+    if (salePrice != null) {
+      _products[idx]['sale_price'] = salePrice == '' ? null : salePrice;
+    }
+    if (stock != null) _products[idx]['stock_quantity'] = stock;
+    notifyListeners();
+  }
+
   Future<bool> updateProduct(
     AuthService auth,
     int id, {
     String? price,
     String? regularPrice,
+    String? salePrice,
     int? stock,
     String? status,
   }) async {
@@ -113,21 +126,27 @@ class ProductsService extends ChangeNotifier {
       final body = <String, dynamic>{};
       if (price != null) body['price'] = price;
       if (regularPrice != null) body['regular_price'] = regularPrice;
+      if (salePrice != null) body['sale_price'] = salePrice;
       if (stock != null) {
         body['stock_quantity'] = stock;
         body['manage_stock'] = true;
       }
       if (status != null) body['status'] = status;
 
-      final res = await auth.api.dio.put('products/$id', data: body);
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        final idx = _products.indexWhere((p) => p['id'].toString() == id.toString());
-        if (idx >= 0) {
-          if (price != null) _products[idx]['price'] = price;
-          if (regularPrice != null) _products[idx]['regular_price'] = regularPrice;
-          if (stock != null) _products[idx]['stock_quantity'] = stock;
-          notifyListeners();
-        }
+      final opt = Options(
+        contentType: 'application/json',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      );
+      var res = await auth.api.dio.put('products/$id', data: body, options: opt);
+      var ok = res.statusCode == 200 || res.statusCode == 201 ||
+          (res.data is Map && res.data['success'] == true);
+      if (!ok) {
+        res = await auth.api.dio.post('products/$id', data: {...body, '_method': 'PUT'}, options: opt);
+        ok = res.statusCode == 200 || res.statusCode == 201 ||
+            (res.data is Map && res.data['success'] == true);
+      }
+      if (ok) {
+        patchLocal(id, price: price, regularPrice: regularPrice, salePrice: salePrice, stock: stock);
         return true;
       }
       return false;

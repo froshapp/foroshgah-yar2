@@ -18,7 +18,6 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
   bool syncing = false;
   bool hasKey = false;
   int tokenCount = 0;
-  String? msg;
 
   @override
   void initState() {
@@ -26,39 +25,58 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
     _load();
   }
 
+  String _friendlyError(String? e) {
+    if (e == null || e.isEmpty) return '';
+    final s = e.toLowerCase();
+    if (s.contains('missing_instanceid') || s.contains('instanceid')) {
+      return 'سرویس گوگل پلی روی این گوشی در دسترس نیست یا نیاز به به‌روزرسانی دارد.';
+    }
+    if (s.contains('firebaseoptions') || s.contains('values.xml')) {
+      return 'پیکربندی فایربیس ناقص است. اپ را از بیلد جدید نصب کنید.';
+    }
+    if (s.contains('غیرفعال')) return e;
+    if (s.contains('network') || s.contains('socket')) {
+      return 'اتصال اینترنت برقرار نیست.';
+    }
+    return 'راه‌اندازی اعلان با مشکل مواجه شد. سرویس گوگل پلی و اینترنت را بررسی کنید.';
+  }
+
   Future<void> _load() async {
-    setState(() { loading = true; msg = null; });
+    setState(() => loading = true);
     try {
       final res = await context.read<AuthService>().api.dio.get('fcm-settings');
       if (res.data is Map) {
         hasKey = res.data['has_server_key'] == true;
         tokenCount = int.tryParse('${res.data['token_count'] ?? 0}') ?? 0;
       }
-    } catch (e) {
-      msg = '$e';
-    }
+    } catch (_) {}
     if (mounted) setState(() => loading = false);
   }
 
   Future<void> _save() async {
     final key = keyCtrl.text.trim();
     if (key.isEmpty) {
-      setState(() => msg = 'کلید سرور را وارد کنید');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کلید سرور را وارد کنید')));
       return;
     }
-    setState(() { saving = true; msg = null; });
+    setState(() => saving = true);
     try {
       await context.read<AuthService>().api.dio.post('fcm-settings', data: {'server_key': key});
       keyCtrl.clear();
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('کلید FCM ذخیره شد'),
+          content: Text('کلید ذخیره شد'),
           backgroundColor: Color(0xFF065F46),
         ));
       }
-    } catch (e) {
-      msg = '$e';
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('ذخیره کلید ناموفق بود'),
+          backgroundColor: Color(0xFF7F1D1D),
+        ));
+      }
     }
     if (mounted) setState(() => saving = false);
   }
@@ -66,6 +84,9 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
   Future<void> _syncDevice() async {
     setState(() => syncing = true);
     final fcm = FcmService();
+    if (!fcm.enabled) {
+      await fcm.setEnabled(true);
+    }
     if (!fcm.ready) {
       await fcm.init();
     }
@@ -73,7 +94,11 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
     await _load();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'توکن این گوشی ثبت شد' : 'ثبت نشد — google-services.json واقعی لازم است'),
+        content: Text(ok
+            ? 'این گوشی برای دریافت اعلان ثبت شد'
+            : _friendlyError(fcm.lastError).isNotEmpty
+                ? _friendlyError(fcm.lastError)
+                : 'ثبت انجام نشد. گوگل پلی سرویس را بررسی کنید'),
         backgroundColor: ok ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       ));
       setState(() => syncing = false);
@@ -83,12 +108,13 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final fcm = FcmService();
+    final err = _friendlyError(fcm.lastError);
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(children: [
         const GlassHeader(
-          title: 'اعلان پوش (FCM)',
-          subtitle: 'Firebase Cloud Messaging',
+          title: 'اعلان پوش',
+          subtitle: 'دریافت اعلان سفارش روی گوشی',
           leadingIcon: Icons.notifications_active_rounded,
           leadingColor: AppColors.blue,
           showSettingsGear: false,
@@ -104,13 +130,13 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('فعال‌سازی اعلان پوش', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         subtitle: Text(
-                          FcmService().enabled ? 'پوش روشن است' : 'پوش خاموش است',
+                          fcm.enabled ? 'روشن — سفارش جدید به گوشی می‌آید' : 'خاموش',
                           style: const TextStyle(color: AppColors.textDim, fontSize: 12),
                         ),
-                        value: FcmService().enabled,
+                        value: fcm.enabled,
                         activeColor: AppColors.purple,
                         onChanged: (v) async {
-                          await FcmService().setEnabled(v);
+                          await fcm.setEnabled(v);
                           setState(() {});
                           if (v) await _syncDevice();
                         },
@@ -119,49 +145,18 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                     const SizedBox(height: 12),
                     NeonCard(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('وضعیت سرور', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
-                        const SizedBox(height: 8),
-                        _row('کلید سرور', hasKey ? 'تنظیم شده ✓' : 'تنظیم نشده'),
+                        _row('وضعیت', fcm.ready ? 'آماده' : 'غیرفعال'),
+                        _row('کلید سرور', hasKey ? 'تنظیم شده' : 'تنظیم نشده'),
                         _row('دستگاه‌های ثبت‌شده', '$tokenCount'),
-                      ]),
-                    ),
-                    const SizedBox(height: 12),
-                    NeonCard(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('وضعیت این گوشی', style: TextStyle(color: AppColors.textMute, fontSize: 12)),
-                        const SizedBox(height: 8),
-                        _row('Firebase', fcm.ready ? 'آماده ✓' : 'غیرفعال'),
-                        if (fcm.token != null && fcm.token!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          const Text('توکن دستگاه', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            Expanded(
-                              child: Text(
-                                '${fcm.token!.substring(0, fcm.token!.length > 28 ? 28 : fcm.token!.length)}…',
-                                style: const TextStyle(color: Colors.white, fontSize: 11),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.copy, size: 18, color: AppColors.purpleGlow),
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: fcm.token!));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('توکن کپی شد')),
-                                );
-                              },
-                            ),
-                          ]),
+                        if (err.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(err, style: const TextStyle(color: AppColors.red, fontSize: 12, height: 1.4)),
                         ],
-                        if (fcm.lastError != null) ...[
-                          const SizedBox(height: 6),
-                          Text('خطا: ${fcm.lastError}', style: const TextStyle(color: AppColors.red, fontSize: 11)),
-                        ],
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: syncing ? null : _syncDevice,
                           icon: const Icon(Icons.phonelink_setup, size: 18),
-                          label: Text(syncing ? '...' : 'ثبت این گوشی برای اعلان'),
+                          label: Text(syncing ? '...' : 'ثبت این گوشی'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.blue,
                             foregroundColor: Colors.white,
@@ -172,10 +167,10 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                     const SizedBox(height: 12),
                     NeonCard(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        const Text('Server Key فایربیس', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        const Text('کلید سرور فایربیس', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         const Text(
-                          'Firebase Console → Project settings → Cloud Messaging → Server key',
+                          'از کنسول فایربیس → تنظیمات پروژه → Cloud Messaging کپی کنید',
                           style: TextStyle(color: AppColors.textDim, fontSize: 11),
                         ),
                         const SizedBox(height: 12),
@@ -183,7 +178,7 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                           controller: keyCtrl,
                           style: const TextStyle(color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
-                            hintText: 'AAAA... Server Key',
+                            hintText: 'Server Key',
                             hintStyle: const TextStyle(color: AppColors.textMute),
                             filled: true,
                             fillColor: const Color(0xFF0B1230),
@@ -201,23 +196,7 @@ class _FcmSettingsScreenState extends State<FcmSettingsScreen> {
                           ),
                           child: Text(saving ? '...' : 'ذخیره کلید سرور'),
                         ),
-                        if (msg != null) ...[
-                          const SizedBox(height: 8),
-                          Text(msg!, style: const TextStyle(color: AppColors.red, fontSize: 12)),
-                        ],
                       ]),
-                    ),
-                    const SizedBox(height: 12),
-                    const NeonCard(
-                      child: Text(
-                        'برای کار واقعی:\n'
-                        '۱) در Firebase یک اپ Android با پکیج ir.apadanasleep.foroshgah_yar بساز\n'
-                        '۲) google-services.json را در android_templates بگذار و APK بساز\n'
-                        '۳) Server Key را اینجا ذخیره کن\n'
-                        '۴) دکمه «ثبت این گوشی» را بزن\n'
-                        '۵) یک سفارش تستی ثبت کن — باید اعلان بیاید',
-                        style: TextStyle(color: AppColors.textDim, fontSize: 12, height: 1.55),
-                      ),
                     ),
                   ],
                 ),

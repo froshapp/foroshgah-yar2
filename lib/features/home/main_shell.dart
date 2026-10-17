@@ -21,7 +21,6 @@ import '../modules/site_status_screen.dart';
 import '../modules/coupons_screen.dart';
 import '../modules/activity_log_screen.dart';
 import '../modules/managers_screen.dart';
-import '../settings/fcm_settings_screen.dart';
 import '../modules/sales_report_screen.dart';
 import '../modules/warehouses_screen.dart';
 import '../settings/plugins_screen.dart';
@@ -244,7 +243,6 @@ class _MoreTab extends StatelessWidget {
           _item(context, Icons.local_offer_rounded, 'کوپن و تخفیف', 'ساخت و مدیریت کد تخفیف', const Color(0xFF22C55E), const CouponsScreen()),
           _item(context, Icons.history_rounded, 'لاگ تغییرات', 'سوابق کارهای مدیریت', AppColors.blue, const ActivityLogScreen()),
           _item(context, Icons.admin_panel_settings_rounded, 'مدیران و دسترسی', 'نقش مدیران فروشگاه', AppColors.purple, const ManagersScreen()),
-          _item(context, Icons.notifications_active_rounded, 'اعلان پوش FCM', 'کلید فایربیس و پوش سفارش', AppColors.blue, const FcmSettingsScreen()),
         ],
       ),
     );
