@@ -24,6 +24,7 @@ void main() async {
   await auth.tryAutoLogin();
   if (auth.isAuthenticated) {
     await FcmService().syncToken(auth);
+    FcmService().startPolling(auth);
   }
 
   runApp(

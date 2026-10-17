@@ -526,19 +526,114 @@ class _ProductsScreenState extends State<ProductsScreen> {
     int done = 0;
     int failed = 0;
     final sampleInfo = <String>[];
+    final ids = <int>[];
+    for (final p in targets.take(80)) {
+      final id = int.tryParse('${p['id']}') ?? 0;
+      if (id > 0) ids.add(id);
+    }
+    if (ids.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('محصولی برای تغییر یافت نشد'),
+        backgroundColor: Color(0xFF7F1D1D),
+      ));
+      return;
+    }
 
-    // نمایش لودینگ
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('در حال اعمال روی ${targets.length} محصول...'),
+        content: Text('در حال اعمال روی ${ids.length} محصول...'),
         duration: const Duration(seconds: 2),
       ));
     }
 
-    for (final p in targets.take(80)) {
-      final id = int.tryParse('${p['id']}') ?? 0;
-      if (id <= 0) continue;
-      try {
+    // ۱) API گروهی سرور (مستقیم DB)
+    try {
+      final bulkBody = {
+        'ids': ids,
+        'mode': mode.value,
+        'value': val,
+        if (wantCat != null) 'category': wantCat,
+      };
+      final res = await auth.api.dio.post('products/bulk-price', data: bulkBody, options: Options(
+        contentType: 'application/json',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        sendTimeout: const Duration(seconds: 120),
+        receiveTimeout: const Duration(seconds: 120),
+      ));
+      if (res.data is Map) {
+        done = int.tryParse('${res.data['updated'] ?? res.data['done'] ?? 0}') ?? 0;
+        failed = int.tryParse('${res.data['failed'] ?? 0}') ?? 0;
+        if (res.data['samples'] is List) {
+          for (final s in (res.data['samples'] as List).take(3)) {
+            sampleInfo.add(s.toString());
+          }
+        }
+      }
+    } catch (_) {
+      done = 0;
+    }
+
+    // ۲) اگر گروهی کم بود، تکی مثل ویرایش دستی
+    if (done < ids.length) {
+      for (final p in targets.take(80)) {
+        final id = int.tryParse('${p['id']}') ?? 0;
+        if (id <= 0) continue;
+        try {
+          String dig(dynamic v) {
+            var s = '${v ?? ''}'.trim();
+            const fa = '۰۱۲۳۴۵۶۷۸۹';
+            const ar = '٠١٢٣٤٥٦٧٨٩';
+            for (var i = 0; i < 10; i++) {
+              s = s.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
+            }
+            return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
+          }
+          final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
+          final saleRaw = p['sale_price'];
+          final saleNum = double.tryParse(dig(saleRaw)) ?? 0;
+          final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
+          if (reg <= 0 && saleNum <= 0) { failed++; continue; }
+          final baseReg = reg > 0 ? reg : saleNum;
+          double calc(double b) {
+            final n = mode.value == 'percent' ? b + (b * val / 100.0) : b + val;
+            return n < 0 ? 0 : n.roundToDouble();
+          }
+          final newReg = calc(baseReg).round().toString();
+          final saleStr = hasSale ? calc(saleNum).round().toString() : '';
+          final active = (saleStr.isNotEmpty && (double.tryParse(saleStr) ?? 0) < (double.tryParse(newReg) ?? 0))
+              ? saleStr
+              : newReg;
+          // همان body ویرایش تکی
+          final body = <String, dynamic>{
+            'regular_price': newReg,
+            'price': active,
+            'sale_price': (saleStr.isNotEmpty && saleStr != active) ? saleStr : '',
+          };
+          final res = await auth.api.dio.put('products/$id', data: body, options: Options(
+            contentType: 'application/json',
+            headers: {'Content-Type': 'application/json'},
+          ));
+          final ok = res.statusCode == 200 || res.statusCode == 201 ||
+              (res.data is Map && res.data['success'] == true);
+          if (ok) {
+            done++;
+            svc.patchLocal(id, price: active, regularPrice: newReg, salePrice: body['sale_price']);
+            // محاسبهٔ محلی قیمت بعدی برای محصولات بعدی در حلقه
+            p['regular_price'] = newReg;
+            p['price'] = active;
+            p['sale_price'] = body['sale_price'] == '' ? null : body['sale_price'];
+          } else {
+            failed++;
+          }
+        } catch (_) {
+          failed++;
+        }
+      }
+    } else {
+      // گروهی موفق — قیمت‌ها را محلی هم محاسبه کن
+      for (final p in targets.take(80)) {
+        final id = int.tryParse('${p['id']}') ?? 0;
+        if (id <= 0) continue;
         String dig(dynamic v) {
           var s = '${v ?? ''}'.trim();
           const fa = '۰۱۲۳۴۵۶۷۸۹';
@@ -549,63 +644,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
           return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
         }
         final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
-        final saleRaw = p['sale_price'];
-        final saleNum = double.tryParse(dig(saleRaw)) ?? 0;
-        final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
-        final sale = hasSale ? saleNum : 0.0;
-        if (reg <= 0 && sale <= 0) {
-          failed++;
-          continue;
-        }
-        final baseReg = reg > 0 ? reg : sale;
-        double calc(double b) {
-          final n = mode.value == 'percent' ? b + (b * val / 100.0) : b + val;
-          return n < 0 ? 0 : n.roundToDouble();
-        }
-        final newReg = calc(baseReg);
-        String? newSaleStr;
-        if (hasSale && sale > 0) {
-          final ns = calc(sale);
-          if (ns > 0 && ns < newReg) {
-            newSaleStr = ns.round().toString();
-          } else {
-            newSaleStr = ''; // حذف ویژه اگر نامعتبر
-          }
-        } else {
-          newSaleStr = '';
-        }
-        final active = (newSaleStr != null && newSaleStr.isNotEmpty) ? newSaleStr : newReg.round().toString();
-        final ok = await svc.updateProduct(
-          auth,
-          id,
-          price: active,
-          regularPrice: newReg.round().toString(),
-          salePrice: newSaleStr,
-        );
-        if (ok) {
-          done++;
-          // به‌روزرسانی فوری لیست
-          svc.patchLocal(id, price: active, regularPrice: newReg.round().toString(), salePrice: newSaleStr);
-          if (sampleInfo.length < 3) {
-            sampleInfo.add('${p['name'] ?? id}: ${baseReg.round()}→${newReg.round()}');
-          }
-        } else {
-          failed++;
-        }
-      } catch (_) {
-        failed++;
+        final saleNum = double.tryParse(dig(p['sale_price'])) ?? 0;
+        if (reg <= 0 && saleNum <= 0) continue;
+        final baseReg = reg > 0 ? reg : saleNum;
+        final n = mode.value == 'percent' ? baseReg + (baseReg * val / 100.0) : baseReg + val;
+        final newReg = n < 0 ? 0 : n.round();
+        svc.patchLocal(id, price: newReg, regularPrice: newReg);
       }
     }
 
     if (!mounted) return;
-    final extra = sampleInfo.isEmpty ? '' : ' | نمونه: ${sampleInfo.join(' · ')}';
+    final extra = sampleInfo.isEmpty ? '' : ' | ${sampleInfo.join(' · ')}';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(done > 0 ? '✓ $done محصول به‌روز شد$extra' : 'هیچ محصولی به‌روز نشد (ناموفق: $failed)'),
+      content: Text(done > 0 ? '✓ $done محصول به‌روز شد$extra' : 'اعمال نشد — دوباره تلاش کنید'),
       backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       duration: const Duration(seconds: 4),
     ));
-    // رفرش از سرور بعد از کوتاهی تأخیر (پاک‌سازی کش)
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 800));
+    // cache-bust
+    try {
+      await auth.api.dio.get('products', queryParameters: {'page': 1, 'per_page': 1, '_ts': DateTime.now().millisecondsSinceEpoch});
+    } catch (_) {}
+    await svc.fetchProducts(auth, refresh: true);
     await svc.fetchProducts(auth, refresh: true);
   }
 
