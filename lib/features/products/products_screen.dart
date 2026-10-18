@@ -509,72 +509,126 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
-    // سمت سرور: با category همه محصولات دسته + زیردسته (تا ۸۰۰)
+    // ۱) همه محصولات دسته را لود کن و با ids اعمال کن (قابل‌اطمینان‌تر از فقط category)
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(catFilter != null
-            ? 'در حال اعمال روی همه محصولات این دسته و زیردسته‌ها...'
-            : 'در حال اعمال روی محصولات...'),
-        duration: const Duration(seconds: 2),
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('در حال اعمال تغییر قیمت...'),
+        duration: Duration(seconds: 2),
       ));
     }
 
     int done = 0;
     int failed = 0;
     String serverMsg = '';
+
     try {
-      final bulkBody = <String, dynamic>{
-        'mode': mode.value,
-        'value': val.abs(),
-        'direction': direction.value,
-        if (catFilter != null) 'category': catFilter,
-        if (catFilter == null) 'all': true,
-      };
-      final res = await auth.api.dio.post('products/bulk-price', data: bulkBody, options: Options(
-        contentType: 'application/json',
-        headers: {'Content-Type': 'application/json'},
-        receiveTimeout: const Duration(seconds: 120),
-        sendTimeout: const Duration(seconds: 60),
-      ));
-      if (res.data is Map) {
-        done = int.tryParse('${res.data['updated'] ?? res.data['done'] ?? 0}') ?? 0;
-        failed = int.tryParse('${res.data['failed'] ?? 0}') ?? 0;
-        serverMsg = (res.data['message'] ?? '').toString();
-        // اگر سرور ۰ برگرداند ولی دسته انتخاب شده، یک بار با ids محلی تلاش کن
-        if (done == 0 && catFilter != null) {
-          await svc.loadAllForCategory(auth, catFilter);
-          final ids = <int>[];
-          for (final p in svc.products) {
-            final id = int.tryParse('${p['id']}') ?? 0;
-            if (id > 0) ids.add(id);
-          }
-          if (ids.isNotEmpty) {
-            final res2 = await auth.api.dio.post('products/bulk-price', data: {
-              'mode': mode.value,
-              'value': val.abs(),
-              'direction': direction.value,
-              'ids': ids,
-              'category': catFilter,
-            }, options: Options(
+      // بارگذاری کامل دسته انتخاب‌شده (یا همه صفحات فعلی)
+      await svc.loadAllForCategory(auth, catFilter);
+      final targets = <Map<String, dynamic>>[];
+      for (final p in svc.products) {
+        final id = int.tryParse('${p['id']}') ?? 0;
+        if (id > 0) targets.add(Map<String, dynamic>.from(p));
+      }
+      final ids = targets.map((p) => int.tryParse('${p['id']}') ?? 0).where((id) => id > 0).toList();
+
+      if (ids.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('محصولی در این دسته یافت نشد'),
+            backgroundColor: Color(0xFF7F1D1D),
+          ));
+        }
+        valueCtrl.dispose();
+        return;
+      }
+
+      // تلاش گروهی با ids
+      try {
+        final bulkBody = <String, dynamic>{
+          'mode': mode.value,
+          'value': val.abs(),
+          'direction': direction.value,
+          'ids': ids,
+          if (catFilter != null) 'category': catFilter,
+        };
+        final res = await auth.api.dio.post('products/bulk-price', data: bulkBody, options: Options(
+          contentType: 'application/json',
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          receiveTimeout: const Duration(seconds: 120),
+          sendTimeout: const Duration(seconds: 60),
+          validateStatus: (s) => s != null && s < 500,
+        ));
+        if (res.data is Map) {
+          done = int.tryParse('${res.data['updated'] ?? res.data['done'] ?? 0}') ?? 0;
+          failed = int.tryParse('${res.data['failed'] ?? 0}') ?? 0;
+          serverMsg = (res.data['message'] ?? '').toString();
+        }
+      } catch (e) {
+        serverMsg = e.toString();
+      }
+
+      // اگر گروهی کار نکرد → تکی
+      if (done == 0) {
+        done = 0;
+        failed = 0;
+        final signed = direction.value == 'down' ? -val.abs() : val.abs();
+        for (final p in targets) {
+          final id = int.tryParse('${p['id']}') ?? 0;
+          if (id <= 0) continue;
+          try {
+            String dig(dynamic v) {
+              var s = '${v ?? ''}'.trim();
+              const fa = '۰۱۲۳۴۵۶۷۸۹';
+              const ar = '٠١٢٣٤٥٦٧٨٩';
+              for (var i = 0; i < 10; i++) {
+                s = s.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
+              }
+              return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
+            }
+            final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
+            final saleRaw = p['sale_price'];
+            final saleNum = double.tryParse(dig(saleRaw)) ?? 0;
+            final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
+            if (reg <= 0 && saleNum <= 0) { failed++; continue; }
+            final baseReg = reg > 0 ? reg : saleNum;
+            double calc(double b) {
+              final n = mode.value == 'percent' ? b + (b * signed / 100.0) : b + signed;
+              return n < 0 ? 0 : n.roundToDouble();
+            }
+            final newReg = calc(baseReg).round().toString();
+            final saleStr = hasSale ? calc(saleNum).round().toString() : '';
+            final activeNum = (saleStr.isNotEmpty && (double.tryParse(saleStr) ?? 0) > 0 && (double.tryParse(saleStr) ?? 0) < (double.tryParse(newReg) ?? 0))
+                ? (double.tryParse(saleStr) ?? 0)
+                : (double.tryParse(newReg) ?? 0);
+            final active = activeNum.round().toString();
+            final body = <String, dynamic>{
+              'regular_price': newReg,
+              'price': active,
+              'sale_price': (saleStr.isNotEmpty && saleStr != active) ? saleStr : '',
+            };
+            final r = await auth.api.dio.put('products/$id', data: body, options: Options(
               contentType: 'application/json',
               headers: {'Content-Type': 'application/json'},
-              receiveTimeout: const Duration(seconds: 120),
+              validateStatus: (s) => s != null && s < 500,
             ));
-            if (res2.data is Map) {
-              done = int.tryParse('${res2.data['updated'] ?? res2.data['done'] ?? 0}') ?? 0;
-              failed = int.tryParse('${res2.data['failed'] ?? 0}') ?? 0;
-              serverMsg = (res2.data['message'] ?? '').toString();
+            final ok = r.statusCode == 200 || r.statusCode == 201 ||
+                (r.data is Map && (r.data['success'] == true || r.data['product'] != null));
+            if (ok) {
+              done++;
+              svc.patchLocal(id, price: active, regularPrice: newReg, salePrice: body['sale_price']);
+            } else {
+              failed++;
             }
+          } catch (_) {
+            failed++;
           }
         }
-      }
-    } catch (e) {
-      // fallback تکی
-      await svc.loadAllForCategory(auth, catFilter);
-      for (final p in List<Map<String, dynamic>>.from(svc.products)) {
-        final id = int.tryParse('${p['id']}') ?? 0;
-        if (id <= 0) continue;
-        try {
+      } else {
+        // گروهی موفق — محلی هم پچ کن
+        final signed = direction.value == 'down' ? -val.abs() : val.abs();
+        for (final p in targets) {
+          final id = int.tryParse('${p['id']}') ?? 0;
+          if (id <= 0) continue;
           String dig(dynamic v) {
             var s = '${v ?? ''}'.trim();
             const fa = '۰۱۲۳۴۵۶۷۸۹';
@@ -585,35 +639,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
             return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
           }
           final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
-          final saleRaw = p['sale_price'];
-          final saleNum = double.tryParse(dig(saleRaw)) ?? 0;
-          final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
-          if (reg <= 0 && saleNum <= 0) { failed++; continue; }
-          final baseReg = reg > 0 ? reg : saleNum;
-          final n = mode.value == 'percent' ? baseReg + (baseReg * val / 100.0) : baseReg + val;
-          final newReg = (n < 0 ? 0 : n).round().toString();
-          final saleStr = hasSale ? (mode.value == 'percent' ? saleNum + (saleNum * val / 100.0) : saleNum + val).round().toString() : '';
-          final active = (saleStr.isNotEmpty && (double.tryParse(saleStr) ?? 0) < (double.tryParse(newReg) ?? 0)) ? saleStr : newReg;
-          final body = <String, dynamic>{
-            'regular_price': newReg,
-            'price': active,
-            'sale_price': (saleStr.isNotEmpty && saleStr != active) ? saleStr : '',
-          };
-          final r = await auth.api.dio.put('products/$id', data: body, options: Options(
-            contentType: 'application/json',
-            headers: {'Content-Type': 'application/json'},
-          ));
-          final ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
-          if (ok) {
-            done++;
-            svc.patchLocal(id, price: active, regularPrice: newReg, salePrice: body['sale_price']);
-          } else {
-            failed++;
-          }
-        } catch (_) {
-          failed++;
+          if (reg <= 0) continue;
+          final n = mode.value == 'percent' ? reg + (reg * signed / 100.0) : reg + signed;
+          final newReg = (n < 0 ? 0 : n).round();
+          svc.patchLocal(id, price: newReg, regularPrice: newReg);
         }
       }
+    } catch (e) {
+      serverMsg = e.toString();
     }
 
     if (!mounted) {
@@ -623,7 +656,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(done > 0
           ? '✓ $done محصول به‌روز شد${failed > 0 ? ' — ناموفق: $failed' : ''}'
-          : (serverMsg.isNotEmpty ? serverMsg : 'اعمال نشد — دسته را چک کنید یا دوباره تلاش کنید')),
+          : (serverMsg.isNotEmpty ? 'خطا: $serverMsg' : 'اعمال نشد — دوباره تلاش کنید')),
       backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       duration: const Duration(seconds: 4),
     ));
