@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -77,12 +78,49 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     try {
       final body = <String, dynamic>{
         if (all) 'all': true,
-        if (!all) 'ids': selected.toList(),
+        if (!all) 'ids': selected.where((e) => e.isNotEmpty).toList(),
       };
-      try {
-        await context.read<AuthService>().api.dio.post('activity-log', data: body);
-      } catch (_) {
-        await context.read<AuthService>().api.dio.delete('activity-log', data: body);
+      if (!all && (body['ids'] as List).isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('موردی انتخاب نشده'),
+            backgroundColor: Color(0xFF7F1D1D),
+          ));
+        }
+        return;
+      }
+      final res = await context.read<AuthService>().api.dio.post(
+        'activity-log',
+        data: body,
+        options: Options(
+          contentType: 'application/json',
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          validateStatus: (s) => s != null && s < 500,
+        ),
+      );
+      final okPost = res.statusCode == 200 || res.statusCode == 201 ||
+          (res.data is Map && res.data['success'] == true);
+      if (!okPost) {
+        await context.read<AuthService>().api.dio.request(
+          'activity-log',
+          data: body,
+          options: Options(
+            method: 'DELETE',
+            contentType: 'application/json',
+            headers: {'Content-Type': 'application/json'},
+            validateStatus: (s) => s != null && s < 500,
+          ),
+        );
+      }
+      if (all) {
+        items = [];
+      } else {
+        final idset = Set<String>.from(selected);
+        items = items.where((e) {
+          final m = Map<String, dynamic>.from(e as Map);
+          final id = m['id']?.toString() ?? '';
+          return id.isEmpty || !idset.contains(id);
+        }).toList();
       }
       setState(() { selected.clear(); selectMode = false; });
       await _load();
