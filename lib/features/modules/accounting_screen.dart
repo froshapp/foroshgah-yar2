@@ -22,6 +22,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
 
   int days = 7;
   Map sales = {};
+  bool salesLoading = false;
 
   Future<void> _load() async {
     setState(() {
@@ -34,11 +35,17 @@ class _AccountingScreenState extends State<AccountingScreen> {
     } catch (e) {
       error = e.toString();
     }
+    await _loadSales();
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _loadSales() async {
+    if (mounted) setState(() => salesLoading = true);
     try {
       final sres = await context.read<AuthService>().api.dio.get('sales-report', queryParameters: {'days': days});
       if (sres.data is Map) sales = Map<String, dynamic>.from(sres.data as Map);
     } catch (_) {}
-    if (mounted) setState(() => loading = false);
+    if (mounted) setState(() => salesLoading = false);
   }
 
   String _fmt(dynamic v) {
@@ -122,7 +129,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
                               const SizedBox(height: 12),
                               const Text('نمودار روزانه', style: TextStyle(color: AppColors.textDim, fontSize: 12)),
                               const SizedBox(height: 8),
-                              SizedBox(height: 120, child: _miniChart()),
+                              SizedBox(height: 120, child: salesLoading ? const Center(child: MiniLoader()) : _miniChart()),
                             ]),
                           ),
                           const SizedBox(height: 14),
@@ -162,8 +169,9 @@ class _AccountingScreenState extends State<AccountingScreen> {
     final sel = days == d;
     return GestureDetector(
       onTap: () {
+        if (days == d) return;
         setState(() => days = d);
-        _load();
+        _loadSales();
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

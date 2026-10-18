@@ -137,7 +137,7 @@ class FcmService {
     _pollTimer?.cancel();
     if (!enabled) return;
     Future.delayed(const Duration(seconds: 3), () => _tick());
-    _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) => _tick());
+    _pollTimer = Timer.periodic(const Duration(seconds: 90), (_) => _tick());
   }
 
   void stopPolling() {

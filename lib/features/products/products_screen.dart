@@ -481,112 +481,64 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return;
     }
 
-    // لیست هدف: اول محصولات قابل‌مشاهده صفحه، بعد در صورت نیاز همه
-    await svc.fetchProducts(auth, refresh: true);
-    var list = _filtered(svc.products);
-    if (list.isEmpty) list = List<Map<String, dynamic>>.from(svc.products);
-
-    bool matchCat(Map p, int? want) {
-      if (want == null) return true;
-      final pcats = p['categories'] ?? p['category_ids'] ?? p['category'];
-      if (pcats is List) {
-        for (final c in pcats) {
-          final id = c is Map ? (c['id'] ?? c['term_id']) : c;
-          if (int.tryParse('$id') == want) return true;
-        }
-      } else if (pcats != null) {
-        if (int.tryParse('$pcats') == want) return true;
-      }
-      // نام دسته
-      final names = p['category_names'] ?? p['categories_names'];
-      return false;
-    }
-
-    final wantCat = catFilter; // فقط فیلتر صفحه محصولات
-    var targets = <Map<String, dynamic>>[];
-    for (final p in list) {
-      if (!matchCat(p, wantCat)) continue;
-      final id = int.tryParse('${p['id']}') ?? 0;
-      if (id > 0) targets.add(Map<String, dynamic>.from(p));
-    }
-    if (targets.isEmpty && wantCat != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('در این دسته محصولی برای تغییر نیست'),
-          backgroundColor: Color(0xFF7F1D1D),
-        ));
-      }
-      valueCtrl.dispose();
-      return;
-    }
-    if (targets.isEmpty) {
-      for (final p in svc.products) {
-        final id = int.tryParse('${p['id']}') ?? 0;
-        if (id > 0) targets.add(Map<String, dynamic>.from(p));
-      }
-    }
-
-    if (targets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('محصولی یافت نشد (کل بارگذاری‌شده: ${svc.products.length})'),
-        backgroundColor: const Color(0xFF7F1D1D),
-      ));
-      return;
-    }
-
-    int done = 0;
-    int failed = 0;
-    final sampleInfo = <String>[];
-    final ids = <int>[];
-    for (final p in targets.take(80)) {
-      final id = int.tryParse('${p['id']}') ?? 0;
-      if (id > 0) ids.add(id);
-    }
-    if (ids.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('محصولی برای تغییر یافت نشد'),
-        backgroundColor: Color(0xFF7F1D1D),
-      ));
-      return;
-    }
-
+    // سمت سرور: با category همه محصولات دسته + زیردسته (تا ۸۰۰)
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('در حال اعمال روی ${ids.length} محصول...'),
+        content: Text(catFilter != null
+            ? 'در حال اعمال روی همه محصولات این دسته و زیردسته‌ها...'
+            : 'در حال اعمال روی محصولات...'),
         duration: const Duration(seconds: 2),
       ));
     }
 
-    // ۱) API گروهی سرور (مستقیم DB)
+    int done = 0;
+    int failed = 0;
     try {
-      final bulkBody = {
-        'ids': ids,
+      final bulkBody = <String, dynamic>{
         'mode': mode.value,
         'value': val,
-        if (wantCat != null) 'category': wantCat,
+        if (catFilter != null) 'category': catFilter,
+        if (catFilter == null) 'all': true,
       };
       final res = await auth.api.dio.post('products/bulk-price', data: bulkBody, options: Options(
         contentType: 'application/json',
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        sendTimeout: const Duration(seconds: 120),
+        headers: {'Content-Type': 'application/json'},
         receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 60),
       ));
       if (res.data is Map) {
         done = int.tryParse('${res.data['updated'] ?? res.data['done'] ?? 0}') ?? 0;
         failed = int.tryParse('${res.data['failed'] ?? 0}') ?? 0;
-        if (res.data['samples'] is List) {
-          for (final s in (res.data['samples'] as List).take(3)) {
-            sampleInfo.add(s.toString());
+        // اگر سرور ۰ برگرداند ولی دسته انتخاب شده، یک بار با ids محلی تلاش کن
+        if (done == 0 && catFilter != null) {
+          await svc.loadAllForCategory(auth, catFilter);
+          final ids = <int>[];
+          for (final p in svc.products) {
+            final id = int.tryParse('${p['id']}') ?? 0;
+            if (id > 0) ids.add(id);
+          }
+          if (ids.isNotEmpty) {
+            final res2 = await auth.api.dio.post('products/bulk-price', data: {
+              'mode': mode.value,
+              'value': val,
+              'ids': ids,
+              'category': catFilter,
+            }, options: Options(
+              contentType: 'application/json',
+              headers: {'Content-Type': 'application/json'},
+              receiveTimeout: const Duration(seconds: 120),
+            ));
+            if (res2.data is Map) {
+              done = int.tryParse('${res2.data['updated'] ?? res2.data['done'] ?? 0}') ?? 0;
+              failed = int.tryParse('${res2.data['failed'] ?? 0}') ?? 0;
+            }
           }
         }
       }
-    } catch (_) {
-      done = 0;
-    }
-
-    // ۲) اگر گروهی کم بود، تکی مثل ویرایش دستی
-    if (done < ids.length) {
-      for (final p in targets.take(80)) {
+    } catch (e) {
+      // fallback تکی
+      await svc.loadAllForCategory(auth, catFilter);
+      for (final p in List<Map<String, dynamic>>.from(svc.products)) {
         final id = int.tryParse('${p['id']}') ?? 0;
         if (id <= 0) continue;
         try {
@@ -605,34 +557,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
           final hasSale = saleRaw != null && saleRaw.toString().isNotEmpty && saleNum > 0;
           if (reg <= 0 && saleNum <= 0) { failed++; continue; }
           final baseReg = reg > 0 ? reg : saleNum;
-          double calc(double b) {
-            final n = mode.value == 'percent' ? b + (b * val / 100.0) : b + val;
-            return n < 0 ? 0 : n.roundToDouble();
-          }
-          final newReg = calc(baseReg).round().toString();
-          final saleStr = hasSale ? calc(saleNum).round().toString() : '';
-          final active = (saleStr.isNotEmpty && (double.tryParse(saleStr) ?? 0) < (double.tryParse(newReg) ?? 0))
-              ? saleStr
-              : newReg;
-          // همان body ویرایش تکی
+          final n = mode.value == 'percent' ? baseReg + (baseReg * val / 100.0) : baseReg + val;
+          final newReg = (n < 0 ? 0 : n).round().toString();
+          final saleStr = hasSale ? (mode.value == 'percent' ? saleNum + (saleNum * val / 100.0) : saleNum + val).round().toString() : '';
+          final active = (saleStr.isNotEmpty && (double.tryParse(saleStr) ?? 0) < (double.tryParse(newReg) ?? 0)) ? saleStr : newReg;
           final body = <String, dynamic>{
             'regular_price': newReg,
             'price': active,
             'sale_price': (saleStr.isNotEmpty && saleStr != active) ? saleStr : '',
           };
-          final res = await auth.api.dio.put('products/$id', data: body, options: Options(
+          final r = await auth.api.dio.put('products/$id', data: body, options: Options(
             contentType: 'application/json',
             headers: {'Content-Type': 'application/json'},
           ));
-          final ok = res.statusCode == 200 || res.statusCode == 201 ||
-              (res.data is Map && res.data['success'] == true);
+          final ok = r.statusCode == 200 || r.statusCode == 201 || (r.data is Map && r.data['success'] == true);
           if (ok) {
             done++;
             svc.patchLocal(id, price: active, regularPrice: newReg, salePrice: body['sale_price']);
-            // محاسبهٔ محلی قیمت بعدی برای محصولات بعدی در حلقه
-            p['regular_price'] = newReg;
-            p['price'] = active;
-            p['sale_price'] = body['sale_price'] == '' ? null : body['sale_price'];
           } else {
             failed++;
           }
@@ -640,44 +581,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
           failed++;
         }
       }
-    } else {
-      // گروهی موفق — قیمت‌ها را محلی هم محاسبه کن
-      for (final p in targets.take(80)) {
-        final id = int.tryParse('${p['id']}') ?? 0;
-        if (id <= 0) continue;
-        String dig(dynamic v) {
-          var s = '${v ?? ''}'.trim();
-          const fa = '۰۱۲۳۴۵۶۷۸۹';
-          const ar = '٠١٢٣٤٥٦٧٨٩';
-          for (var i = 0; i < 10; i++) {
-            s = s.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
-          }
-          return s.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
-        }
-        final reg = double.tryParse(dig(p['regular_price'] ?? p['price'] ?? 0)) ?? 0;
-        final saleNum = double.tryParse(dig(p['sale_price'])) ?? 0;
-        if (reg <= 0 && saleNum <= 0) continue;
-        final baseReg = reg > 0 ? reg : saleNum;
-        final n = mode.value == 'percent' ? baseReg + (baseReg * val / 100.0) : baseReg + val;
-        final newReg = n < 0 ? 0 : n.round();
-        svc.patchLocal(id, price: newReg, regularPrice: newReg);
-      }
     }
 
-    if (!mounted) return;
-    final extra = sampleInfo.isEmpty ? '' : ' | ${sampleInfo.join(' · ')}';
+    if (!mounted) {
+      valueCtrl.dispose();
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(done > 0 ? '✓ $done محصول به‌روز شد$extra' : 'اعمال نشد — دوباره تلاش کنید'),
+      content: Text(done > 0
+          ? '✓ $done محصول به‌روز شد${failed > 0 ? ' — ناموفق: $failed' : ''}'
+          : 'اعمال نشد — دوباره تلاش کنید'),
       backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       duration: const Duration(seconds: 4),
     ));
-    await Future.delayed(const Duration(milliseconds: 800));
-    // cache-bust
-    try {
-      await auth.api.dio.get('products', queryParameters: {'page': 1, 'per_page': 1, '_ts': DateTime.now().millisecondsSinceEpoch});
-    } catch (_) {}
-    await svc.fetchProducts(auth, refresh: true);
-    await svc.fetchProducts(auth, refresh: true);
+    await svc.fetchProducts(auth, refresh: true, categoryId: catFilter);
+    valueCtrl.dispose();
   }
 
   @override

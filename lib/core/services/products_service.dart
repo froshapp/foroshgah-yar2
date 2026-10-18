@@ -60,7 +60,7 @@ class ProductsService extends ChangeNotifier {
         await auth.api.ensureReachable();
       } catch (_) {}
 
-      final params = <String, dynamic>{'page': _page, 'per_page': 50, 'status': 'any'};
+      final params = <String, dynamic>{'page': _page, 'per_page': 100, 'status': 'any'};
       if (_search.isNotEmpty) params['search'] = _search;
       if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
 
@@ -95,6 +95,41 @@ class ProductsService extends ChangeNotifier {
 
   void clearCategory() {
     _categoryId = null;
+  }
+
+  
+  /// بارگذاری همه صفحات یک دسته (برای عملیات گروهی)
+  Future<void> loadAllForCategory(AuthService auth, int? categoryId) async {
+    _categoryId = categoryId;
+    _page = 1;
+    _hasMore = true;
+    _products = [];
+    _loading = true;
+    notifyListeners();
+    var guard = 0;
+    while (_hasMore && guard < 20) {
+      guard++;
+      try {
+        final params = <String, dynamic>{'page': _page, 'per_page': 100, 'status': 'any'};
+        if (_categoryId != null && _categoryId! > 0) params['category'] = _categoryId;
+        final res = await auth.api.dio.get('products', queryParameters: params);
+        List list = [];
+        if (res.data is Map) {
+          final m = res.data as Map;
+          if (m['products'] is List) list = m['products'] as List;
+        } else if (res.data is List) {
+          list = res.data as List;
+        }
+        final items = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _products.addAll(items);
+        _hasMore = items.length >= 100;
+        _page++;
+      } catch (_) {
+        _hasMore = false;
+      }
+    }
+    _loading = false;
+    notifyListeners();
   }
 
   void patchLocal(int id, {dynamic price, dynamic regularPrice, dynamic salePrice, int? stock}) {
