@@ -16,6 +16,24 @@ class AuthService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   Map<String, dynamic>? get user => _user;
+
+  Future<void> _persistRoles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final r = _user?['roles'];
+    if (r is List) {
+      await prefs.setString('fy_user_roles', r.map((e) => e.toString()).join(','));
+    }
+  }
+
+  List<String> get roles {
+    final r = _user?['roles'];
+    if (r is List) return r.map((e) => e.toString()).toList();
+    if (r is String && r.isNotEmpty) return r.split(',');
+    return const [];
+  }
+  bool get isAdmin => roles.contains('administrator');
+  bool get isShopManager => roles.contains('shop_manager') || isAdmin;
+  bool get canManageManagers => isAdmin;
   Map<String, dynamic>? get site => _site;
   String get siteName {
     final n = _site?['name']?.toString();
@@ -58,10 +76,12 @@ class AuthService extends ChangeNotifier {
       final savedEmail = prefs.getString('fy_user_email') ?? '';
       final savedAvatar = prefs.getString('fy_user_avatar') ?? '';
       final savedSiteName = prefs.getString('fy_site_name') ?? '';
+      final savedRoles = prefs.getString('fy_user_roles') ?? '';
       _user = {
         'display_name': savedName,
         'email': savedEmail,
         'avatar': savedAvatar,
+        'roles': savedRoles.isEmpty ? <String>[] : savedRoles.split(','),
       };
       if (savedSiteName.isNotEmpty) {
         _site = {
@@ -89,6 +109,7 @@ class AuthService extends ChangeNotifier {
           }
           if (d['user'] is Map) {
             _user = Map<String, dynamic>.from(d['user'] as Map);
+            await _persistRoles();
           }
           if (_site?['name'] != null) {
             await prefs.setString('fy_site_name', _site!['name'].toString());
@@ -127,7 +148,7 @@ class AuthService extends ChangeNotifier {
       } else if (res.statusCode == 200 && res.data is Map) {
         final d = Map<String, dynamic>.from(res.data as Map);
         if (d['site'] is Map) _site = Map<String, dynamic>.from(d['site'] as Map);
-        if (d['user'] is Map) _user = Map<String, dynamic>.from(d['user'] as Map);
+        if (d['user'] is Map) { _user = Map<String, dynamic>.from(d['user'] as Map); await _persistRoles(); }
         notifyListeners();
       }
     } catch (_) {}
@@ -157,6 +178,7 @@ class AuthService extends ChangeNotifier {
 
         final data = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
         _user = data['user'] is Map ? Map<String, dynamic>.from(data['user'] as Map) : null;
+        await _persistRoles();
         _site = data['site'] is Map ? Map<String, dynamic>.from(data['site'] as Map) : {'url': siteUrl};
 
         if (_user?['display_name'] != null) {
@@ -167,6 +189,12 @@ class AuthService extends ChangeNotifier {
         }
         if (_user?['avatar'] != null) {
           await prefs.setString('fy_user_avatar', _user!['avatar'].toString());
+        }
+        if (_user?['roles'] != null) {
+          final roles = _user!['roles'];
+          if (roles is List) {
+            await prefs.setString('fy_user_roles', roles.map((e) => e.toString()).join(','));
+          }
         }
         if (_site?['name'] != null) {
           await prefs.setString('fy_site_name', _site!['name'].toString());

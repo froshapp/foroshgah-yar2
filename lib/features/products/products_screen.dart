@@ -292,7 +292,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 
   String _catLabel(ProductsService svc) {
-    if (catFilter == null) return 'همه دسته‌ها';
+    if (catFilter == null) return 'همه';
     for (final c in svc.categories) {
       final m = Map<String, dynamic>.from(c as Map);
       if (int.tryParse('${m['id']}') == catFilter) return m['name']?.toString() ?? 'دسته';
@@ -334,7 +334,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           selected: sel,
                           selectedTileColor: AppColors.purple.withOpacity(0.2),
                           leading: Icon(sel ? Icons.check_circle_rounded : Icons.apps_rounded, color: sel ? AppColors.purpleGlow : AppColors.textMute),
-                          title: const Text('همه دسته‌ها', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          title: const Text('همه محصولات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                           onTap: () => Navigator.pop(ctx, {'picked': true, 'id': null}),
                         );
                       }
@@ -365,9 +365,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Future<void> _openBulkPrice(AuthService auth, ProductsService svc) async {
-    final mode = ValueNotifier<String>('percent');
+    final mode = ValueNotifier<String>('percent'); // percent | fixed
+    final direction = ValueNotifier<String>('up'); // up | down
     final valueCtrl = TextEditingController();
-    final pageCat = catFilter; // ملاک: دسته انتخاب‌شده در صفحه محصولات
+    final pageCat = catFilter;
     String catTitle = 'همه محصولات';
     if (pageCat != null) {
       for (final c in svc.categories) {
@@ -407,9 +408,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
             if (pageCat == null)
               const Padding(
                 padding: EdgeInsets.only(top: 6),
-                child: Text('برای محدود کردن به یک دسته، اول از فیلتر بالای صفحه دسته را انتخاب کنید.', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
+                child: Text('برای محدود کردن، اول از بالا یک دسته انتخاب کنید.', style: TextStyle(color: AppColors.textDim, fontSize: 11)),
               ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            ValueListenableBuilder<String>(
+              valueListenable: direction,
+              builder: (_, d, __) => Row(children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('افزایش'),
+                    selected: d == 'up',
+                    onSelected: (_) => direction.value = 'up',
+                    selectedColor: const Color(0xFF059669),
+                    labelStyle: TextStyle(color: d == 'up' ? Colors.white : AppColors.textDim),
+                    backgroundColor: const Color(0xFF0B1230),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('کاهش'),
+                    selected: d == 'down',
+                    onSelected: (_) => direction.value = 'down',
+                    selectedColor: const Color(0xFFDC2626),
+                    labelStyle: TextStyle(color: d == 'down' ? Colors.white : AppColors.textDim),
+                    backgroundColor: const Color(0xFF0B1230),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 10),
             ValueListenableBuilder<String>(
               valueListenable: mode,
               builder: (_, m, __) => Row(children: [
@@ -442,7 +470,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: 'مقدار (درصد یا تومان)',
+                labelText: 'مقدار (عدد مثبت)',
                 labelStyle: const TextStyle(color: AppColors.textDim),
                 filled: true,
                 fillColor: const Color(0xFF0B1230),
@@ -467,7 +495,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
 
     if (ok != true || !mounted) return;
-    // نرمال‌سازی ارقام فارسی/عربی و جداکننده
     var raw = valueCtrl.text.trim();
     const fa = '۰۱۲۳۴۵۶۷۸۹';
     const ar = '٠١٢٣٤٥٦٧٨٩';
@@ -476,8 +503,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
     raw = raw.replaceAll(',', '').replaceAll('٬', '').replaceAll('،', '').replaceAll(' ', '');
     final val = double.tryParse(raw);
-    if (val == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مقدار معتبر وارد کنید')));
+    if (val == null || val == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مقدار معتبر و غیرصفر وارد کنید')));
+      valueCtrl.dispose();
       return;
     }
 
@@ -493,10 +521,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     int done = 0;
     int failed = 0;
+    String serverMsg = '';
     try {
       final bulkBody = <String, dynamic>{
         'mode': mode.value,
-        'value': val,
+        'value': val.abs(),
+        'direction': direction.value,
         if (catFilter != null) 'category': catFilter,
         if (catFilter == null) 'all': true,
       };
@@ -509,6 +539,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       if (res.data is Map) {
         done = int.tryParse('${res.data['updated'] ?? res.data['done'] ?? 0}') ?? 0;
         failed = int.tryParse('${res.data['failed'] ?? 0}') ?? 0;
+        serverMsg = (res.data['message'] ?? '').toString();
         // اگر سرور ۰ برگرداند ولی دسته انتخاب شده، یک بار با ids محلی تلاش کن
         if (done == 0 && catFilter != null) {
           await svc.loadAllForCategory(auth, catFilter);
@@ -520,7 +551,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (ids.isNotEmpty) {
             final res2 = await auth.api.dio.post('products/bulk-price', data: {
               'mode': mode.value,
-              'value': val,
+              'value': val.abs(),
+              'direction': direction.value,
               'ids': ids,
               'category': catFilter,
             }, options: Options(
@@ -531,6 +563,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             if (res2.data is Map) {
               done = int.tryParse('${res2.data['updated'] ?? res2.data['done'] ?? 0}') ?? 0;
               failed = int.tryParse('${res2.data['failed'] ?? 0}') ?? 0;
+              serverMsg = (res2.data['message'] ?? '').toString();
             }
           }
         }
@@ -590,7 +623,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(done > 0
           ? '✓ $done محصول به‌روز شد${failed > 0 ? ' — ناموفق: $failed' : ''}'
-          : 'اعمال نشد — دوباره تلاش کنید'),
+          : (serverMsg.isNotEmpty ? serverMsg : 'اعمال نشد — دسته را چک کنید یا دوباره تلاش کنید')),
       backgroundColor: done > 0 ? const Color(0xFF065F46) : const Color(0xFF7F1D1D),
       duration: const Duration(seconds: 4),
     ));

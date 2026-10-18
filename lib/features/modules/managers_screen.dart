@@ -81,12 +81,37 @@ class _ManagersScreenState extends State<ManagersScreen> {
     );
     if (ok == null || ok == role) return;
     try {
-      await context.read<AuthService>().api.dio.post('managers', data: {'id': id, 'role': ok});
+      final res = await context.read<AuthService>().api.dio.post('managers', data: {'id': id, 'role': ok});
+      // به‌روزرسانی محلی فوری
+      setState(() {
+        items = items.map((e) {
+          final m = Map<String, dynamic>.from(e as Map);
+          if ((m['id']?.toString() ?? '') == id.toString()) {
+            m['role'] = ok;
+            m['roles'] = [ok];
+          }
+          return m;
+        }).toList();
+        // اگر نقش از لیست مدیران خارج شد حذف کن
+        if (!['administrator', 'shop_manager', 'editor'].contains(ok)) {
+          items = items.where((e) => (e as Map)['id']?.toString() != id.toString()).toList();
+        }
+      });
       await _load();
+      // اگر نقش خود کاربر عوض شد، سایت‌اینفو را تازه کن
+      try {
+        final auth = context.read<AuthService>();
+        final me = auth.user?['id']?.toString();
+        if (me != null && me == id.toString()) {
+          await auth.tryAutoLogin();
+        }
+      } catch (_) {}
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('نقش به‌روز شد'),
-          backgroundColor: Color(0xFF065F46),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(res.data is Map && res.data['user'] != null
+              ? 'نقش به ${_roleLabel(ok)} تغییر کرد'
+              : 'نقش به‌روز شد'),
+          backgroundColor: const Color(0xFF065F46),
         ));
       }
     } catch (e) {

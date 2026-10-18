@@ -33,7 +33,15 @@ class ProductsService extends ChangeNotifier {
       }
       _categories = list.map((e) => Map<String, dynamic>.from(e as Map)).where((e) {
         final parent = int.tryParse('${e['parent'] ?? 0}') ?? 0;
-        return parent == 0;
+        if (parent != 0) return false;
+        final name = (e['name']?.toString() ?? '').trim();
+        final slug = (e['slug']?.toString() ?? '').toLowerCase();
+        // مخفی: بدون دسته‌بندی / uncategorized / خالی
+        if (name.isEmpty) return false;
+        if (slug == 'uncategorized' || slug == 'unategorized') return false;
+        if (name == 'بدون دسته‌بندی' || name == 'بدون دسته بندی' || name == 'Uncategorized') return false;
+        if (name == 'دسته بندی' || name == 'دسته‌بندی') return false; // دسته ساختگی/بی‌معنی
+        return true;
       }).toList();
       notifyListeners();
     } catch (_) {}

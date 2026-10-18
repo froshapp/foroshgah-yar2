@@ -69,15 +69,17 @@ class _TasksScreenState extends State<TasksScreen> {
         items = List.from(res.data['items'] as List);
       } else {
         await _load();
-      try { await context.read<NotifBadgeService>().refresh(context.read<AuthService>()); } catch (_) {}
       }
-      // به‌روزرسانی فوری عدد اعلان
+      // به‌روزرسانی اعلان‌ها
       try {
         await context.read<NotifBadgeService>().refresh(context.read<AuthService>());
       } catch (_) {}
+      try {
+        await FcmService().showLocal('کار جدید', text);
+      } catch (_) {}
       if (mounted) {
         setState(() {});
-        showOk(context, 'ثبت شد');
+        showOk(context, 'ثبت شد — در اعلان‌ها هم نمایش داده می‌شود');
       }
     } catch (e) {
       showErr(context, e.toString());
