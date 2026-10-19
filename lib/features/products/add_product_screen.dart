@@ -295,48 +295,138 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                   ]),
                   if (_productType == 'variable') ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF252640),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.35)),
+                        color: const Color(0xFF121A38),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF3D4F8C).withOpacity(0.55)),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.08), blurRadius: 18, offset: const Offset(0, 6)),
+                        ],
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        const Text('ویژگی‌های متغیر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        const Text('مثال: نام=رنگ ، گزینه‌ها=قرمز، آبی، سبز', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                        const SizedBox(height: 10),
+                        Row(children: [
+                          Container(
+                            width: 34, height: 34,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF2868FF)]),
+                            ),
+                            child: const Icon(Icons.tune_rounded, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('ویژگی‌های محصول (مثل ووکامرس)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                            SizedBox(height: 2),
+                            Text('نام ویژگی + مقادیر | برای ساخت ورییشن', style: TextStyle(color: Color(0xFF9AA9CC), fontSize: 11)),
+                          ])),
+                        ]),
+                        const SizedBox(height: 12),
+                        // انتخاب سریع از ویژگی‌های فروشگاه
+                        if (_attrList.isNotEmpty) ...[
+                          const Text('ویژگی‌های موجود فروشگاه', style: TextStyle(color: Color(0xFFB8C4E6), fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _attrList.map((attr) {
+                              final name = attr['name']?.toString() ?? '';
+                              final terms = (attr['terms'] is List)
+                                  ? (attr['terms'] as List).map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
+                                  : <String>[];
+                              final already = _varRows.any((r) => (r['name']?.text.trim() ?? '') == name);
+                              return ActionChip(
+                                label: Text(name, style: TextStyle(color: already ? Colors.white70 : Colors.white, fontSize: 12)),
+                                avatar: Icon(already ? Icons.check_circle : Icons.add_circle_outline, size: 16, color: already ? const Color(0xFF10B981) : const Color(0xFF8B6CFF)),
+                                backgroundColor: already ? const Color(0xFF1B3A2F) : const Color(0xFF1A2450),
+                                side: BorderSide(color: already ? const Color(0xFF10B981).withOpacity(0.5) : const Color(0xFF6C63FF).withOpacity(0.35)),
+                                onPressed: already ? null : () {
+                                  setState(() {
+                                    final cName = TextEditingController(text: name);
+                                    final cOpts = TextEditingController(text: terms.join('، '));
+                                    _varRows.add({'name': cName, 'options': cOpts});
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         for (var i = 0; i < _varRows.length; i++) ...[
-                          Row(children: [
-                            Expanded(
-                              child: TextField(
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0B1230),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFF2A3A6E)),
+                            ),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              Row(children: [
+                                Text('ویژگی ${i + 1}', style: const TextStyle(color: Color(0xFF9AA9CC), fontSize: 11, fontWeight: FontWeight.w600)),
+                                const Spacer(),
+                                InkWell(
+                                  onTap: () => _removeVarRow(i),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                  ),
+                                ),
+                              ]),
+                              const SizedBox(height: 8),
+                              TextField(
                                 controller: _varRows[i]['name'],
                                 style: const TextStyle(color: Colors.white),
-                                decoration: _dec('نام ویژگی (رنگ / سایز)'),
+                                decoration: _dec('نام ویژگی — مثال: رنگ، سایز، جنس'),
                               ),
-                            ),
-                            IconButton(
-                              onPressed: () => _removeVarRow(i),
-                              icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
-                            ),
-                          ]),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: _varRows[i]['options'],
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _dec('گزینه‌ها با کاما (S, M, L)'),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _varRows[i]['options'],
+                                style: const TextStyle(color: Colors.white),
+                                maxLines: 2,
+                                onChanged: (_) => setState(() {}),
+                                decoration: _dec('مقادیر با کاما — مثال: قرمز، آبی، سبز'),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(children: [
+                                const Icon(Icons.info_outline, size: 14, color: Color(0xFF6C63FF)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _optionCount(_varRows[i]['options']?.text ?? '') > 0
+                                        ? '${_optionCount(_varRows[i]['options']?.text ?? '')} مقدار'
+                                        : 'حداقل یک مقدار وارد کنید',
+                                    style: const TextStyle(color: Color(0xFF9AA9CC), fontSize: 11),
+                                  ),
+                                ),
+                              ]),
+                            ]),
                           ),
-                          const SizedBox(height: 12),
                         ],
-                        TextButton.icon(
+                        OutlinedButton.icon(
                           onPressed: _addVarRow,
-                          icon: const Icon(Icons.add, color: Color(0xFF8B6CFF)),
-                          label: const Text('افزودن ویژگی', style: TextStyle(color: Color(0xFF8B6CFF))),
+                          icon: const Icon(Icons.add, color: Color(0xFF8B6CFF), size: 18),
+                          label: const Text('افزودن ویژگی سفارشی', style: TextStyle(color: Color(0xFF8B6CFF), fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF6C63FF)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        const Text('قیمت و موجودی مرحله بعد به‌عنوان پیش‌فرض همه ورییشن‌ها اعمال می‌شود.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF152048),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'تعداد ورییشن تقریبی: ${_estimateVariations()}  ·  قیمت و موجودی مرحله بعد روی همه ورییشن‌ها اعمال می‌شود',
+                            style: const TextStyle(color: Color(0xFFB8C4E6), fontSize: 11, height: 1.4),
+                          ),
+                        ),
                       ]),
                     ),
                   ],

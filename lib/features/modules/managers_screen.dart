@@ -173,6 +173,16 @@ class _ManagersScreenState extends State<ManagersScreen> {
         }
         return;
       }
+      if (res.data is Map && res.data['success'] != true) {
+        final msg = res.data['message']?.toString() ?? 'نقش اعمال نشد';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(msg),
+            backgroundColor: const Color(0xFF7F1D1D),
+          ));
+        }
+        return;
+      }
 
       setState(() {
         if (removeFromList || !['administrator', 'shop_manager', 'editor'].contains(newRole)) {
