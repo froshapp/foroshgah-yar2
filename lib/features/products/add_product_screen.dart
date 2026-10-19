@@ -121,6 +121,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
+  int _optionCount(String raw) {
+    return raw.split(RegExp(r'[,،]')).map((e) => e.trim()).where((e) => e.isNotEmpty).length;
+  }
+
+  int _estimateVariations() {
+    if (_varRows.isEmpty) return 0;
+    var total = 1;
+    var any = false;
+    for (final r in _varRows) {
+      final c = _optionCount(r['options']?.text ?? '');
+      if (c > 0) {
+        total *= c;
+        any = true;
+      }
+    }
+    return any ? total : 0;
+  }
+
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام محصول الزامی است')));
