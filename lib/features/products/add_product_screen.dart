@@ -31,6 +31,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _saleTo = TextEditingController();
   final _attrs = TextEditingController(); // ویژگی‌ها اختیاری
   String _status = 'publish';
+  String _productType = 'simple'; // simple | variable
+  // ویژگی‌های متغیر: [{name, options}] options = متن با کاما
+  final List<Map<String, TextEditingController>> _varRows = [];
   List<Map<String, dynamic>> _brands = [];
   List<Map<String, dynamic>> _shipping = [];
   List<Map<String, dynamic>> _attrList = [];
@@ -89,12 +92,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _saleFrom.dispose();
     _saleTo.dispose();
     _attrs.dispose();
+    for (final r in _varRows) {
+      r['name']?.dispose();
+      r['options']?.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _pick(ImageSource src) async {
     final f = await _picker.pickImage(source: src, maxWidth: 1200, imageQuality: 85);
     if (f != null) setState(() => _image = f);
+  }
+
+  void _addVarRow() {
+    setState(() {
+      _varRows.add({
+        'name': TextEditingController(),
+        'options': TextEditingController(),
+      });
+    });
+  }
+
+  void _removeVarRow(int i) {
+    setState(() {
+      _varRows[i]['name']?.dispose();
+      _varRows[i]['options']?.dispose();
+      _varRows.removeAt(i);
+    });
   }
 
   Future<void> _save() async {
@@ -156,14 +180,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_brandName != null) body['brand'] = _brandName;
       if (_shippingMethod != null) body['shipping_class'] = _shippingMethod;
       if (_attrs.text.trim().isNotEmpty) body['attributes_text'] = _attrs.text.trim();
-      if (_selectedAttrs.isNotEmpty) {
+      body['type'] = _productType;
+      if (_productType == 'variable') {
+        final attrs = <Map<String, dynamic>>[];
+        for (final r in _varRows) {
+          final n = r['name']?.text.trim() ?? '';
+          final o = r['options']?.text.trim() ?? '';
+          if (n.isEmpty || o.isEmpty) continue;
+          final opts = o.split(RegExp(r'[,،]')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+          if (opts.isEmpty) continue;
+          attrs.add({'name': n, 'options': opts, 'variation': true, 'visible': true});
+        }
+        if (attrs.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('برای محصول متغیر حداقل یک ویژگی با گزینه وارد کنید'),
+              backgroundColor: Color(0xFF7F1D1D),
+            ));
+          }
+          setState(() => _saving = false);
+          return;
+        }
+        body['attributes'] = attrs;
+        // ورییشن‌ها روی سرور از ترکیب گزینه‌ها ساخته می‌شوند
+      } else if (_selectedAttrs.isNotEmpty) {
         body['attributes'] = _selectedAttrs.entries.map((e) => {'name': e.key, 'option': e.value}).toList();
       }
 
       final res = await auth.api.dio.post('products', data: body);
       if (!mounted) return;
       if (res.statusCode == 200 || res.statusCode == 201 || res.data?['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('محصول اضافه شد')));
+        final msg = (res.data is Map && res.data['message'] != null) ? res.data['message'].toString() : 'محصول اضافه شد';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -220,6 +268,78 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     _chip('draft', 'پیش‌نویس', Colors.orange),
                     _chip('pending', 'در انتظار', Colors.white54),
                   ]),
+                  const SizedBox(height: 16),
+                  _label('نوع محصول'),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    ChoiceChip(
+                      label: const Text('ساده'),
+                      selected: _productType == 'simple',
+                      onSelected: (_) => setState(() => _productType = 'simple'),
+                      selectedColor: const Color(0xFF6C63FF),
+                      labelStyle: TextStyle(color: _productType == 'simple' ? Colors.white : Colors.white70),
+                      backgroundColor: const Color(0xFF252640),
+                    ),
+                    ChoiceChip(
+                      label: const Text('متغیر (سایز / رنگ / ...)'),
+                      selected: _productType == 'variable',
+                      onSelected: (_) {
+                        setState(() {
+                          _productType = 'variable';
+                          if (_varRows.isEmpty) _addVarRow();
+                        });
+                      },
+                      selectedColor: const Color(0xFF6C63FF),
+                      labelStyle: TextStyle(color: _productType == 'variable' ? Colors.white : Colors.white70),
+                      backgroundColor: const Color(0xFF252640),
+                    ),
+                  ]),
+                  if (_productType == 'variable') ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF252640),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.35)),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        const Text('ویژگی‌های متغیر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        const Text('مثال: نام=رنگ ، گزینه‌ها=قرمز، آبی، سبز', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                        const SizedBox(height: 10),
+                        for (var i = 0; i < _varRows.length; i++) ...[
+                          Row(children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _varRows[i]['name'],
+                                style: const TextStyle(color: Colors.white),
+                                decoration: _dec('نام ویژگی (رنگ / سایز)'),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => _removeVarRow(i),
+                              icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
+                            ),
+                          ]),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _varRows[i]['options'],
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _dec('گزینه‌ها با کاما (S, M, L)'),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        TextButton.icon(
+                          onPressed: _addVarRow,
+                          icon: const Icon(Icons.add, color: Color(0xFF8B6CFF)),
+                          label: const Text('افزودن ویژگی', style: TextStyle(color: Color(0xFF8B6CFF))),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text('قیمت و موجودی مرحله بعد به‌عنوان پیش‌فرض همه ورییشن‌ها اعمال می‌شود.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                      ]),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   _label('نام محصول'),
                   const SizedBox(height: 8),
