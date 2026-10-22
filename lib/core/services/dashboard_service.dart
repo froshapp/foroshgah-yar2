@@ -13,6 +13,7 @@ class DashboardService extends ChangeNotifier {
   List _daily = [];
   List get dailySales => _daily;
   bool _loading = false;
+  bool _fetching = false;
   String? _error;
 
   Map<String, dynamic> get stats => _stats;
@@ -28,6 +29,8 @@ class DashboardService extends ChangeNotifier {
   }
 
   Future<void> fetchStats(AuthService auth, {int days = 7}) async {
+    if (_fetching) return;
+    _fetching = true;
     _loading = true;
     _error = null;
     notifyListeners();
@@ -59,6 +62,7 @@ class DashboardService extends ChangeNotifier {
     }
 
     _loading = false;
+    _fetching = false;
     notifyListeners();
   }
 }

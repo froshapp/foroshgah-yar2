@@ -8,6 +8,8 @@ class ApiClient {
   String? _baseUrl;
   String? _token;
   String? _siteHost;
+  DateTime? _reachableOkUntil;
+  bool _reachInFlight = false;
 
   Dio get dio {
     if (_dio == null) {
@@ -59,8 +61,8 @@ class ApiClient {
   void _buildDio(String baseUrl, {String? hostHeader}) {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl.endsWith('/') ? baseUrl : '$baseUrl/',
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 12),
+      receiveTimeout: const Duration(seconds: 25),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -74,7 +76,7 @@ class ApiClient {
     (_dio!.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
-      client.connectionTimeout = const Duration(seconds: 60);
+      client.connectionTimeout = const Duration(seconds: 15);
       return client;
     };
 
@@ -102,27 +104,38 @@ class ApiClient {
     _buildDio(_baseUrl!);
   }
 
-  /// If system DNS fails, resolve via DoH and reconnect by IP
+  /// If system DNS fails, resolve via DoH and reconnect by IP (cached 3 min)
   Future<void> ensureReachable() async {
     if (_siteHost == null || _baseUrl == null) return;
-
+    final now = DateTime.now();
+    if (_reachableOkUntil != null && now.isBefore(_reachableOkUntil!)) return;
+    if (_reachInFlight) return;
+    _reachInFlight = true;
     try {
-      final result = await InternetAddress.lookup(_siteHost!)
-          .timeout(const Duration(seconds: 5));
-      if (result.isNotEmpty) return;
-    } catch (_) {}
+      try {
+        final result = await InternetAddress.lookup(_siteHost!)
+            .timeout(const Duration(seconds: 3));
+        if (result.isNotEmpty) {
+          _reachableOkUntil = now.add(const Duration(minutes: 3));
+          return;
+        }
+      } catch (_) {}
 
-    final ip = await _resolveViaDoh(_siteHost!);
-    if (ip == null) {
-      throw DioException(
-        requestOptions: RequestOptions(path: _baseUrl!),
-        type: DioExceptionType.connectionError,
-        message: 'DNS: نتوانست دامنه را پیدا کند ($_siteHost)',
-      );
+      final ip = await _resolveViaDoh(_siteHost!);
+      if (ip == null) {
+        throw DioException(
+          requestOptions: RequestOptions(path: _baseUrl!),
+          type: DioExceptionType.connectionError,
+          message: 'DNS: نتوانست دامنه را پیدا کند ($_siteHost)',
+        );
+      }
+
+      final path = '/wp-json/foroshgah-yar/v1';
+      _buildDio('https://$ip$path', hostHeader: _siteHost);
+      _reachableOkUntil = now.add(const Duration(minutes: 3));
+    } finally {
+      _reachInFlight = false;
     }
-
-    final path = '/wp-json/foroshgah-yar/v1';
-    _buildDio('https://$ip$path', hostHeader: _siteHost);
   }
 
   Future<void> saveToken(String token) async {

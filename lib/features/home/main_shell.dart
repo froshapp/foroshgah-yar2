@@ -75,12 +75,14 @@ class MainShellState extends State<MainShell> with WidgetsBindingObserver {
           }
         }
       }
-      // همیشه نشست و آمار را نرم رفرش کن (بدون جابه‌جایی صفحه)
-      try {
-        final auth = context.read<AuthService>();
-        auth.revalidateSession();
-        context.read<DashboardService>().fetchStats(auth);
-      } catch (_) {}
+      // فقط اگر بیش از ۲ دقیقه خارج بوده، نشست/آمار را نرم رفرش کن
+      if (away >= const Duration(minutes: 2)) {
+        try {
+          final auth = context.read<AuthService>();
+          auth.revalidateSession();
+          context.read<DashboardService>().fetchStats(auth);
+        } catch (_) {}
+      }
       _pausedAt = null;
     }
   }
