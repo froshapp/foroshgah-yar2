@@ -26,32 +26,61 @@ jobs:
           mkdir -p assets/images assets/icons
           touch assets/images/.gitkeep assets/icons/.gitkeep
 
-      - name: Fix AndroidManifest + Icon + compileSdk 35
+      - name: Fix AndroidManifest + Icon + compileSdk 35 + Persian name
         run: |
           python3 << 'PY'
           from pathlib import Path
           import re
+          APP_NAME = "فروشگاه یار"
+          print("APP_NAME =", APP_NAME)
+
           p = Path("android/app/src/main/AndroidManifest.xml")
-          t = p.read_text()
+          t = p.read_text(encoding="utf-8")
           if "android.permission.INTERNET" not in t:
               idx = t.find(">")
               t = t[:idx+1] + '\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' + t[idx+1:]
           if "usesCleartextTraffic" not in t:
               t = t.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
-          p.write_text(t)
-          print("Manifest OK")
+          t = re.sub(r'\s*android:label\s*=\s*"[^"]*"', '', t)
+          t = t.replace("<application", f'<application android:label="{APP_NAME}"', 1)
+          p.write_text(t, encoding="utf-8")
+          print("Manifest label forced to Persian")
+
+          values = Path("android/app/src/main/res/values")
+          values.mkdir(parents=True, exist_ok=True)
+          (values / "strings.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
+              f'    <string name="app_name">{APP_NAME}</string>\n'
+              f'    <string name="app_label">{APP_NAME}</string>\n'
+              '</resources>\n',
+              encoding="utf-8",
+          )
+          Path("android/app/src/main/res/values-fa").mkdir(parents=True, exist_ok=True)
+          (Path("android/app/src/main/res/values-fa") / "strings.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
+              f'    <string name="app_name">{APP_NAME}</string>\n'
+              '</resources>\n',
+              encoding="utf-8",
+          )
 
           for gp in [Path("android/app/build.gradle"), Path("android/app/build.gradle.kts")]:
               if not gp.exists():
                   continue
-              gt = gp.read_text()
+              gt = gp.read_text(encoding="utf-8")
               gt2 = re.sub(r"compileSdk(?:Version)?\s*=?\s*\d+", "compileSdk = 35", gt)
               if gt2 == gt:
                   gt2 = re.sub(r"compileSdkVersion\s+\d+", "compileSdk 35", gt)
               if "compileSdk" not in gt2 and "android {" in gt2:
                   gt2 = gt2.replace("android {", "android {\n    compileSdk = 35", 1)
-              gp.write_text(gt2)
-              print("compileSdk set to 35 in", gp)
+              if "resValue" not in gt2 and "defaultConfig" in gt2:
+                  gt2 = re.sub(
+                      r'(defaultConfig\s*\{)',
+                      r'\1\n        resValue "string", "app_name", "' + APP_NAME + r'"',
+                      gt2,
+                      count=1,
+                  )
+              gp.write_text(gt2, encoding="utf-8")
+              print("gradle ok", gp)
           PY
           rm -rf android/app/src/main/res/mipmap-anydpi-v26 || true
           if [ -f assets/icons/app_icon.png ]; then
@@ -65,6 +94,23 @@ jobs:
           else
             echo "WARNING: icon not found"
             ls -la assets/icons/ || true
+          fi
+          echo "=== strings ==="
+          cat android/app/src/main/res/values/strings.xml
+          grep -n "label" android/app/src/main/AndroidManifest.xml || true
+
+      - name: Sign with stable keystore
+        run: |
+          set -e
+          if [ -f android_templates/foroshgah-yar.jks ] && [ -f android_templates/inject_signing.py ]; then
+            mkdir -p android/app
+            cp -f android_templates/foroshgah-yar.jks android/app/foroshgah-yar.jks
+            python3 android_templates/inject_signing.py
+            echo "Signing injected"
+            grep -n "signingConfig\|storeFile" android/app/build.gradle android/app/build.gradle.kts 2>/dev/null || true
+          else
+            echo "WARNING: keystore missing - APK will use debug sign"
+            ls -la android_templates/ || true
           fi
 
       - name: Get dependencies
